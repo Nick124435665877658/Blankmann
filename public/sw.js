@@ -1,4 +1,4 @@
-const CACHE = 'blankmann-shell-v5'
+const CACHE = 'blankmann-shell-v6'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg']
 
 self.addEventListener('install', event => {

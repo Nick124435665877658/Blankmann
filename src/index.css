@@ -157,7 +157,6 @@
 
 
 /* Sophia – Designrichtung Mockup 1 */
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap');
 .theme-sophia .sidebar{
  background:linear-gradient(155deg,#f2f8ef 0%,#eaf5ed 58%,#e3f1e7 100%);
  border-right:1px solid #d8eadf;
@@ -315,3 +314,5 @@
 .recipe-edit-form .ingredient-picker{max-height:360px}
 .theme-sophia .meal-actions button{color:#c00020}
 @media(max-width:520px){.recipe-card-editable>.recipe-row{flex-wrap:wrap}.recipe-card-editable .meal-actions{margin-left:auto}.meal-edit-form .meal-edit-actions button,.recipe-edit-form .meal-edit-actions button{flex:1}}
+
+.food-price{display:grid;justify-items:end;gap:3px;color:var(--green-dark);font-size:12px;font-weight:700;white-space:nowrap}.food-price small{font-size:9px;font-weight:500;color:var(--muted)}

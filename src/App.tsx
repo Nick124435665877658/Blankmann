@@ -46,8 +46,8 @@ const weekDates = (start: string) => Array.from({ length: 7 }, (_, i) => {
 })
 const shortDate = (d: Date) => new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit' }).format(d)
 const friendlyError = (error: unknown) => error instanceof Error ? error.message : 'Das hat gerade nicht geklappt.'
-const mealLabel = (type: string) => ({ breakfast: 'Frühstück', lunch: 'Mittagessen', dinner: 'Abendessen' }[type] ?? type)
-const mealTypeValue = (label: string) => ({ Frühstück: 'breakfast', Mittagessen: 'lunch', Abendessen: 'dinner' }[label] ?? 'dinner')
+const mealLabel = (type: string) => (({ breakfast: 'Frühstück', lunch: 'Mittagessen', dinner: 'Abendessen' } as Record<string, string>)[type] ?? type)
+const mealTypeValue = (label: string) => (({ Frühstück: 'breakfast', Mittagessen: 'lunch', Abendessen: 'dinner' } as Record<string, string>)[label] ?? 'dinner')
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null)

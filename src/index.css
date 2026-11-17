@@ -154,3 +154,52 @@
  .device-choice span{font-size:8px}
 }
 @media(max-width:390px){.topbar-left .breadcrumb{display:none}.theme-choice{padding:5px 6px}.topbar-right{gap:4px}}
+
+
+/* Sophia – Designrichtung Mockup 1 */
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&display=swap');
+.theme-sophia .sidebar{
+ background:linear-gradient(155deg,#f2f8ef 0%,#eaf5ed 58%,#e3f1e7 100%);
+ border-right:1px solid #d8eadf;
+ box-shadow:5px 0 24px #8eaa9612;
+}
+.theme-sophia .brand strong{color:#a52e62;font-family:'Caveat',cursive;font-size:27px;letter-spacing:0;font-weight:700}
+.theme-sophia .brand span{color:#a6bca9;letter-spacing:2px}
+.theme-sophia .brand-mark{background:linear-gradient(145deg,#d9eddf,#c4e3d0);color:#a52e62;border:1px solid #c8e2d1}
+.theme-sophia .household-chip{background:#e0efe4;color:#9b4169;border:1px solid #d2e8d9}
+.theme-sophia .nav-item{color:#b34c79;border-radius:13px;padding:13px 14px;transition:background .2s,transform .2s}
+.theme-sophia .nav-item:hover{background:#e1f0e5;color:#982957;transform:translateX(2px)}
+.theme-sophia .nav-item.active{background:#d4eadb;color:#972653;box-shadow:inset 3px 0 #9cc9a8}
+.theme-sophia .nav-item.active small{background:#c1dfca;color:#7b9e83}
+.theme-sophia .budget-mini{background:#e3f0e6;border:1px solid #d4e8da}
+.theme-sophia .budget-mini-top,.theme-sophia .budget-mini>small{color:#8b9f90}
+.theme-sophia .budget-mini-top strong{color:#a52e62}
+.theme-sophia .progress{background:#f5d9e5}
+.theme-sophia .progress i{background:#a9cdb0}
+.theme-sophia .main-content{background:radial-gradient(ellipse at 80% 0%,#ffe4ee 0%,transparent 38%),linear-gradient(135deg,#fff1f6 0%,#ffedf4 52%,#fff5f8 100%)}
+.theme-sophia .topbar{background:#fff0f6d9;border-color:#f1cada;box-shadow:0 3px 18px #a52e6208}
+.theme-sophia .page-wrap{padding-top:36px}
+.theme-sophia .page-heading h1{font-family:'Caveat',cursive;font-size:clamp(34px,4vw,48px);font-weight:600;letter-spacing:0;color:#a52660}
+.theme-sophia .page-heading p{color:#a85d7d}
+.theme-sophia .eyebrow{color:#c07896;letter-spacing:1.7px}
+.theme-sophia .heading-icon{background:#e0efe4;color:#a52e62;border:1px solid #d1e6d8;border-radius:18px}
+.theme-sophia .stat-card,.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{
+ background:linear-gradient(145deg,#fffafd 0%,#fff7fa 100%);
+ border:1px solid #f2cbd9;border-radius:19px;
+ box-shadow:0 8px 24px #a52e6210,0 2px 5px #a52e6208;
+}
+.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .settings-panel h2{color:#a52660}
+.theme-sophia .day-pill{background:#fffafd;border-color:#f3d4df;border-radius:12px}
+.theme-sophia .day-pill.today{background:#e2f0e5;border-color:#cfe5d5;color:#8d315f}
+.theme-sophia .button-dark{background:linear-gradient(135deg,#c23d78,#a92e65);border-radius:11px;box-shadow:0 4px 10px #a92e6220}
+.theme-sophia .button-light{background:#e6f2e9;color:#8f4265;border:1px solid #d7e9dc}
+.theme-sophia .tip-banner,.theme-sophia .feature-card{background:linear-gradient(110deg,#e4f1e7,#f9e3ec);border:1px solid #e4e9dc;border-radius:17px}
+.theme-sophia .tip-icon{background:#d1e8d7;color:#a52e62}
+.theme-sophia .footer{color:#b66a89}
+.theme-sophia .auth-layout,.theme-sophia.loading-screen{background:radial-gradient(ellipse at 20% 10%,#e4f1e7 0,transparent 35%),radial-gradient(ellipse at 85% 0%,#fbdce8 0,transparent 42%),#fff1f6}
+@media(max-width:720px){
+ .theme-sophia .sidebar{background:linear-gradient(90deg,#edf6ef,#e5f2e9);box-shadow:0 -5px 20px #8eaa9615}
+ .theme-sophia .nav-item.active{box-shadow:inset 0 3px #9cc9a8}
+ .theme-sophia .page-wrap{padding-top:25px}
+ .theme-sophia .page-heading h1{font-size:36px}
+}

@@ -110,14 +110,14 @@
 .theme-nick .device-choice.selected{background:#24413d;color:#b4eadb;border-color:#38665c}
 .theme-nick .footer{border-color:#283645}
 .theme-sophia{--ink:#9e2858;--muted:#b65a7d;--green:#c33c73;--green-dark:#a92e65;--sage:#f9dce8;--paper:#fff8fb;--line:#f0bfd2;color:#a52e62;background:#fff0f5}
-.theme-sophia .sidebar{background:#ffe4ee;border-color:#efbfd1}
+.theme-sophia .sidebar{background:#eaf5ee;border-color:#d5e8dc}
 .theme-sophia .main-content{background:#fff0f5}
 .theme-sophia .topbar{background:#ffe7f0ed;border-color:#efbfd1}
 .theme-sophia .brand-mark{background:#bd4778;color:#fff5f9}
 .theme-sophia .brand span,.theme-sophia .breadcrumb,.theme-sophia .sync-status,.theme-sophia .footer{color:#b96a89}
 .theme-sophia .household-chip,.theme-sophia .budget-mini{background:#fbd5e4;color:#a94470}
 .theme-sophia .nav-item{color:#ad5578}
-.theme-sophia .nav-item:hover,.theme-sophia .nav-item.active{background:#f8cddd;color:#9e2858}
+.theme-sophia .nav-item:hover{background:#dff0e5;color:#9e2858}.theme-sophia .nav-item.active{background:#d3eadb;color:#9e2858}
 .theme-sophia .nav-item.active{font-weight:700}
 .theme-sophia .profile-button,.theme-sophia .profile-button b{color:#9e2858}
 .theme-sophia .avatar,.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo,.theme-sophia .tip-icon{background:#f8d3e2;color:#b42e68}

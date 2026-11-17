@@ -175,7 +175,8 @@ export default function App() {
   async function addPantryItem(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!supabase || !household) return
-    const form = new FormData(e.currentTarget)
+    const formElement = e.currentTarget
+    const form = new FormData(formElement)
     const name = String(form.get('name') ?? '').trim()
     if (!name) return
     const { error: insertError } = await supabase.from('pantry_items').insert({
@@ -183,13 +184,14 @@ export default function App() {
       unit: String(form.get('unit') || '') || null, best_before: String(form.get('best_before') || '') || null,
       storage_location: String(form.get('storage_location') || 'Vorratsschrank'),
     })
-    if (insertError) setError(insertError.message); else { e.currentTarget.reset(); await refreshData() }
+    if (insertError) setError(insertError.message); else { formElement.reset(); await refreshData() }
   }
 
   async function addMeal(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!supabase || !household) return
-    const form = new FormData(e.currentTarget)
+    const formElement = e.currentTarget
+    const form = new FormData(formElement)
     const title = String(form.get('title') ?? '').trim()
     if (!title) return
     setBusy(true); setError('')
@@ -205,7 +207,7 @@ export default function App() {
       meal_type: mealTypeValue(String(form.get('meal_type'))), custom_title: title, servings: 2,
     })
     setBusy(false)
-    if (mealError) setError(mealError.message); else { e.currentTarget.reset(); await refreshData() }
+    if (mealError) setError(mealError.message); else { formElement.reset(); await refreshData() }
   }
 
   async function addRecipe(e: FormEvent<HTMLFormElement>) {
@@ -224,7 +226,7 @@ export default function App() {
       instructions: [], notes: null, created_by: session.user.id,
     }).select('id').single()
     if (created.error) { setBusy(false); setError(created.error.message); return }
-    const ingredients = String(form.get('ingredients') || '').split('\\n').map(s => s.trim()).filter(Boolean)
+    const ingredients = String(form.get('ingredients') || '').split('\n').map(s => s.trim()).filter(Boolean)
     if (ingredients.length) {
       const rows = ingredients.map(name => ({
         household_id: household.id, recipe_id: created.data.id, name, normalized_name: name.toLocaleLowerCase('de-DE'),

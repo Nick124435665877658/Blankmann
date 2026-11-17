@@ -229,14 +229,6 @@ export default function App() {
     if (updateError) setError(updateError.message); else await refreshData()
   }
 
-  async function saveActualPrice(item: ShoppingItem, rawValue: string) {
-    if (!supabase) return
-    const actual = rawValue.trim() === '' ? null : Number(rawValue)
-    if (actual !== null && (!Number.isFinite(actual) || actual < 0)) return
-    const { error: updateError } = await supabase.from('shopping_list_items').update({ actual_price: actual }).eq('id', item.id)
-    if (updateError) setError(updateError.message); else await refreshData()
-  }
-
   async function addPantryItem(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!supabase || !household) return
@@ -326,9 +318,6 @@ export default function App() {
   }
 
   const days = weekDates(weekStart)
-  const groupedShopping = shopping.reduce<Record<string, ShoppingItem[]>>((acc, item) => {
-    const group = item.aisle || 'Sonstiges'; (acc[group] ??= []).push(item); return acc
-  }, {})
   const recipeDemand = meals.flatMap(meal => {
     if (!meal.recipe_id) return []
     const recipe = recipes.find(r => r.id === meal.recipe_id)

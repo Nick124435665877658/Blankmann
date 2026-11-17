@@ -226,7 +226,7 @@ export default function App() {
       instructions: [], notes: null, created_by: session.user.id,
     }).select('id').single()
     if (created.error) { setBusy(false); setError(created.error.message); return }
-    const ingredients = String(form.get('ingredients') || '').split('\n').map(s => s.trim()).filter(Boolean)
+    const ingredients = String(form.get('ingredients') || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean)
     if (ingredients.length) {
       const rows = ingredients.map(name => ({
         household_id: household.id, recipe_id: created.data.id, name, normalized_name: name.toLocaleLowerCase('de-DE'),

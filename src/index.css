@@ -316,3 +316,5 @@
 @media(max-width:520px){.recipe-card-editable>.recipe-row{flex-wrap:wrap}.recipe-card-editable .meal-actions{margin-left:auto}.meal-edit-form .meal-edit-actions button,.recipe-edit-form .meal-edit-actions button{flex:1}}
 
 .food-price{display:grid;justify-items:end;gap:3px;color:var(--green-dark);font-size:12px;font-weight:700;white-space:nowrap}.food-price small{font-size:9px;font-weight:500;color:var(--muted)}
+
+.price-catalog-panel{margin-top:17px}.price-catalog-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line)}.price-catalog-row:last-child{border-bottom:0}.price-catalog-row .pantry-name small{font-size:9px}.price-catalog-value{display:grid;justify-items:end;gap:3px;white-space:nowrap}.price-catalog-value b{font-size:12px;color:var(--green-dark)}.price-catalog-value small{font-size:9px;color:var(--muted)}

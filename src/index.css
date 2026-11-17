@@ -203,3 +203,27 @@
  .theme-sophia .page-wrap{padding-top:25px}
  .theme-sophia .page-heading h1{font-size:36px}
 }
+
+
+/* Sophia – etwas mehr Mintgrün, Rosa bleibt die Akzentfarbe */
+.theme-sophia .sidebar{
+ background:linear-gradient(155deg,#e4f2e8 0%,#dcefe2 58%,#d5eadb 100%);
+ border-right-color:#c9e2d1;
+}
+.theme-sophia .main-content{
+ background:radial-gradient(ellipse at 12% 8%,#e1f1e5 0%,transparent 34%),radial-gradient(ellipse at 88% 0%,#ffe4ee 0%,transparent 38%),linear-gradient(135deg,#f4faf5 0%,#fff0f5 60%,#f4faf5 100%);
+}
+.theme-sophia .topbar{background:#eff8f1e8;border-color:#d8eadc}
+.theme-sophia .stat-card{background:linear-gradient(145deg,#fffafd 0%,#f1f8f2 100%)}
+.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{background:linear-gradient(145deg,#fffafd 0%,#f7fbf7 100%)}
+.theme-sophia .heading-icon,.theme-sophia .avatar,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo{background:#dcefe2;color:#a52e62;border-color:#cde5d4}
+.theme-sophia .day-pill.today,.theme-sophia .planned-meal{background:#dcefe2;border-color:#c5e0cd;color:#91345f}
+.theme-sophia .button-light{background:#dcefe2;border-color:#c8e2d0;color:#914466}
+.theme-sophia .tip-banner,.theme-sophia .feature-card{background:linear-gradient(110deg,#dcefe2 0%,#e8f4e9 58%,#f9e3ec 100%);border-color:#d1e6d5}
+.theme-sophia .tip-icon{background:#cce5d2;color:#a52e62}
+.theme-sophia .budget-mini{background:#dcefe2;border-color:#c8e2d0}
+.theme-sophia .progress{background:#f5d9e5}
+.theme-sophia .progress i{background:#8fbd9c}
+@media(max-width:720px){
+ .theme-sophia .sidebar{background:linear-gradient(90deg,#e5f2e8,#dcefe2)}
+}

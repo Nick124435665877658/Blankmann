@@ -130,14 +130,15 @@ export default function App() {
   }, [household, refreshData])
 
   useEffect(() => {
-    if (!supabase || !household) return
-    const channel = supabase.channel('blankmann-household-' + household.id)
+    const client = supabase
+    if (!client || !household) return
+    const channel = client.channel('blankmann-household-' + household.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_items', filter: 'household_id=eq.' + household.id }, () => refreshData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_items', filter: 'household_id=eq.' + household.id }, () => refreshData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plan_entries', filter: 'household_id=eq.' + household.id }, () => refreshData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes', filter: 'household_id=eq.' + household.id }, () => refreshData())
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+    return () => { client.removeChannel(channel) }
   }, [household, refreshData])
 
   const remaining = useMemo(() => shopping.filter(i => !i.checked).length, [shopping])
@@ -199,7 +200,8 @@ export default function App() {
 
   async function addMeal(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!supabase || !household) return
+    const currentUser = session?.user
+    if (!supabase || !household || !currentUser) return
     const formElement = e.currentTarget
     const form = new FormData(formElement)
     const title = String(form.get('title') ?? '').trim()
@@ -208,7 +210,7 @@ export default function App() {
     let plan = await supabase.from('weekly_plans').select('id').eq('household_id', household.id).eq('week_start', weekStart).maybeSingle()
     if (plan.error) { setBusy(false); setError(plan.error.message); return }
     if (!plan.data) {
-      const created = await supabase.from('weekly_plans').insert({ household_id: household.id, week_start: weekStart, budget, created_by: session.user.id }).select('id').single()
+      const created = await supabase.from('weekly_plans').insert({ household_id: household.id, week_start: weekStart, budget, created_by: currentUser.id }).select('id').single()
       if (created.error) { setBusy(false); setError(created.error.message); return }
       plan = { data: created.data, error: null } as typeof plan
     }
@@ -222,7 +224,8 @@ export default function App() {
 
   async function addRecipe(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!supabase || !household) return
+    const currentUser = session?.user
+    if (!supabase || !household || !currentUser) return
     const formElement = e.currentTarget
     const form = new FormData(formElement)
     const title = String(form.get('title') ?? '').trim()
@@ -233,7 +236,7 @@ export default function App() {
       source_type: 'manual', servings: Number(form.get('servings') || 2),
       prep_minutes: form.get('prep_minutes') ? Number(form.get('prep_minutes')) : null,
       cook_minutes: form.get('cook_minutes') ? Number(form.get('cook_minutes')) : null,
-      instructions: [], notes: null, created_by: session.user.id,
+      instructions: [], notes: null, created_by: currentUser.id,
     }).select('id').single()
     if (created.error) { setBusy(false); setError(created.error.message); return }
     const ingredients = String(form.get('ingredients') || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean)

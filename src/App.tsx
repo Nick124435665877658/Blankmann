@@ -410,5 +410,7 @@ function HouseholdSetup({user,onCreated}:{user:User;onCreated:()=>Promise<void>}
 }
 
 function SetupScreen() {
-  return <div className="loading-screen"><div className="brand-mark">B.</div><h1>BLANKMANN</h1><p>Die Verbindung zur Datenbank fehlt noch.</p><div className="setup-instructions">Bitte trage in deiner Hosting-Umgebung die Variablen <code>VITE_SUPABASE_URL</code> und <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> ein. Die Vorlage liegt in <code>.env.example</code>.</div></div>
+  const hasUrl = Boolean(import.meta.env.VITE_SUPABASE_URL)
+  const hasKey = Boolean(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY)
+  return <div className="loading-screen"><div className="brand-mark">B.</div><h1>BLANKMANN</h1><p>Die Verbindung zur Datenbank fehlt noch.</p><div className="setup-instructions">Build-Diagnose (es werden keine Schlüssel angezeigt):<br /><code>VITE_SUPABASE_URL</code>: {hasUrl ? 'vorhanden' : 'FEHLT'}<br /><code>VITE_SUPABASE_PUBLISHABLE_KEY</code>: {hasKey ? 'vorhanden' : 'FEHLT'}<br /><br />Wenn eine Variable fehlt, kommt sie nicht im Vite-Build an. Bitte die Build-Variablen im richtigen Cloudflare-Worker-Projekt prüfen und anschließend neu deployen.</div></div>
 }

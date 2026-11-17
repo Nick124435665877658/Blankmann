@@ -63,3 +63,94 @@
   .device-phone .device-choice span{display:none}
 }
 @media(max-width:380px){.device-switch{gap:1px}.device-choice{padding:5px 6px}.topbar-right{gap:6px}}
+
+
+/* BLANKMANN visual identities: Nick / Sophia */
+.topbar-left{display:flex;align-items:center;gap:25px;min-width:0}
+.build-meta{display:grid;gap:3px;white-space:nowrap;font-family:Manrope,sans-serif}
+.build-meta b{font-size:9px;letter-spacing:1.3px;color:var(--green);font-weight:800}
+.build-meta span{font-size:8px;letter-spacing:1.5px;color:var(--muted)}
+.theme-switch{display:flex;align-items:center;gap:3px;padding:3px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+.theme-choice{border:0;border-radius:7px;padding:7px 11px;background:transparent;color:var(--muted);font-size:10px;font-weight:700}
+.theme-choice.selected{background:var(--green-dark);color:#fff}
+.theme-nick{--ink:#e8edf5;--muted:#929eb0;--green:#75c6b1;--green-dark:#203c3a;--sage:#203432;--paper:#17212c;--line:#2b3948;--gold:#d6b36a;color:var(--ink);background:#0d141d}
+.theme-nick .sidebar{background:#111a25;border-color:#283645}
+.theme-nick .main-content{background:#0d141d}
+.theme-nick .topbar{background:#111a25ed;border-color:#283645}
+.theme-nick .brand-mark{background:#28564d;color:#e9fff8}
+.theme-nick .brand span,.theme-nick .breadcrumb,.theme-nick .sync-status,.theme-nick .footer{color:#8998a9}
+.theme-nick .household-chip,.theme-nick .budget-mini{background:#1a2733;color:#a9bdc4}
+.theme-nick .nav-item{color:#a0adbd}
+.theme-nick .nav-item:hover,.theme-nick .nav-item.active{background:#203b39;color:#a8e5d5}
+.theme-nick .nav-item.active{font-weight:700}
+.theme-nick .budget-mini-top,.theme-nick .budget-mini>small,.theme-nick .profile-button small{color:#9aa8b8}
+.theme-nick .profile-button,.theme-nick .profile-button b{color:#e4ebf4}
+.theme-nick .avatar,.theme-nick .heading-icon,.theme-nick .pantry-icon,.theme-nick .retailer-logo,.theme-nick .tip-icon{background:#203b39;color:#9bd9c9}
+.theme-nick .stat-card,.theme-nick .panel,.theme-nick .retailer-card,.theme-nick .notice-card{background:#17212c;border-color:#2b3948;color:#e6edf5}
+.theme-nick .page-heading h1,.theme-nick .auth-card h1,.theme-nick .panel-head h2,.theme-nick .form-panel h2,.theme-nick .add-panel h2,.theme-nick .feature-card h2,.theme-nick .settings-panel h2,.theme-nick .stat-card>strong{color:#edf3fa}
+.theme-nick .page-heading p,.theme-nick .stat-card>small,.theme-nick .stat-top,.theme-nick .pantry-name small,.theme-nick .pantry-row>span,.theme-nick .retailer-card span,.theme-nick .retailer-card small{color:#9aa8b8}
+.theme-nick .eyebrow{color:#829a9b}
+.theme-nick .day-pill,.theme-nick .planner-day,.theme-nick .planned-meal,.theme-nick .week-panel,.theme-nick .list-panel{background:#192531;border-color:#2b3948;color:#dce6ee}
+.theme-nick .day-pill.today,.theme-nick .planned-meal{background:#24413d;border-color:#315a51;color:#b4eadb}
+.theme-nick .mini-item,.theme-nick .shopping-item,.theme-nick .pantry-row,.theme-nick .meal-slot,.theme-nick .planner-day-head,.theme-nick .setting-block{border-color:#2b3948;color:#e1e9f1}
+.theme-nick .mini-item>small,.theme-nick .shopping-item>small,.theme-nick .planner-day-head small,.theme-nick .meal-slot>small{color:#93a2b1}
+.theme-nick .button-dark{background:#286257;color:#f1fffb}
+.theme-nick .button-dark:hover{background:#34796b}
+.theme-nick .button-light,.theme-nick .round-icon,.theme-nick .icon-button{background:#202e3b;border-color:#354556;color:#c2d0dc}
+.theme-nick .tip-banner,.theme-nick .feature-card{background:#1a302f;border-color:#294a45}
+.theme-nick .tip-banner b,.theme-nick .feature-card p,.theme-nick .tip-banner span{color:#a8c9c2}
+.theme-nick .form-panel input,.theme-nick .form-panel select,.theme-nick .stack-form input,.theme-nick .stack-form select,.theme-nick .settings-panel textarea,.theme-nick .budget-input input{background:#101a24;border-color:#354556;color:#e6edf5}
+.theme-nick .stack-form label,.theme-nick .form-panel label,.theme-nick .settings-panel label,.theme-nick .toggle-row b{color:#c3cfdb}
+.theme-nick .toggle-row small,.theme-nick .muted{color:#94a3b3}
+.theme-nick .progress{background:#30404c}
+.theme-nick .progress i{background:#58a997}
+.theme-nick .alert.success{background:#1d3b35;color:#a9e0d1}
+.theme-nick .alert.error{background:#482b2b;color:#ffc4bd}
+.theme-nick .theme-choice.selected{background:#286257}
+.theme-nick .device-choice.selected{background:#24413d;color:#b4eadb;border-color:#38665c}
+.theme-nick .footer{border-color:#283645}
+.theme-sophia{--ink:#9e2858;--muted:#b65a7d;--green:#c33c73;--green-dark:#a92e65;--sage:#f9dce8;--paper:#fff8fb;--line:#f0bfd2;color:#a52e62;background:#fff0f5}
+.theme-sophia .sidebar{background:#ffe4ee;border-color:#efbfd1}
+.theme-sophia .main-content{background:#fff0f5}
+.theme-sophia .topbar{background:#ffe7f0ed;border-color:#efbfd1}
+.theme-sophia .brand-mark{background:#bd4778;color:#fff5f9}
+.theme-sophia .brand span,.theme-sophia .breadcrumb,.theme-sophia .sync-status,.theme-sophia .footer{color:#b96a89}
+.theme-sophia .household-chip,.theme-sophia .budget-mini{background:#fbd5e4;color:#a94470}
+.theme-sophia .nav-item{color:#ad5578}
+.theme-sophia .nav-item:hover,.theme-sophia .nav-item.active{background:#f8cddd;color:#9e2858}
+.theme-sophia .nav-item.active{font-weight:700}
+.theme-sophia .profile-button,.theme-sophia .profile-button b{color:#9e2858}
+.theme-sophia .avatar,.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo,.theme-sophia .tip-icon{background:#f8d3e2;color:#b42e68}
+.theme-sophia .stat-card,.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{background:#fff8fb;border-color:#f0bfd2;color:#a52e62}
+.theme-sophia .page-heading h1,.theme-sophia .auth-card h1,.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .feature-card h2,.theme-sophia .settings-panel h2,.theme-sophia .stat-card>strong{color:#a52660}
+.theme-sophia .page-heading p,.theme-sophia .stat-card>small,.theme-sophia .stat-top,.theme-sophia .pantry-name small,.theme-sophia .pantry-row>span,.theme-sophia .retailer-card span,.theme-sophia .retailer-card small{color:#b66a89}
+.theme-sophia .eyebrow{color:#bd7794}
+.theme-sophia .day-pill,.theme-sophia .planner-day,.theme-sophia .planned-meal{background:#fff7fa;border-color:#f2cbd9;color:#a52e62}
+.theme-sophia .day-pill.today,.theme-sophia .planned-meal{background:#f9dce8;border-color:#efbfd1;color:#9e2858}
+.theme-sophia .mini-item,.theme-sophia .shopping-item,.theme-sophia .pantry-row,.theme-sophia .meal-slot,.theme-sophia .planner-day-head,.theme-sophia .setting-block{border-color:#f1cada;color:#a52e62}
+.theme-sophia .button-dark{background:#b52f69;color:#fff7fa}
+.theme-sophia .button-dark:hover{background:#982454}
+.theme-sophia .button-light,.theme-sophia .round-icon,.theme-sophia .icon-button{background:#fbe0ea;border-color:#efbfd1;color:#a52e62}
+.theme-sophia .tip-banner,.theme-sophia .feature-card{background:#fbdce8;border-color:#f0bfd2}
+.theme-sophia .tip-banner b,.theme-sophia .feature-card p,.theme-sophia .tip-banner span{color:#a52e62}
+.theme-sophia .form-panel input,.theme-sophia .form-panel select,.theme-sophia .stack-form input,.theme-sophia .stack-form select,.theme-sophia .settings-panel textarea,.theme-sophia .budget-input input{background:#fffafd;border-color:#efbfd1;color:#a52e62}
+.theme-sophia .stack-form label,.theme-sophia .form-panel label,.theme-sophia .settings-panel label,.theme-sophia .toggle-row b{color:#a52e62}
+.theme-sophia .toggle-row small,.theme-sophia .muted{color:#b66a89}
+.theme-sophia .progress{background:#f4d5e1}
+.theme-sophia .progress i{background:#c64d80}
+.theme-sophia .alert.success{background:#f8dce8;color:#9e2858}
+.theme-sophia .alert.error{background:#f9d5d5;color:#a33d54}
+.theme-sophia .theme-choice.selected{background:#b52f69;color:white}
+.theme-sophia .device-choice.selected{background:#f8cddd;color:#9e2858;border-color:#e8a9c2}
+.theme-sophia .footer{border-color:#efbfd1}
+@media(max-width:720px){
+ .topbar-left{gap:0}
+ .build-meta{gap:2px}
+ .build-meta b{font-size:7px;letter-spacing:.7px}
+ .build-meta span{font-size:7px;letter-spacing:.8px}
+ .topbar-right{gap:7px}
+ .theme-choice{padding:6px 8px;font-size:9px}
+ .device-choice{padding:6px 7px}
+ .device-choice span{font-size:8px}
+}
+@media(max-width:390px){.topbar-left .breadcrumb{display:none}.theme-choice{padding:5px 6px}.topbar-right{gap:4px}}

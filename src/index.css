@@ -229,3 +229,40 @@
 }
 
 .food-category{margin:18px 0}.food-category h3{display:flex;gap:9px;margin:0 0 8px;font-size:14px;color:var(--ink)}.food-category h3 small{color:var(--muted)}.food-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line)}.food-source{font-size:10px;color:var(--muted);margin-left:auto;text-align:right}.food-row .pantry-name{min-width:0}.stack-form select[multiple]{min-height:190px;padding:8px}.stack-form label small{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:5px}
+
+
+/* Sophia: klare, kräftige Rot-Schrift statt Himbeer */
+.theme-sophia{
+ --ink:#c00020;
+ --muted:#d12b42;
+ --green:#c00020;
+ --green-dark:#a8001c;
+}
+.theme-sophia .brand strong,
+.theme-sophia .brand-mark,
+.theme-sophia .household-chip,
+.theme-sophia .nav-item,
+.theme-sophia .nav-item:hover,
+.theme-sophia .nav-item.active,
+.theme-sophia .budget-mini-top strong,
+.theme-sophia .page-heading h1,
+.theme-sophia .page-heading p,
+.theme-sophia .eyebrow,
+.theme-sophia .heading-icon,
+.theme-sophia .panel-head h2,
+.theme-sophia .form-panel h2,
+.theme-sophia .add-panel h2,
+.theme-sophia .settings-panel h2,
+.theme-sophia .day-pill.today,
+.theme-sophia .button-light,
+.theme-sophia .tip-icon,
+.theme-sophia .footer,
+.theme-sophia .food-category h3,
+.theme-sophia .food-source{
+ color:#c00020;
+}
+.theme-sophia .nav-item.active{color:#b0001d}
+.theme-sophia .page-heading p,
+.theme-sophia .budget-mini-top,
+.theme-sophia .budget-mini>small,
+.theme-sophia .food-source{color:#d12b42}

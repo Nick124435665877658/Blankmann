@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import {
   Apple, BookOpen, CalendarDays, Check, ChevronDown, CircleDollarSign,
   CookingPot, Leaf, ListChecks, LogOut, Plus, Search, Settings2, ShoppingBasket,
-  Sparkles, Sprout, Store, Warehouse, X,
+  Sparkles, Sprout, Store, Warehouse, X, Smartphone, Tablet,
 } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -64,6 +64,16 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
+  const [deviceMode, setDeviceMode] = useState<'auto' | 'phone' | 'tablet'>(() => {
+    try {
+      const saved = localStorage.getItem('blankmann-device-mode')
+      return saved === 'phone' || saved === 'tablet' ? saved : 'auto'
+    } catch { return 'auto' }
+  })
+
+  useEffect(() => {
+    try { localStorage.setItem('blankmann-device-mode', deviceMode) } catch { /* storage unavailable */ }
+  }, [deviceMode])
 
   const refreshHousehold = useCallback(async (user: User) => {
     if (!supabase) return
@@ -272,7 +282,7 @@ export default function App() {
     const group = item.aisle || 'Sonstiges'; (acc[group] ??= []).push(item); return acc
   }, {})
 
-  return <div className="app-shell">
+  return <div className={"app-shell" + (deviceMode === "tablet" ? " device-tablet" : deviceMode === "phone" ? " device-phone" : "")}>
     <aside className="sidebar">
       <div className="brand"><div className="brand-mark">B.</div><div><strong>BLANKMANN</strong><span>FOODPLANNER</span></div></div>
       <div className="household-chip"><span className="online-dot" />{household.name}<ChevronDown size={14} /></div>
@@ -280,7 +290,7 @@ export default function App() {
       <div className="sidebar-bottom"><div className="budget-mini"><div className="budget-mini-top"><span>Wochenbudget</span><strong>{euro(budget)}</strong></div><div className="progress"><i style={{ width: Math.min(100, spent / Math.max(1, budget) * 100) + '%' }} /></div><small>{euro(spent)} erfasst</small></div><button className="profile-button" onClick={signOut}><div className="avatar">{(session.user.email?.[0] ?? 'B').toUpperCase()}</div><span><b>Mein Konto</b><small>Abmelden</small></span><LogOut size={16} /></button></div>
     </aside>
     <main className="main-content">
-      <header className="topbar"><div className="mobile-brand"><div className="brand-mark">B.</div><strong>BLANKMANN</strong></div><div className="breadcrumb">Dein Zuhause <span>/</span> {nav.find(n => n.id === tab)?.label}</div><div className="topbar-right"><span className="sync-status"><i /> Gemeinsam synchronisiert</span><button className="icon-button" aria-label="Einstellungen" onClick={() => setTab('settings')}><Settings2 size={19} /></button></div></header>
+      <header className="topbar"><div className="mobile-brand"><div className="brand-mark">B.</div><strong>BLANKMANN</strong></div><div className="breadcrumb">Dein Zuhause <span>/</span> {nav.find(n => n.id === tab)?.label}</div><div className="topbar-right"><span className="sync-status"><i /> Gemeinsam synchronisiert</span><div className="device-switch" role="group" aria-label="Ansicht wählen"><button type="button" className={deviceMode === 'phone' ? 'device-choice selected' : 'device-choice'} aria-label="Handy-Ansicht" title="Handy-Ansicht" onClick={() => setDeviceMode('phone')}><Smartphone size={16}/><span>Handy</span></button><button type="button" className={deviceMode === 'tablet' ? 'device-choice selected' : 'device-choice'} aria-label="Tablet-Ansicht" title="Tablet-Ansicht" onClick={() => setDeviceMode('tablet')}><Tablet size={16}/><span>Tablet</span></button><button type="button" className={deviceMode === 'auto' ? 'device-choice selected auto-choice' : 'device-choice auto-choice'} aria-label="Automatische Ansicht" title="Automatisch" onClick={() => setDeviceMode('auto')}>Auto</button></div><button className="icon-button" aria-label="Einstellungen" onClick={() => setTab('settings')}><Settings2 size={19} /></button></div></header>
       <div className="page-wrap">
         {error && <div className="alert error"><span>{error}</span><button onClick={() => setError('')}><X size={16}/></button></div>}
         {notice && <div className="alert success"><Check size={16}/>{notice}</div>}

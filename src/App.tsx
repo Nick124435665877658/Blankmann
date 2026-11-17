@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
-  Apple, BookOpen, CalendarDays, Check, ChevronDown, CircleDollarSign, Clock3,
+  Apple, BookOpen, CalendarDays, Check, ChevronDown, CircleDollarSign,
   CookingPot, Leaf, ListChecks, LogOut, Plus, Search, Settings2, ShoppingBasket,
-  Sparkles, Sprout, Store, Trash2, Warehouse, X,
+  Sparkles, Sprout, Store, Warehouse, X,
 } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -87,7 +87,7 @@ export default function App() {
       activeList = created.data
     }
     setListId(activeList.id)
-    const [shop, stock, plan, planMeals] = await Promise.all([
+    const [shop, stock, plan] = await Promise.all([
       supabase.from('shopping_list_items').select('*').eq('shopping_list_id', activeList.id).order('created_at'),
       supabase.from('pantry_items').select('*').eq('household_id', household.id).order('best_before', { ascending: true, nullsFirst: false }),
       supabase.from('weekly_plans').select('id').eq('household_id', household.id).eq('week_start', weekStart).maybeSingle(),
@@ -145,7 +145,8 @@ export default function App() {
   async function addShoppingItem(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!supabase || !household || !listId) return
-    const form = new FormData(e.currentTarget)
+    const formElement = e.currentTarget
+    const form = new FormData(formElement)
     const name = String(form.get('name') ?? '').trim()
     if (!name) return
     setBusy(true); setError('')
@@ -155,7 +156,7 @@ export default function App() {
     })
     setBusy(false)
     if (result.error) { setError(result.error.message); return }
-    e.currentTarget.reset(); await refreshData()
+    formElement.reset(); await refreshData()
   }
 
   async function toggleShopping(item: ShoppingItem) {

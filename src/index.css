@@ -6,3 +6,5 @@
 @media(max-width:380px){.nav-item{font-size:7px}.stat-card>strong{font-size:19px}.retailer-grid{grid-template-columns:1fr 1fr}}
 
 .recipe-row{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid #f0f0ea}.recipe-row>span{font-size:9px;color:#929b90;white-space:nowrap}
+
+.price-input{width:62px;border:1px solid #e7eae2;background:#fffefa;border-radius:6px;padding:5px 6px;font-size:10px;color:#526653;text-align:right;flex:none}.price-input:focus{outline:2px solid #e8eee5;border-color:#93a78e}

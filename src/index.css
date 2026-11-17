@@ -227,3 +227,5 @@
 @media(max-width:720px){
  .theme-sophia .sidebar{background:linear-gradient(90deg,#e5f2e8,#dcefe2)}
 }
+
+.food-category{margin:18px 0}.food-category h3{display:flex;gap:9px;margin:0 0 8px;font-size:14px;color:var(--ink)}.food-category h3 small{color:var(--muted)}.food-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line)}.food-source{font-size:10px;color:var(--muted);margin-left:auto;text-align:right}.food-row .pantry-name{min-width:0}.stack-form select[multiple]{min-height:190px;padding:8px}.stack-form label small{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:5px}

@@ -1,0 +1,11 @@
+{
+  "name": "BLANKMANN FoodPlanner",
+  "short_name": "BLANKMANN",
+  "description": "Gemeinsam planen, clever einkaufen und weniger wegwerfen.",
+  "lang": "de-DE",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f5f0",
+  "theme_color": "#f6f5f0",
+  "icons": []
+}

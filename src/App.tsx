@@ -334,7 +334,7 @@ function AuthScreen() {
     e.preventDefault(); if(!supabase)return
     const data=new FormData(e.currentTarget); const email=String(data.get('email')); const password=String(data.get('password'))
     setBusy(true);setError('');setMessage('')
-    const result=mode==='login'?await supabase.auth.signInWithPassword({email,password}):await supabase.auth.signUp({email,password,options:{data:{display_name:String(data.get('display_name')||'')}}})
+    const result=mode==='login'?await supabase.auth.signInWithPassword({email,password}):await supabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin,data:{display_name:String(data.get('display_name')||'')}}})
     setBusy(false)
     if(result.error)setError(result.error.message)
     else if(mode==='signup'&&!result.data.session)setMessage('Fast geschafft! Bitte bestätige deine E-Mail-Adresse über den Link in deinem Postfach.')

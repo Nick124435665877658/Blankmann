@@ -134,6 +134,8 @@ export default function App() {
     const channel = supabase.channel('blankmann-household-' + household.id)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shopping_list_items', filter: 'household_id=eq.' + household.id }, () => refreshData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pantry_items', filter: 'household_id=eq.' + household.id }, () => refreshData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_plan_entries', filter: 'household_id=eq.' + household.id }, () => refreshData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes', filter: 'household_id=eq.' + household.id }, () => refreshData())
       .subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [household, refreshData])

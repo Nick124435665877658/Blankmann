@@ -25,3 +25,16 @@ Authentication is email/password. After signing in, create a household; the app 
 
 ## Build
 `npm run build`
+
+## Cloudflare Pages deployment
+Create a Pages project connected to this private GitHub repository and use:
+- Framework preset: Vite
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: `/`
+
+Add these production environment variables in Cloudflare Pages:
+- `VITE_SUPABASE_URL` = `https://rrjsolyytdktfmrykdca.supabase.co`
+- `VITE_SUPABASE_PUBLISHABLE_KEY` = the project's publishable key
+
+Do not add the Supabase service-role or secret key. The app includes SPA fallback routing and a lightweight service worker for its installable PWA shell.

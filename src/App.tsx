@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
-  Apple, BookOpen, CalendarDays, Check, ChevronDown, CircleDollarSign,
+  Apple, BookOpen, CalendarDays, Camera, Check, ChevronDown, CircleDollarSign, ReceiptText, Upload,
   CookingPot, Leaf, ListChecks, LogOut, Plus, Search, Settings2, ShoppingBasket,
   Sparkles, Sprout, Store, Warehouse, X, Smartphone, Tablet,
 } from 'lucide-react'
 import type { Session, User } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
-type Tab = 'overview' | 'planner' | 'shopping' | 'pantry' | 'recipes' | 'prices' | 'settings'
+type Tab = 'overview' | 'planner' | 'shopping' | 'pantry' | 'recipes' | 'prices' | 'receipts' | 'settings'
 type Household = { id: string; name: string }
 type Settings = {
   weekly_budget: number
@@ -22,6 +22,8 @@ type PantryItem = { id: string; name: string; quantity: number | null; unit: str
 type Meal = { id: string; meal_date: string; meal_type: string; custom_title: string | null; servings: number }
 type Recipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; notes: string | null }
 
+type ReceiptUpload = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
+
 const nav: { id: Tab; label: string; icon: typeof CalendarDays }[] = [
   { id: 'overview', label: 'Übersicht', icon: Sprout },
   { id: 'planner', label: 'Wochenplan', icon: CalendarDays },
@@ -29,6 +31,7 @@ const nav: { id: Tab; label: string; icon: typeof CalendarDays }[] = [
   { id: 'pantry', label: 'Vorrat', icon: Warehouse },
   { id: 'recipes', label: 'Rezepte', icon: BookOpen },
   { id: 'prices', label: 'Preise', icon: Store },
+  { id: 'receipts', label: 'Bon scannen', icon: ReceiptText },
 ]
 
 const euro = (n: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
@@ -59,9 +62,11 @@ export default function App() {
   const [pantry, setPantry] = useState<PantryItem[]>([])
   const [meals, setMeals] = useState<Meal[]>([])
   const [recipes, setRecipes] = useState<Recipe[]>([])
+  const [receipts, setReceipts] = useState<ReceiptUpload[]>([])
   const [weekStart, setWeekStart] = useState(mondayISO())
   const [listId, setListId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [receiptBusy, setReceiptBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [deviceMode, setDeviceMode] = useState<'auto' | 'phone' | 'tablet'>(() => {
@@ -112,6 +117,9 @@ export default function App() {
     if (plan.error) throw plan.error
     if (recipeRows.error) throw recipeRows.error
     setRecipes((recipeRows.data ?? []) as Recipe[])
+    const receiptRows = await supabase.from('receipt_uploads').select('id,image_path,retailer_code,purchase_date,status,created_at').eq('household_id', household.id).order('created_at', { ascending: false })
+    if (receiptRows.error) throw receiptRows.error
+    setReceipts((receiptRows.data ?? []) as ReceiptUpload[])
     setShopping((shop.data ?? []) as ShoppingItem[])
     setPantry((stock.data ?? []) as PantryItem[])
     if (plan.data) {
@@ -156,6 +164,24 @@ export default function App() {
   const budget = Number(settings?.weekly_budget ?? 100)
 
   async function signOut() { await supabase?.auth.signOut() }
+
+  async function uploadReceipt(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!supabase || !household || !session?.user) return
+    const form = new FormData(e.currentTarget)
+    const file = form.get('receipt') as File | null
+    if (!file || !file.size) { setError('Bitte fotografiere oder wähle zuerst einen Kassenbon aus.'); return }
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { setError('Bitte nutze ein Foto im JPG-, PNG- oder WebP-Format.'); return }
+    if (file.size > 10 * 1024 * 1024) { setError('Das Foto darf maximal 10 MB groß sein.'); return }
+    setReceiptBusy(true); setError(''); setNotice('')
+    const path = household.id + '/' + crypto.randomUUID() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const uploaded = await supabase.storage.from('receipt-photos').upload(path, file, { contentType: file.type, upsert: false })
+    if (uploaded.error) { setReceiptBusy(false); setError(uploaded.error.message); return }
+    const inserted = await supabase.from('receipt_uploads').insert({ household_id: household.id, image_path: path, retailer_code: String(form.get('retailer') || '') || null, purchase_date: String(form.get('purchase_date') || '') || null, created_by: session.user.id })
+    setReceiptBusy(false)
+    if (inserted.error) { await supabase.storage.from('receipt-photos').remove([path]); setError(inserted.error.message); return }
+    e.currentTarget.reset(); setNotice('Bon sicher hochgeladen. Er wartet jetzt auf die Preiserfassung.'); await refreshData()
+  }
 
   if (!isSupabaseConfigured || !supabase) return <SetupScreen />
   if (!authReady) return <div className="loading-screen"><div className="brand-mark">B.</div><p>BLANKMANN wird vorbereitet …</p></div>
@@ -317,6 +343,7 @@ export default function App() {
         {tab === 'shopping' && <section><div className="page-heading"><div><div className="eyebrow">ZUSAMMEN EINKAUFEN</div><h1>Einkaufsliste</h1><p>Abhaken synchronisiert sich direkt zwischen euren Geräten.</p></div><div className="heading-icon"><ShoppingBasket size={25}/></div></div><div className="shopping-layout"><div className="panel add-panel"><span className="eyebrow">AUF DIE LISTE</span><h2>Was fehlt noch?</h2><form onSubmit={addShoppingItem} className="stack-form"><label>Artikel<input name="name" placeholder="z. B. Paprika" required/></label><div className="form-row"><label>Menge<input name="quantity" type="number" min="0" step="0.1" placeholder="2"/></label><label>Einheit<input name="unit" placeholder="Stück"/></label></div><label>Kategorie<select name="aisle"><option>Obst & Gemüse</option><option>Fleisch & Fisch</option><option>Molkerei</option><option>Trockenware</option><option>Tiefkühl</option><option>Haushalt</option><option>Sonstiges</option></select></label><button className="button button-dark button-full"><Plus size={16}/> Artikel hinzufügen</button></form></div><div className="panel shopping-list-panel"><div className="panel-head"><div><span className="eyebrow">WOCHENEINKAUF</span><h2>{remaining} offen <span className="muted">/ {shopping.length}</span></h2></div><span className="list-counter">{shopping.length ? Math.round((shopping.length-remaining)/shopping.length*100) : 0}%</span></div>{shopping.length ? Object.entries(groupedShopping).map(([group,items])=><div className="shopping-group" key={group}><h3>{group}</h3>{items.map(item=><div className={item.checked?'shopping-item checked':'shopping-item'} key={item.id}><button className="check-circle" onClick={()=>toggleShopping(item)}>{item.checked&&<Check size={13}/>}</button><span>{item.name}</span>{item.quantity && <small>{item.quantity} {item.unit}</small>}<input className="price-input" aria-label={item.name+' tatsächlicher Preis'} type="number" min="0" step="0.01" placeholder="€" defaultValue={item.actual_price??''} onBlur={e=>saveActualPrice(item,e.target.value)}/></div>)}</div>) : <div className="empty-state"><ShoppingBasket size={30}/><b>Deine Liste ist noch leer.</b><span>Füge links den ersten Artikel hinzu.</span></div>}</div></div></section>}
         {tab === 'pantry' && <section><div className="page-heading"><div><div className="eyebrow">WENIGER VERSCHWENDEN</div><h1>Dein Vorrat</h1><p>Was da ist, muss nicht noch einmal gekauft werden.</p></div><div className="heading-icon"><Warehouse size={25}/></div></div><div className="shopping-layout"><div className="panel add-panel"><span className="eyebrow">VORRAT ERGÄNZEN</span><h2>Was habt ihr da?</h2><form className="stack-form" onSubmit={addPantryItem}><label>Zutat<input name="name" placeholder="z. B. Kartoffeln" required/></label><div className="form-row"><label>Menge<input name="quantity" type="number" min="0" step="0.1" placeholder="1"/></label><label>Einheit<input name="unit" placeholder="kg"/></label></div><label>Mindesthaltbar bis<input name="best_before" type="date"/></label><label>Lagerort<select name="storage_location"><option>Vorratsschrank</option><option>Kühlschrank</option><option>Gefrierfach</option><option>Keller</option></select></label><button className="button button-dark button-full"><Plus size={16}/> Zum Vorrat</button></form></div><div className="panel shopping-list-panel"><div className="panel-head"><div><span className="eyebrow">EURE ZUTATEN</span><h2>{pantry.length} Vorratsartikel</h2></div><Search size={19}/></div>{pantry.length?pantry.map(item=><div className="pantry-row" key={item.id}><div className="pantry-icon"><Apple size={18}/></div><div className="pantry-name"><b>{item.name}</b><small>{item.storage_location || 'Vorrat'} {item.best_before?'· MHD '+new Date(item.best_before+'T12:00:00').toLocaleDateString('de-DE'):''}</small></div><span>{item.quantity??''} {item.unit??''}</span></div>):<div className="empty-state"><Warehouse size={30}/><b>Noch ist der Vorrat leer.</b><span>Trage eure Zutaten ein, damit wir sie beim Planen berücksichtigen können.</span></div>}</div></div></section>}
         {tab === 'recipes' && <section><div className="page-heading"><div><div className="eyebrow">EURE REZEPTSAMMLUNG</div><h1>Rezepte</h1><p>Lieblingsgerichte sammeln – Cookidoo-Import kommt als nächster Schritt.</p></div><div className="heading-icon"><BookOpen size={25}/></div></div><div className="shopping-layout"><form className="panel add-panel stack-form" onSubmit={addRecipe}><span className="eyebrow">NEUES REZEPT</span><h2>Gericht speichern</h2><label>Name<input name="title" placeholder="z. B. Hähnchen-Gemüse-Pfanne" required/></label><label>Kurzbeschreibung<input name="description" placeholder="Was macht das Gericht besonders?"/></label><div className="form-row"><label>Portionen<input name="servings" type="number" min="1" defaultValue="2"/></label><label>Vorbereitung (Min.)<input name="prep_minutes" type="number" min="0" placeholder="15"/></label></div><label>Kochzeit (Min.)<input name="cook_minutes" type="number" min="0" placeholder="25"/></label><label>Zutaten – eine pro Zeile<textarea name="ingredients" placeholder={'2 Hähnchenbrustfilets\\n1 Zucchini\\n1 rote Paprika'} rows={5}/></label><button className="button button-dark button-full" disabled={busy}><Plus size={16}/> Rezept speichern</button></form><div className="panel shopping-list-panel"><div className="panel-head"><div><span className="eyebrow">EURE SAMMLUNG</span><h2>{recipes.length} Rezepte</h2></div><BookOpen size={19}/></div>{recipes.length?recipes.map(recipe=><div className="recipe-row" key={recipe.id}><div className="pantry-icon"><CookingPot size={18}/></div><div className="pantry-name"><b>{recipe.title}</b><small>{recipe.description || 'Eigenes Rezept'} · {recipe.servings} Portionen</small></div><span>{[recipe.prep_minutes,recipe.cook_minutes].filter(Boolean).length?[recipe.prep_minutes,recipe.cook_minutes].filter(Boolean).reduce((a,b)=>Number(a)+Number(b),0)+' Min.':'–'}</span></div>):<div className="empty-state"><BookOpen size={30}/><b>Noch keine Rezepte gespeichert.</b><span>Füge links euer erstes Lieblingsgericht hinzu.</span></div>}</div></div><div className="preference-chips">{settings?.histamine_low_enabled&&<span><Leaf size={14}/> Histaminbewusst</span>}{settings?.tomato_free_enabled&&<span>Tomatenfrei</span>}{settings?.cream_free_enabled&&<span>Sahnefrei</span>}{settings?.vegetable_rich_enabled&&<span>Gemüsereich</span>}</div><div className="notice-card"><Sparkles size={18}/><span>Cookidoo-Rezepte können wir im nächsten Ausbauschritt über einen Link oder durch manuelle Übernahme ergänzen.</span></div></section>}
+        {tab === 'receipts' && <section><div className="page-heading"><div><div className="eyebrow">PREISDATENBANK FÜTTERN</div><h1>Kassenbon erfassen</h1><p>Fotografiere deinen Bon direkt hier. Die Aufnahme wird eurem Haushalt zugeordnet.</p></div><div className="heading-icon"><ReceiptText size={25}/></div></div><div className="shopping-layout"><form className="panel add-panel stack-form" onSubmit={uploadReceipt}><span className="eyebrow">NEUER KASSENBON</span><h2>Bon fotografieren</h2><label>Supermarkt<select name="retailer"><option value="aldi_nord">ALDI Nord</option><option value="lidl">Lidl</option><option value="rewe">REWE</option><option value="kaufland">Kaufland</option><option value="edeka">EDEKA</option><option value="other">Anderer Markt</option></select></label><label>Einkaufsdatum<input name="purchase_date" type="date" defaultValue={todayISO()}/></label><label className="receipt-file-label"><Camera size={19}/> Foto aufnehmen oder auswählen<input name="receipt" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required/></label><small>JPG, PNG oder WebP · maximal 10 MB. Das Foto bleibt privat in eurem Haushalt.</small><button className="button button-dark button-full" disabled={receiptBusy}>{receiptBusy?'Bon wird hochgeladen …':<><Upload size={16}/> Bon hochladen</>}</button></form><div className="panel shopping-list-panel"><div className="panel-head"><div><span className="eyebrow">EURE BELEGE</span><h2>{receipts.length} hochgeladen</h2></div><ReceiptText size={19}/></div>{receipts.length ? receipts.map(r=><div className="pantry-row" key={r.id}><div className="pantry-icon"><ReceiptText size={18}/></div><div className="pantry-name"><b>{{aldi_nord:'ALDI Nord',lidl:'Lidl',rewe:'REWE',kaufland:'Kaufland',edeka:'EDEKA',other:'Anderer Markt'}[r.retailer_code || ''] || 'Supermarkt'}</b><small>{r.purchase_date ? new Date(r.purchase_date+'T12:00:00').toLocaleDateString('de-DE') : new Date(r.created_at).toLocaleDateString('de-DE')} · {r.status==='uploaded'?'Wartet auf Auswertung':'Erfasst'}</small></div><span className="badge-muted">Foto</span></div>) : <div className="empty-state"><Camera size={30}/><b>Noch keine Bons gespeichert.</b><span>Der erste Bon legt den Grundstein für eure Preisverläufe.</span></div>}</div></div><div className="notice-card"><Sparkles size={18}/><span>Aktuell speichern wir die Belegfotos sicher und legen sie zur Auswertung ab. Die automatische Texterkennung und Übernahme der einzelnen Artikelpreise ist der nächste technische Schritt – es werden noch keine Preise ungeprüft eingetragen.</span></div></section>}
         {tab === 'prices' && <section><div className="page-heading"><div><div className="eyebrow">CLEVER VERGLEICHEN</div><h1>Supermarktpreise</h1><p>Preisverlauf und Angebotsvergleich für Erfurt.</p></div><div className="heading-icon"><Store size={25}/></div></div><div className="retailer-grid">{[['ALDI Nord','aldi_nord'],['Lidl','lidl'],['REWE','rewe'],['Kaufland','kaufland'],['EDEKA','edeka']].map(([name,code])=><div className="retailer-card" key={code}><div className="retailer-logo">{name.slice(0,1)}</div><b>{name}</b><span>Erfurt · Preisquelle vorbereitet</span><small>Erste Preiserfassung steht noch aus</small></div>)}</div><div className="notice-card"><Store size={19}/><span>Die monatliche Erfassung ist vorbereitet. Preise erscheinen erst, wenn sie mit einer nachvollziehbaren Quelle erfasst und geprüft wurden. ALDI Süd wird nicht als Erfurter Filiale gewertet.</span></div></section>}
         {tab === 'settings' && <section><div className="page-heading"><div><div className="eyebrow">EURE HAUSHALTSREGELN</div><h1>Einstellungen</h1><p>So soll BLANKMANN für euch planen.</p></div><div className="heading-icon"><Settings2 size={25}/></div></div><form className="panel settings-panel" onSubmit={saveSettings}><div className="setting-block"><span className="eyebrow">BUDGET</span><h2>Wöchentliches Einkaufsbudget</h2><label className="budget-input"><span>€</span><input name="weekly_budget" type="number" min="1" step="1" defaultValue={budget}/></label></div><div className="setting-block"><span className="eyebrow">ESSENSVORLIEBEN</span><h2>Was sollen wir berücksichtigen?</h2><Toggle name="histamine_low_enabled" label="Histaminbewusst planen" description="Möglichst histaminarme Zutaten bevorzugen." checked={settings?.histamine_low_enabled??true}/><Toggle name="tomato_free_enabled" label="Tomatenfrei" description="Auch versteckte Tomatenzutaten in Saucen und Fertigprodukten meiden." checked={settings?.tomato_free_enabled??true}/><Toggle name="cream_free_enabled" label="Ohne Sahne" description="Gerichte standardmäßig ohne Sahne planen." checked={settings?.cream_free_enabled??true}/><Toggle name="vegetable_rich_enabled" label="Gemüsereich" description="Gemüse soll einen großen Teil der Mahlzeiten ausmachen." checked={settings?.vegetable_rich_enabled??true}/></div><div className="setting-block"><label>Weitere Hinweise<textarea name="dietary_notes" defaultValue={settings?.dietary_notes??''} placeholder="Weitere Zutaten, die ihr meidet, Vorlieben, Hinweise …"/></label></div><button className="button button-dark">Einstellungen speichern</button></form></section>}
       </div>

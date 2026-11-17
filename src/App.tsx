@@ -168,7 +168,8 @@ export default function App() {
   async function uploadReceipt(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!supabase || !household || !session?.user) return
-    const form = new FormData(e.currentTarget)
+    const formElement = e.currentTarget
+    const form = new FormData(formElement)
     const file = form.get('receipt') as File | null
     if (!file || !file.size) { setError('Bitte fotografiere oder wähle zuerst einen Kassenbon aus.'); return }
     if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { setError('Bitte nutze ein Foto im JPG-, PNG- oder WebP-Format.'); return }
@@ -180,7 +181,7 @@ export default function App() {
     const inserted = await supabase.from('receipt_uploads').insert({ household_id: household.id, image_path: path, retailer_code: String(form.get('retailer') || '') || null, purchase_date: String(form.get('purchase_date') || '') || null, created_by: session.user.id })
     setReceiptBusy(false)
     if (inserted.error) { await supabase.storage.from('receipt-photos').remove([path]); setError(inserted.error.message); return }
-    e.currentTarget.reset(); setNotice('Bon sicher hochgeladen. Er wartet jetzt auf die Preiserfassung.'); await refreshData()
+    formElement.reset(); setNotice('Bon sicher hochgeladen. Er wartet jetzt auf die Preiserfassung.'); await refreshData()
   }
 
   if (!isSupabaseConfigured || !supabase) return <SetupScreen />

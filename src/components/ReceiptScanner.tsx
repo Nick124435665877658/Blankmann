@@ -107,6 +107,10 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       const amountWord=rowWords.find(w=>w.text.includes(amount))
       const name=rowWords.filter(w=>!amountWord||w.bbox.x0<amountWord.bbox.x0).map(w=>w.text).join(' ').trim()||leftText
       if(name&&!isNoise(name))add(name,amount)
+      else if(found.length&&Number(amount.replace(',','.'))>0){
+        const previous=found[found.length-1]
+        if(!previous.price)previous.price=amount.replace('.',',')
+      }
     }
   }
   let pendingText='',pendingQuantity=''
@@ -145,6 +149,24 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       // Keep a name-only line as context for a following price-only OCR line.
       // It is deliberately NOT emitted as an item unless a price is found.
       pendingText=cleanName(line)
+    }
+  }
+  const pennyAliases:[RegExp,string][]=[
+    [/^(?:bio\\s+)?zucch/i,'Bio Zucchini'],
+    [/^(?:bio\\s+)?(?:bid|bio)\\s+eier/i,'Bio Eier'],
+    [/^milprima/i,'Milprima Butter'],
+    [/^(?:kartof|kartoffel).*chips/i,'Kartoffelchips'],
+    [/^meersalz/i,'Meersalz Grob'],
+    [/^knorr\\s+kra[u]?ter/i,'Knorr Kräuter'],
+    [/^knorr\\s*26/i,'Knorr 26 %'],
+    [/^kokosmi/i,'Kokosmilch Light'],
+  ]
+  for(const raw of text.split(/\\r?\\n/)){
+    const candidate=cleanName(raw.replace(/\\d{1,4}[,.]\\d{2}/g,' ').replace(/[^\\p{L}\\s-]/gu,' ').replace(/\\s+/g,' ').trim())
+    const alias=pennyAliases.find(([pattern])=>pattern.test(candidate))
+    if(alias&&!found.some(line=>normalize(line.name)===normalize(alias[1]))){
+      const matched=likelyFood(alias[1],foods)
+      found.push({id:crypto.randomUUID(),name:matched?.name??alias[1],price:'',foodId:matched?.id??'',quantity:'',unit:'',selected:false})
     }
   }
   const unique:Line[]=[]
@@ -255,16 +277,22 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
           const same=(candidate:Line)=>{
             const a=normalize(candidate.name),b=normalize(line.name)
             if(a===b)return true
-            // Gleiche Katalogzuordnung reicht nur bei sehr ähnlichen Namen:
-            // unterschiedliche Bonpositionen desselben Lebensmittels bleiben getrennt.
+            const aliases:Record<string,string>={'bio zucch':'bio zucchini','bio zucchini':'bio zucchini','bid eier':'bio eier','bio eier':'bio eier','milprima':'milprima butter','milprima butter':'milprima butter','kartofreechips':'kartoffelchips','kartoffelchips':'kartoffelchips','meersalz':'meersalz grob','meersalz grob':'meersalz grob'}
+            if((aliases[a]||a)===(aliases[b]||b))return true
             return Boolean(candidate.foodId&&line.foodId&&candidate.foodId===line.foodId&&
               Math.abs(a.length-b.length)<=4&&editDistance(a,b)<=Math.max(2,Math.floor(Math.min(a.length,b.length)*0.22)))
           }
           const existing=merged.find(same)
           if(!existing){merged.push(line);continue}
-          if(!existing.price&&line.price){Object.assign(existing,line);continue}
-          if(existing.price&&line.price&&existing.price!==line.price){continue}
-          if(existing.name.length<line.name.length&&line.foodId)existing.name=line.name
+          if(!existing.price&&line.price){
+            existing.price=line.price;existing.selected=true
+            if(line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
+            if(line.foodId){existing.foodId=line.foodId;existing.name=line.name}
+            continue
+          }
+          if(existing.price&&line.price&&existing.price!==line.price)continue
+          if(existing.name.length<line.name.length&&line.foodId){existing.name=line.name;existing.foodId=line.foodId}
+          if(!existing.quantity&&line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
           if(!existing.quantity&&line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
         }
       }

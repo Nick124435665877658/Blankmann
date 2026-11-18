@@ -89,7 +89,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       if(downloaded.error)throw downloaded.error
       setProgress('Texterkennung wird geladen …')
       const api=await loadTesseract()
-      worker=await api.createWorker('deu+eng',1,{logger:(m:Record<string,unknown>)=>{if(typeof m.progress==='number')setProgress('Bon wird gelesen: '+Math.round(Number(m.progress)*100)+' %')}})
+      worker=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Bon wird gelesen: '+Math.round(Number(m.progress)*100)+' %')}})
       const result=await worker.recognize(downloaded.data)
       const parsed=parseReceipt(result.data.text,foods)
       if(!parsed.length)throw new Error('Ich konnte keine sicheren Artikelpreise erkennen. Bitte fotografiere den Bon möglichst gerade, vollständig und scharf.')

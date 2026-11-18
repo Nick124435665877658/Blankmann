@@ -441,3 +441,19 @@
 /* Mobile build/version metadata: keep both labels readable on narrow screens. */
 @media(max-width:720px){.mobile-brand-copy{display:grid;grid-template-columns:max-content;gap:2px;align-content:center;overflow:visible}.mobile-brand-copy small{display:block;font-size:7px;line-height:1.25;letter-spacing:.35px;white-space:nowrap;overflow:visible}}
 @media(max-width:390px){.mobile-brand-copy small{font-size:6.5px;letter-spacing:.1px}}
+
+
+/* Sophia palette – full responsive override (desktop and phone). */
+.theme-sophia{background:#fce8ef!important;color:#c00020!important;--ink:#b0001d;--muted:#a84d5d;--paper:#fffafb;--line:#f0c8d2;--sage:#e4f3e9;--green:#26734e;--green-dark:#174b34}
+.theme-sophia body,.theme-sophia .app-shell,.theme-sophia .main-content,.theme-sophia .page-wrap{background:#fce8ef!important}
+.theme-sophia .topbar{background:#fce8efed!important;border-color:#edc0cc!important}
+.theme-sophia .sidebar{background:#e8f5ec!important;border-color:#cde6d5!important}
+.theme-sophia .panel,.theme-sophia .stat-card,.theme-sophia .retailer-card,.theme-sophia .notice-card,.theme-sophia .auth-card{background:#fffafb!important;border-color:#efc8d2!important}
+.theme-sophia .page-heading h1,.theme-sophia .page-heading p,.theme-sophia .eyebrow,.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .settings-panel h2,.theme-sophia .nav-item,.theme-sophia .stack-form label,.theme-sophia .form-panel label,.theme-sophia .settings-panel label,.theme-sophia .pantry-name b,.theme-sophia .pantry-name small,.theme-sophia .receipt-review,.theme-sophia .receipt-save-row>b,.theme-sophia .footer,.theme-sophia .muted{color:#c00020!important}
+.theme-sophia .panel p,.theme-sophia .panel small,.theme-sophia .stat-top,.theme-sophia .stat-card>small,.theme-sophia .breadcrumb{color:#b34b60!important}
+.theme-sophia input,.theme-sophia select,.theme-sophia textarea,.theme-sophia .receipt-line-edit>input,.theme-sophia .receipt-line-edit>select,.theme-sophia .receipt-line-edit .form-row input{background:#fff!important;color:#b0001d!important;border-color:#efc4cf!important}
+.theme-sophia .button-dark{background:#c00020!important;color:#fff!important}
+.theme-sophia .button-light,.theme-sophia .round-icon,.theme-sophia .icon-button{background:#dff1e5!important;border-color:#c3e3ce!important;color:#b0001d!important}
+.theme-sophia .nav-item.active{background:#d8f0e2!important;color:#b0001d!important}
+.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .tip-icon,.theme-sophia .feature-icon,.theme-sophia .avatar{background:#d9f0e2!important;color:#4f9c75!important}
+.theme-sophia .nav-item svg,.theme-sophia .heading-icon svg,.theme-sophia .panel svg,.theme-sophia .page-heading svg{color:#65a982!important;stroke:#65a982}

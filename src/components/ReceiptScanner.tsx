@@ -11,7 +11,7 @@ declare global {
 }
 
 const retailers: Record<string,string> = { aldi_nord:'ALDI Nord', lidl:'Lidl', rewe:'REWE', kaufland:'Kaufland', edeka:'EDEKA', penny:'Penny', other:'Anderer Markt' }
-const normalize = (value: string) => value.toLocaleLowerCase('de-DE').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()
+const normalize = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()
 const euro = (value: number) => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(value)
 const categories: [string, RegExp][] = [
   ['Fleisch & Fisch',/huhn|haehnchen|pute|rind|schwein|hack|lachs|fisch|wurst|schinken/],
@@ -27,20 +27,28 @@ function guessCategory(name:string) { const n=normalize(name); return categories
 type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
 function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   const found:Line[]=[]
+  const pendingNames:string[]=[]
+  const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|wechselgeld|betrag|zu zahlen|summe eur)\b/i.test(normalize(value))
   const add=(rawName:string, rawPrice:string, rawQuantity='', rawUnit='')=>{
-    let name=rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/[|_]+/g,' ').replace(/\s+/g,' ').trim()
-    name=name.replace(/\s+(?:[A-Z*])$/,'').trim()
-    if(name.length<3 || /^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand)\b/i.test(name)) return
-    const price=Number(rawPrice.replace(',','.'))
-    if(!Number.isFinite(price)||price<=0||price>500) return
+    let name=rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/[|_]+/g,' ').replace(/\s+/g,' ').replace(/\s+\*$/,'').trim()
+    if(name.length<3 || isNoise(name)) return
+    const price=rawPrice?Number(rawPrice.replace(',','.')):NaN
+    if(rawPrice&&(!Number.isFinite(price)||price<=0||price>500)) return
     const norm=normalize(name)
-    const exact=foods.find(f=>f.normalized_name===norm || normalize(f.name)===norm)
-    const likely=exact ?? foods.find(f=>norm.length>5 && (norm.includes(normalize(f.name))||normalize(f.name).includes(norm)))
+    const exact=foods.find(f=>normalize(f.normalized_name)===norm || normalize(f.name)===norm)
+    const likely=exact ?? foods.find(f=>{
+      const foodName=normalize(f.name),tokens=norm.split(' ').filter(t=>t.length>3)
+      return foodName.length>4&&(norm.includes(foodName)||foodName.includes(norm)||tokens.filter(t=>foodName.split(' ').includes(t)).length>=2)
+    })
     const pack=name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
-    found.push({id:crypto.randomUUID(),name,price:price.toFixed(2).replace('.',','),foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:true})
+    found.push({id:crypto.randomUUID(),name,price:Number.isFinite(price)?price.toFixed(2).replace('.',','):'',foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:Number.isFinite(price)})
   }
-  // Prefer word coordinates: supermarket receipts put the product name on the left
-  // and the amount in a separate right-hand column.
+  const remember=(candidate:string)=>{
+    const clean=candidate.replace(/\s+/g,' ').replace(/^[|:;.\-]+|[|:;.\-]+$/g,'').trim()
+    if(clean.length>=3&&!isNoise(clean)&&/[a-zäöüß]/i.test(clean)&&!/\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/.test(clean))pendingNames.push(clean)
+  }
+  // First pass: group OCR words by their vertical position. Product names and
+  // amounts may be on adjacent rows, so keep a name until its price appears.
   if(words.length){
     const sorted=[...words].filter(w=>w.text.trim()).sort((a,b)=>((a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1))||a.bbox.x0-b.bbox.x0)
     const rows:{y:number;words:OCRWord[]}[]=[]
@@ -52,50 +60,63 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       row.y=row.words.reduce((s,w)=>s+(w.bbox.y0+w.bbox.y1)/2,0)/row.words.length
     }
     rows.sort((a,b)=>a.y-b.y)
-    for(let i=0;i<rows.length;i++){
-      const row=rows[i], rowWords=row.words.sort((a,b)=>a.bbox.x0-b.bbox.x0)
+    for(const row of rows){
+      const rowWords=row.words.sort((a,b)=>a.bbox.x0-b.bbox.x0)
       const rowText=rowWords.map(w=>w.text).join(' ').replace(/\s+/g,' ').trim()
       const priceMatch=[...rowText.matchAll(/(-?\d{1,4}[,.]\d{2})/g)].pop()
-      if(!priceMatch) continue
-      const amount=priceMatch[1]
-      const amountIndex=rowText.lastIndexOf(amount)
+      if(!priceMatch){remember(rowText);continue}
+      const amount=priceMatch[1],amountIndex=rowText.lastIndexOf(amount)
       const leftText=rowText.slice(0,amountIndex).trim()
-      if(/^\d+\s*stk?\s*[x×]/i.test(leftText) || /^\d+\s*[x×]/i.test(leftText)) {
-        const previous=found[found.length-1]
-        const qty=leftText.match(/(\d+)\s*(stk|stück)?\s*[x×]/i)
+      if(/^\d+\s*(?:stk|stück)?\s*[x×]/i.test(leftText)){
+        const previous=found[found.length-1],qty=leftText.match(/(\d+)\s*(?:stk|stück)?\s*[x×]/i)
         if(previous&&qty){previous.quantity=qty[1];previous.unit='stk'}
         continue
       }
-      if(Number(amount.replace(',','.'))<0 || /rabatt|\d+%/i.test(leftText)){
-        const previous=found[found.length-1]
-        if(previous && (normalize(leftText).includes(normalize(previous.name).split(' ')[0]) || /rabatt|\d+%/i.test(leftText))){
-          const discounted=Number(previous.price.replace(',','.'))+Number(amount.replace(',','.'))
-          if(discounted>0) previous.price=discounted.toFixed(2).replace('.',',')
-        }
-        continue
-      }
-      const nameWords=rowWords.filter(w=>w.bbox.x0 < (rowWords.find(w=>w.text.includes(amount))?.bbox.x0 ?? Infinity))
-      const name=nameWords.map(w=>w.text).join(' ').trim() || leftText
-      if(name && !/^(summe|gesamt|gegeben|mwst|pfand|ec-cash)/i.test(name)) add(name,amount)
+      if(Number(amount.replace(',','.'))<0||/rabatt|\d+%/i.test(leftText))continue
+      const amountWord=rowWords.find(w=>w.text.includes(amount))
+      const name=rowWords.filter(w=>!amountWord||w.bbox.x0<amountWord.bbox.x0).map(w=>w.text).join(' ').trim()||leftText
+      if(name&&!isNoise(name))add(name,amount)
+      else if(pendingNames.length)add(pendingNames.pop()!,amount)
     }
   }
-  // Text fallback catches OCR engines/layouts that do not provide useful coordinates.
-  {
-    for(const raw of text.split(/\r?\n/)){
-      const line=raw.replace(/\s+/g,' ').trim()
-      const match=line.match(/(.+?)\s+(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
-      if(!match || /pfand|summe|gesamt|mwst|rabatt|kartenzahlung/i.test(match[1])) continue
-      const name=match[1].replace(/^\d+\s*[xX×]\s*/,'').trim()
-      const qty=name.match(/(\d+)\s*(stk|stück)?\s*[x×]/i)
+  // Second pass: text layout fallback. Also associates a price-only line with
+  // the previous plausible product name instead of silently dropping it.
+  let pendingText=''
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.replace(/\s+/g,' ').trim()
+    if(!line)continue
+    const match=line.match(/(.+?)\s+(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
+    if(match){
+      let name=match[1].trim()
+      const qty=name.match(/(\d+)\s*(?:stk|stück)?\s*[x×]/i)
       if(qty){const previous=found[found.length-1];if(previous){previous.quantity=qty[1];previous.unit='stk'};continue}
-      if(Number(match[2].replace(',','.'))<0) continue
-      const norm=normalize(name)
-      if(found.some(l=>normalize(l.name)===norm && l.price===match[2].replace('.',','))) continue
-      add(name,match[2])
+      if(Number(match[2].replace(',','.'))<0||/rabatt|pfand|summe|gesamt|mwst|kartenzahlung/i.test(name))continue
+      if(!name||/^[\s|:;.-]*$/.test(name))name=pendingText
+      if(name&&!isNoise(name))add(name,match[2])
+      pendingText=''
+      continue
     }
+    const priceOnly=line.match(/^[-|:; ]*(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
+    if(priceOnly&&pendingText){
+      if(Number(priceOnly[1].replace(',','.'))>0)add(pendingText,priceOnly[1])
+      pendingText=''
+      continue
+    }
+    if(!isNoise(line)&&/[a-zäöüß]/i.test(line))pendingText=line
   }
-  // Remove duplicate detections from overlapping OCR rows/passes.
-  return found.filter((line,index,all)=>all.findIndex(other=>normalize(other.name)===normalize(line.name)&&other.price===line.price)===index)
+  if(pendingText)remember(pendingText)
+  // Keep unresolved product-like rows visible for manual correction. Never
+  // silently discard a possible item just because OCR missed its price.
+  for(const name of pendingNames) add(name,'')
+  const unique:Line[]=[]
+  for(const line of found){
+    const key=normalize(line.name)
+    const existing=unique.findIndex(other=>normalize(other.name)===key)
+    if(existing<0)unique.push(line)
+    else if(!unique[existing].price&&line.price)unique[existing]=line
+    else if(unique[existing].price&&line.price&&unique[existing].price!==line.price)unique.push(line)
+  }
+  return unique
 }
 async function prepareReceiptImages(file:Blob):Promise<{label:string;blob:Blob}[]>{
   const bitmap=await createImageBitmap(file)
@@ -241,18 +262,20 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     setBusy(true);setError('');setNotice('');setProgress('Artikel und Preise werden gespeichert …')
     try{
       let added=0
+      const foodIdByName=new Map(foods.map(food=>[normalize(food.name),food.id]))
       for(const line of lines.filter(l=>l.selected)){
         const price=Number(line.price.replace(',','.'))
         if(!line.name.trim()||!Number.isFinite(price)||price<=0)continue
         let foodId=line.foodId
         if(!foodId){
           const norm=normalize(line.name)
-          const existing=foods.find(f=>normalize(f.name)===norm)
-          if(existing)foodId=existing.id
+          const existingId=foodIdByName.get(norm)
+          if(existingId)foodId=existingId
           else{
             const created=await supabase.from('household_foods').insert({household_id:householdId,name:line.name.trim(),normalized_name:norm,category:guessCategory(line.name),default_unit:line.unit||null,notes:'Automatisch aus Kassenbon ergänzt',source_name:'receipt',created_by:userId}).select('id').single()
             if(created.error)throw created.error
             foodId=created.data.id
+            foodIdByName.set(norm,foodId)
             setFoods(current=>[...current,{id:foodId,name:line.name.trim(),normalized_name:norm,category:guessCategory(line.name),default_unit:line.unit||null}])
           }
         }
@@ -295,10 +318,10 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     {error&&<div className="alert error" role="alert">{error}</div>}
     {notice&&<div className="alert success"><Check size={16}/>{notice}</div>}
     {activeReceipt&&lines.length>0&&<div className="panel receipt-review">
-      <div className="panel-head"><div><span className="eyebrow">OCR-ERGEBNIS PRÜFEN</span><h2>{lines.length} erkannte Bonpositionen</h2><small>Bitte Namen, Preis und Zuordnung kurz kontrollieren. Nicht markierte Zeilen werden ausgelassen.</small></div><Sparkles size={20}/></div>
+      <div className="panel-head"><div><span className="eyebrow">OCR-ERGEBNIS PRÜFEN</span><h2>{lines.filter(l=>Number(l.price.replace(',','.'))>0).length} Positionen mit Preis · {lines.filter(l=>!Number(l.price.replace(',','.'))).length} zur Prüfung</h2><small>Auch Zeilen ohne erkannten Preis bleiben sichtbar. Ergänze fehlende Preise und prüfe die Zuordnung, bevor du speicherst.</small></div><Sparkles size={20}/></div>
       {lines.map(line=><div className="receipt-line-edit" key={line.id}>
         <input aria-label="Artikelname" value={line.name} onChange={e=>updateLine(line.id,{name:e.target.value})}/>
-        <input aria-label="Preis in Euro" inputMode="decimal" value={line.price} onChange={e=>updateLine(line.id,{price:e.target.value})}/>
+        <input aria-label="Preis in Euro" placeholder="Preis €" inputMode="decimal" value={line.price} onChange={e=>updateLine(line.id,{price:e.target.value})}/>
         <select aria-label="Nahrungsmittel zuordnen" value={line.foodId} onChange={e=>updateLine(line.id,{foodId:e.target.value})}><option value="">+ Neu anlegen: {line.name}</option>{foods.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
         <div className="form-row"><input aria-label="Packungsmenge" placeholder="Menge" value={line.quantity} onChange={e=>updateLine(line.id,{quantity:e.target.value})}/><input aria-label="Einheit" placeholder="g, kg, ml …" value={line.unit} onChange={e=>updateLine(line.id,{unit:e.target.value})}/></div>
         <label className="receipt-include"><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label>
@@ -307,6 +330,6 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     </div>}
     {activeReceipt&&receiptPreview&&<div className="panel receipt-image-check"><div className="panel-head"><div><span className="eyebrow">QUELLBILD</span><h2>Bonfoto zur Kontrolle</h2><small>So sieht die Texterkennung die gespeicherte Datei.</small></div></div><img src={receiptPreview} alt="Hochgeladenes Kassenbonfoto"/></div>}
     {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><small>{ocrMethod}</small><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
-    <div className="notice-card"><Sparkles size={18}/><span>Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert.</span></div>
+    <div className="notice-card"><Sparkles size={18}/><span>Unsichere oder unvollständige Zeilen bleiben zur manuellen Prüfung sichtbar. Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert.</span></div>
   </section>
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -97,7 +97,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}
   }
-  async function uploadAndAnalyse(e:React.FormEvent<HTMLFormElement>){
+  async function uploadAndAnalyse(e:FormEvent<HTMLFormElement>){
     e.preventDefault();if(!supabase)return
     const form=new FormData(e.currentTarget);const file=form.get('receipt')
     if(!(file instanceof File)||!file.size){setError('Bitte zuerst ein Bonfoto auswählen.');return}
@@ -139,7 +139,11 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
         const unit=line.unit||null
         let unitPrice:number|null=null;let unitLabel:string|null=null
         if(quantity&&unit){const factor=unit==='kg'||unit==='l'?1:unit==='g'||unit==='ml'?0.001:null;if(factor){unitPrice=price/(quantity*factor);unitLabel=unit==='kg'||unit==='g'?'€/kg':'€/l'}}
-        const inserted=await supabase.from('household_food_prices').insert({household_id:householdId,food_item_id:foodId,retailer_code:activeReceipt.retailer_code||retailer,price_eur:price,package_quantity:quantity,package_unit:unit,unit_price_eur:unitPrice,unit_label:unitLabel,price_type:'regular',source_name:'Kassenbon '+(retailers[activeReceipt.retailer_code||retailer]||'Supermarkt'),observed_at:activeReceipt.purchase_date||purchaseDate,notes:'receipt:'+activeReceipt.id})
+        const receiptNote='receipt:'+activeReceipt.id
+        const duplicate=await supabase.from('household_food_prices').select('id').eq('household_id',householdId).eq('food_item_id',foodId).eq('notes',receiptNote).limit(1).maybeSingle()
+        if(duplicate.error)throw duplicate.error
+        if(duplicate.data)continue
+        const inserted=await supabase.from('household_food_prices').insert({household_id:householdId,food_item_id:foodId,retailer_code:activeReceipt.retailer_code||retailer,price_eur:price,package_quantity:quantity,package_unit:unit,unit_price_eur:unitPrice,unit_label:unitLabel,price_type:'regular',source_name:'Kassenbon '+(retailers[activeReceipt.retailer_code||retailer]||'Supermarkt'),observed_at:activeReceipt.purchase_date||purchaseDate,notes:receiptNote})
         if(inserted.error)throw inserted.error
         added++
       }

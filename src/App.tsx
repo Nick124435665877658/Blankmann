@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
-  Apple, BookOpen, CalendarDays, Camera, Check, ChevronDown, CircleDollarSign, ReceiptText, Upload, Edit3, Trash2,
+  Apple, BookOpen, CalendarDays, Check, ChevronDown, CircleDollarSign, ReceiptText, Edit3, Trash2,
   CookingPot, Leaf, ListChecks, LogOut, Plus, Search, Settings2, ShoppingBasket,
   Sparkles, Sprout, Store, Warehouse, X, Smartphone, Tablet,
 } from 'lucide-react'

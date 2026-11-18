@@ -86,6 +86,8 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     if(!line)continue
     const quantityOnly=line.match(/^(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
     if(quantityOnly){pendingQuantity=quantityOnly[1].replace('.',',');continue}
+    const namedQuantity=line.match(/^(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
+    if(namedQuantity){pendingText=cleanName(namedQuantity[1]);pendingQuantity=namedQuantity[2].replace('.',',');continue}
     const match=line.match(/(.+?)\s+(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
     if(match){
       let name=match[1].trim()

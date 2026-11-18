@@ -252,7 +252,7 @@ function paddleResultToOCR(result: PaddleOCRResult): { text: string; words: OCRW
       },
     }
   }).filter(word => word.text.trim() && word.bbox.x1 >= word.bbox.x0 && word.bbox.y1 >= word.bbox.y0)
-  return { text: words.map(word => word.text).join('\\n'), words }
+  return { text: words.map(word => word.text).join('\n'), words }
 }
 
 async function loadTesseract() {

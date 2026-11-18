@@ -627,3 +627,29 @@
 .theme-sophia .feature-card,
 .theme-sophia .stat-card,
 .theme-sophia .panel { box-shadow: none !important; }
+
+/* Letzte Farbabsicherung für alle Sophia-Unterelemente und Zustände */
+.theme-sophia * { color: #C00020 !important; }
+.theme-sophia .button-dark,
+.theme-sophia .button-dark *,
+.theme-sophia .button-dark:hover,
+.theme-sophia .button-dark:hover * { color: #FFFFFF !important; }
+.theme-sophia svg,
+.theme-sophia svg * { stroke: #C00020 !important; }
+.theme-sophia .button-dark svg,
+.theme-sophia .button-dark svg * { stroke: #FFFFFF !important; }
+.theme-sophia .check-circle,
+.theme-sophia .check-circle:hover,
+.theme-sophia .shopping-item.checked .check-circle,
+.theme-sophia .toggle-switch,
+.theme-sophia .toggle-row input:checked + .toggle-switch,
+.theme-sophia .theme-choice.selected,
+.theme-sophia .device-choice.selected,
+.theme-sophia .list-counter,
+.theme-sophia .empty-illustration {
+  background: #F8DCE6 !important;
+  border-color: #EFBBC9 !important;
+  color: #C00020 !important;
+}
+.theme-sophia .toggle-switch:after { background: #FFFFFF !important; }
+.theme-sophia .shopping-item.checked .check-circle { background: #C00020 !important; color: #FFFFFF !important; }

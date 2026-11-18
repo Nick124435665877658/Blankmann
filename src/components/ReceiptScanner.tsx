@@ -13,6 +13,8 @@ declare global {
 const retailers: Record<string,string> = { aldi_nord:'ALDI Nord', lidl:'Lidl', rewe:'REWE', kaufland:'Kaufland', edeka:'EDEKA', penny:'Penny', other:'Anderer Markt' }
 const normalize = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9-]+/g,' ').replace(/\s+/g,' ').trim()
 const euro = (value: number) => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(value)
+function editDistance(a:string,b:string){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const current=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=current}}return row[b.length]}
+function likelyFood(name:string,foods:Food[]){const n=normalize(name);const exact=foods.find(f=>normalize(f.name)===n||normalize(f.normalized_name)===n);if(exact)return exact;return foods.find(f=>{const target=normalize(f.name);if(!target||Math.abs(target.length-n.length)>2)return false;return editDistance(n,target)<=Math.max(1,Math.floor(Math.min(n.length,target.length)*0.16))})}
 const categories: [string, RegExp][] = [
   ['Fleisch & Fisch',/huhn|haehnchen|pute|rind|schwein|hack|lachs|fisch|wurst|schinken/],
   ['Milchprodukte & Eier',/milch|joghurt|quark|kaese|butter|ei(er)?|skyr/],
@@ -41,7 +43,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     const price=rawPrice?Number(rawPrice.replace(',','.')):NaN
     if(rawPrice&&(!Number.isFinite(price)||price<=0||price>500)) return
     const norm=normalize(name)
-    const exact=foods.find(f=>normalize(f.normalized_name)===norm || normalize(f.name)===norm)
+    const exact=likelyFood(name,foods)
     const likely=exact ?? foods.find(f=>{
       const foodName=normalize(f.name),tokens=norm.split(' ').filter(t=>t.length>3)
       return foodName.length>4&&(norm.includes(foodName)||foodName.includes(norm)||tokens.filter(t=>foodName.split(' ').includes(t)).length>=2)
@@ -112,8 +114,17 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       pendingText='';pendingQuantity=''
       continue
     }
-    if(!isNoise(line)&&/[\p{L}]/u.test(line))pendingText=cleanName(line)
+    if(!isNoise(line)&&/[\\p{L}]/u.test(line)){
+      const candidate=cleanName(line),known=likelyFood(candidate,foods)
+      if(known&&!found.some(item=>normalize(item.name)===normalize(known.name)))found.push({id:crypto.randomUUID(),name:known.name,price:'',foodId:known.id,quantity:'',unit:'',selected:false})
+      pendingText=candidate
+    }
   }
+  const rawNormalized=normalize(text)
+  const knownEier=foods.find(f=>/^(eier|ei)$/.test(normalize(f.name)))
+  const knownZucchini=foods.find(f=>/^zucchin/.test(normalize(f.name)))
+  if(knownEier&&/eier|e1er/.test(rawNormalized)&&!found.some(item=>/eier/.test(normalize(item.name))))found.push({id:crypto.randomUUID(),name:knownEier.name,price:'',foodId:knownEier.id,quantity:'',unit:'',selected:false})
+  if(knownZucchini&&/zucchin[i1l]?|zuchini|zucch1ni/.test(rawNormalized)&&!found.some(item=>/zucchin/.test(normalize(item.name))))found.push({id:crypto.randomUUID(),name:knownZucchini.name,price:'',foodId:knownZucchini.id,quantity:'',unit:'',selected:false})
   const unique:Line[]=[]
   for(const line of found){
     const key=normalize(line.name),existing=unique.findIndex(other=>normalize(other.name)===key)
@@ -143,7 +154,7 @@ async function prepareReceiptImages(file:Blob):Promise<{label:string;blob:Blob}[
   for(let p=0,i=0;p<gray.length;p++,i+=4){const contrast=Math.max(0,Math.min(255,(gray[p]-128)*1.5+128));enhanced.data[i]=enhanced.data[i+1]=enhanced.data[i+2]=contrast;enhanced.data[i+3]=255;const bw=gray[p]>threshold?255:0;binary.data[i]=binary.data[i+1]=binary.data[i+2]=bw;binary.data[i+3]=255}
   const toBlob=(data:ImageData)=>new Promise<Blob>((resolve,reject)=>{ctx.putImageData(data,0,0);canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Bild konnte nicht vorbereitet werden.')),'image/png')})
   const enhancedBlob=await toBlob(enhanced),binaryBlob=await toBlob(binary)
-  return [{label:'Kontrast',blob:enhancedBlob},{label:'Schwarz-Weiß',blob:binaryBlob}]
+  return [{label:'Original',blob:file},{label:'Kontrast',blob:enhancedBlob},{label:'Schwarz-Weiß',blob:binaryBlob}]
 }
 function scoreOCR(text:string,words:OCRWord[]=[]){
   const confidence=words.length?words.reduce((sum,w)=>sum+(w.confidence??0),0)/words.length:0
@@ -204,19 +215,14 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       setReceiptPreview(URL.createObjectURL(downloaded.data))
       const variants=await prepareReceiptImages(downloaded.data)
       let best:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number}|null=null
-      for(const variant of variants){
-        setProgress('Bon wird gelesen ('+variant.label+') …')
-        if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'})
+      const attempts:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number}[]=[]
+      for(const variant of variants)for(const mode of ['6','11']){
+        setProgress('Bon wird gelesen ('+variant.label+', Modus '+mode+') …')
+        if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:'1'})
         const result=await worker.recognize(variant.blob)
-        const score=scoreOCR(result.data.text,result.data.words||[])
-        if(!best||score>best.score)best={data:result.data,label:variant.label,score}
+        attempts.push({data:result.data,label:variant.label+' · PSM '+mode,score:scoreOCR(result.data.text,result.data.words||[])})
       }
-      if(best&&best.score<28&&worker.setParameters){
-        await worker.setParameters({tessedit_pageseg_mode:'11',preserve_interword_spaces:'1'})
-        const alternate=await worker.recognize(variants[0].blob)
-        const score=scoreOCR(alternate.data.text,alternate.data.words||[])
-        if(score>best.score)best={data:alternate.data,label:'Kontrast · freie Seitensegmentierung',score}
-      }
+      best=attempts.sort((a,b)=>b.score-a.score)[0]??null
       if(!best)throw new Error('Texterkennung lieferte kein Ergebnis.')
       setOcrText(best.data.text);setOcrMethod(best.label+' · Qualitätswert '+Math.round(best.score))
       const parsed=parseReceipt(best.data.text,foods,best.data.words||[])

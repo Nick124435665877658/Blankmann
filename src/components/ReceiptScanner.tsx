@@ -34,6 +34,14 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     let name=raw.replace(/[|_]+/g,' ').replace(/[“”„"'´]/g,' ').replace(/[^\p{L}\p{N}\s-]/gu,' ').replace(/\s+/g,' ').trim()
     name=name.replace(/\bkokosmi\s+lc\s+dad\s+ight(?:\s+.*)?$/i,'Kokosmilch Light')
     name=name.replace(/\bkokosmilch\s+d[a4]d?\s*l?i[gq]ht\b/i,'Kokosmilch Light')
+    // Penny-/OCR-spezifische Korrekturen: nur eindeutige Artikelstämme normalisieren.
+    if(/^bio\s+zucch/i.test(name)) name='Bio Zucchini'
+    else if(/^bio\s+eier/i.test(name)||/^bid\s+eier/i.test(name)) name='Bio Eier'
+    else if(/^milprima/i.test(name)) name='Milprima Butter'
+    else if(/^kartof+el?f?ree?chips/i.test(name)||/^kartoffel.*chips/i.test(name)) name='Kartoffelchips'
+    else if(/^knorr\s+kraeu?ter/i.test(normalize(name))) name='Knorr Kräuter'
+    else if(/^knorr\s*26/i.test(name)) name='Knorr 26 %'
+    else if(/^meersalz/i.test(name)) name='Meersalz Grob'
     return name
   }
   const add=(rawName:string, rawPrice:string, rawQuantity='', rawUnit='')=>{
@@ -77,8 +85,13 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
         const candidate=cleanName(rowText)
         const letters=(candidate.match(/[\p{L}]/gu)||[]).length
         const confidence=rowWords.reduce((sum,w)=>sum+(w.confidence??0),0)/Math.max(1,rowWords.length)
-        if(confidence>=35&&candidate.length>=3&&letters>=3&&letters/Math.max(1,candidate.length)>=0.45&&!isNoise(candidate)){
-          const matched=likelyFood(candidate,foods)
+        const matched=likelyFood(candidate,foods)
+        const wordsCount=candidate.split(/\s+/).filter(Boolean).length
+        const readable=letters/Math.max(1,candidate.length)>=0.62
+        // Prüfzeilen nur behalten, wenn sie plausibel lesbar oder einem Katalogartikel zuordenbar sind.
+        // Das verhindert, dass Fragmente aus neun OCR-Läufen als Dutzende Phantomartikel erscheinen.
+        if(!isNoise(candidate)&&candidate.length>=5&&letters>=4&&wordsCount<=6&&
+          (Boolean(matched)||(confidence>=60&&readable&&wordsCount<=4))){
           found.push({id:crypto.randomUUID(),name:matched?.name??candidate,price:'',foodId:matched?.id??'',quantity:'',unit:'',selected:false})
         }
         continue
@@ -210,6 +223,8 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   useEffect(()=>{refresh().catch(e=>setError(e.message))},[refresh])
   const selectedCount=useMemo(()=>lines.filter(l=>l.selected&&Number(l.price.replace(',','.'))>0).length,[lines])
   function updateLine(id:string,patch:Partial<Line>){setLines(current=>current.map(line=>line.id===id?{...line,...patch}:line))}
+  function addManualLine(){setLines(current=>[...current,{id:crypto.randomUUID(),name:'',price:'',foodId:'',quantity:'',unit:'',selected:true}])}
+  function removeLine(id:string){setLines(current=>current.filter(line=>line.id!==id))}
   async function analyse(receipt:Receipt) {
     if(!supabase)return
     setBusy(true);setError('');setNotice('');setProgress('Privaten Bon laden …');setActiveReceipt(receipt);setLines([]);setOcrText('')
@@ -237,9 +252,14 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       const merged:Line[]=[]
       for(const attempt of [...attempts].sort((a,b)=>(b.parsed.filter(x=>x.price).length*100+b.parsed.length*10+b.score/100)-(a.parsed.filter(x=>x.price).length*100+a.parsed.length*10+a.score/100))){
         for(const line of attempt.parsed){
-          const same=(candidate:Line)=>candidate.foodId&&line.foodId
-            ? candidate.foodId===line.foodId
-            : normalize(candidate.name)===normalize(line.name)
+          const same=(candidate:Line)=>{
+            const a=normalize(candidate.name),b=normalize(line.name)
+            if(a===b)return true
+            // Gleiche Katalogzuordnung reicht nur bei sehr ähnlichen Namen:
+            // unterschiedliche Bonpositionen desselben Lebensmittels bleiben getrennt.
+            return Boolean(candidate.foodId&&line.foodId&&candidate.foodId===line.foodId&&
+              Math.abs(a.length-b.length)<=4&&editDistance(a,b)<=Math.max(2,Math.floor(Math.min(a.length,b.length)*0.22)))
+          }
           const existing=merged.find(same)
           if(!existing){merged.push(line);continue}
           if(!existing.price&&line.price){Object.assign(existing,line);continue}
@@ -361,17 +381,18 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     {notice&&<div className="alert success"><Check size={16}/>{notice}</div>}
     {activeReceipt&&lines.length>0&&<div className="panel receipt-review">
       <div className="panel-head"><div><span className="eyebrow">OCR-ERGEBNIS PRÜFEN</span><h2>{lines.filter(l=>Number(l.price.replace(',','.'))>0).length} Positionen mit Preis · {lines.filter(l=>!Number(l.price.replace(',','.'))).length} zur Prüfung</h2><small>Auch Zeilen ohne erkannten Preis bleiben sichtbar. Ergänze fehlende Preise und prüfe die Zuordnung, bevor du speicherst.</small></div><Sparkles size={20}/></div>
+      <div className="receipt-review-tools"><button type="button" className="button button-light button-small" onClick={addManualLine} disabled={busy}>+ Artikel manuell ergänzen</button></div>
       {lines.map(line=><div className="receipt-line-edit" key={line.id}>
         <input aria-label="Artikelname" value={line.name} onChange={e=>updateLine(line.id,{name:e.target.value})}/>
         <input aria-label="Preis in Euro" placeholder="Preis €" inputMode="decimal" value={line.price} onChange={e=>updateLine(line.id,{price:e.target.value})}/>
         <select aria-label="Nahrungsmittel zuordnen" value={line.foodId} onChange={e=>updateLine(line.id,{foodId:e.target.value})}><option value="">+ Neu anlegen: {line.name}</option>{foods.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
         <div className="form-row"><input aria-label="Packungsmenge" placeholder="Menge" value={line.quantity} onChange={e=>updateLine(line.id,{quantity:e.target.value})}/><input aria-label="Einheit" placeholder="g, kg, ml …" value={line.unit} onChange={e=>updateLine(line.id,{unit:e.target.value})}/></div>
-        <label className="receipt-include"><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label>
+        <div className="receipt-include"><label><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label><button type="button" className="button button-light button-small" onClick={()=>removeLine(line.id)} aria-label="Artikelzeile entfernen">Entfernen</button></div>
       </div>)}
       <div className="receipt-save-row"><b>{selectedCount} Positionen · {euro(lines.filter(l=>l.selected).reduce((sum,l)=>sum+(Number(l.price.replace(',','.'))||0),0))}</b><button className="button button-dark" disabled={busy||!selectedCount} onClick={savePrices}><CircleDollarSign size={16}/> Preise & Nahrungsmittel speichern</button></div>
     </div>}
     {activeReceipt&&receiptPreview&&<div className="panel receipt-image-check"><div className="panel-head"><div><span className="eyebrow">QUELLBILD</span><h2>Bonfoto zur Kontrolle</h2><small>So sieht die Texterkennung die gespeicherte Datei.</small></div></div><img src={receiptPreview} alt="Hochgeladenes Kassenbonfoto"/></div>}
-    {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><small>{ocrMethod}</small><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
+    {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><small>{ocrMethod}</small><p>Die Rohtexte aller Durchläufe dienen der Diagnose. Nur plausible Artikelzeilen erscheinen oben in der Prüfliste; unklare Zeilen werden nicht automatisch als Lebensmittel gespeichert.</p><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
     <div className="notice-card"><Sparkles size={18}/><span>Unsichere oder unvollständige Zeilen bleiben zur manuellen Prüfung sichtbar. Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert.</span></div>
   </section>
 }

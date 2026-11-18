@@ -52,7 +52,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       return foodName.length>4&&(norm.includes(foodName)||foodName.includes(norm)||tokens.filter(t=>foodName.split(' ').includes(t)).length>=2)
     })
     const pack=name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
-    found.push({id:crypto.randomUUID(),name,price:Number.isFinite(price)?price.toFixed(2).replace('.',','):'',foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:Number.isFinite(price)})
+    found.push({id:crypto.randomUUID(),name:likely?.name??name,price:Number.isFinite(price)?price.toFixed(2).replace('.',','):'',foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:Number.isFinite(price)})
   }
   if(words.length){
     const sorted=[...words].filter(w=>w.text.trim()).sort((a,b)=>((a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1))||a.bbox.x0-b.bbox.x0)
@@ -75,7 +75,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
         // A name-only OCR row with its own word geometry is a real review candidate,
         // unlike a catalog word found somewhere in the whole OCR document.
         const candidate=cleanName(rowText)
-        const letters=(candidate.match(/[\\p{L}]/gu)||[]).length
+        const letters=(candidate.match(/[\p{L}]/gu)||[]).length
         const confidence=rowWords.reduce((sum,w)=>sum+(w.confidence??0),0)/Math.max(1,rowWords.length)
         if(confidence>=35&&candidate.length>=3&&letters>=3&&letters/Math.max(1,candidate.length)>=0.45&&!isNoise(candidate)){
           const matched=likelyFood(candidate,foods)
@@ -128,7 +128,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       pendingText='';pendingQuantity=''
       continue
     }
-    if(!isNoise(line)&&/[\\p{L}]/u.test(line)){
+    if(!isNoise(line)&&/[\p{L}]/u.test(line)){
       // Keep a name-only line as context for a following price-only OCR line.
       // It is deliberately NOT emitted as an item unless a price is found.
       pendingText=cleanName(line)
@@ -223,20 +223,39 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       if(receiptPreview)URL.revokeObjectURL(receiptPreview)
       setReceiptPreview(URL.createObjectURL(downloaded.data))
       const variants=await prepareReceiptImages(downloaded.data)
-      let best:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number}|null=null
-      const attempts:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number}[]=[]
-      for(const variant of variants)for(const mode of ['6','11']){
+      const attempts:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number;parsed:Line[]}[]=[]
+      for(const variant of variants)for(const mode of ['4','6','11']){
         setProgress('Bon wird gelesen ('+variant.label+', Modus '+mode+') …')
-        if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:'1'})
+        if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:'1',user_defined_dpi:'300'})
         const result=await worker.recognize(variant.blob)
-        attempts.push({data:result.data,label:variant.label+' · PSM '+mode,score:scoreOCR(result.data.text,result.data.words||[])})
+        const parsed=parseReceipt(result.data.text,foods,result.data.words||[])
+        attempts.push({data:result.data,label:variant.label+' · PSM '+mode,score:scoreOCR(result.data.text,result.data.words||[]),parsed})
       }
-      best=attempts.sort((a,b)=>b.score-a.score)[0]??null
-      if(!best)throw new Error('Texterkennung lieferte kein Ergebnis.')
-      const parsed=parseReceipt(best.data.text,foods,best.data.words||[])
-      setOcrText(best.data.text);setOcrMethod(best.label+' · Qualitätswert '+Math.round(best.score)+' · '+parsed.length+' Preispositionen')
+      if(!attempts.length)throw new Error('Texterkennung lieferte kein Ergebnis.')
+      // OCR-Durchläufe ergänzen einander: eine Position wird nicht verworfen,
+      // nur weil eine andere Bildaufbereitung oder Segmentierung besser bewertet wurde.
+      const merged:Line[]=[]
+      for(const attempt of [...attempts].sort((a,b)=>(b.parsed.filter(x=>x.price).length*100+b.parsed.length*10+b.score/100)-(a.parsed.filter(x=>x.price).length*100+a.parsed.length*10+a.score/100))){
+        for(const line of attempt.parsed){
+          const same=(candidate:Line)=>candidate.foodId&&line.foodId
+            ? candidate.foodId===line.foodId
+            : normalize(candidate.name)===normalize(line.name)
+          const existing=merged.find(same)
+          if(!existing){merged.push(line);continue}
+          if(!existing.price&&line.price){Object.assign(existing,line);continue}
+          if(existing.price&&line.price&&existing.price!==line.price){merged.push(line);continue}
+          if(existing.name.length<line.name.length&&line.foodId)existing.name=line.name
+          if(!existing.quantity&&line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
+        }
+      }
+      const best=[...attempts].sort((a,b)=>b.parsed.filter(x=>x.price).length-a.parsed.filter(x=>x.price).length||b.parsed.length-a.parsed.length||b.score-a.score)[0]
+      const parsed=merged
+      const priceCount=parsed.filter(line=>line.price).length
+      const reviewCount=parsed.length-priceCount
+      const textResults=attempts.map(a=>'--- '+a.label+' ---\\n'+a.data.text).join('\\n\\n')
+      setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe zusammengeführt · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
-      if(!parsed.length)throw new Error('Die Texterkennung hat noch keine verlässlichen Artikel erkannt. Das erkannte Bild und der Rohtext bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
+      if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
       setLines(parsed)
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}

@@ -152,17 +152,17 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     }
   }
   const pennyAliases:[RegExp,string][]=[
-    [/^(?:bio\\s+)?zucch/i,'Bio Zucchini'],
-    [/^(?:bio\\s+)?(?:bid|bio)\\s+eier/i,'Bio Eier'],
+    [/^(?:bio\s+)?zucch/i,'Bio Zucchini'],
+    [/^(?:bio\s+)?(?:bid|bio)\s+eier/i,'Bio Eier'],
     [/^milprima/i,'Milprima Butter'],
     [/^(?:kartof|kartoffel).*chips/i,'Kartoffelchips'],
     [/^meersalz/i,'Meersalz Grob'],
-    [/^knorr\\s+kra[u]?ter/i,'Knorr Kräuter'],
-    [/^knorr\\s*26/i,'Knorr 26 %'],
+    [/^knorr\s+kra[u]?ter/i,'Knorr Kräuter'],
+    [/^knorr\s*26/i,'Knorr 26 %'],
     [/^kokosmi/i,'Kokosmilch Light'],
   ]
-  for(const raw of text.split(/\\r?\\n/)){
-    const candidate=cleanName(raw.replace(/\\d{1,4}[,.]\\d{2}/g,' ').replace(/[^\\p{L}\\s-]/gu,' ').replace(/\\s+/g,' ').trim())
+  for(const raw of text.split(/\r?\n/)){
+    const candidate=cleanName(raw.replace(/\d{1,4}[,.]\d{2}/g,' ').replace(/[^\p{L}\s-]/gu,' ').replace(/\s+/g,' ').trim())
     const alias=pennyAliases.find(([pattern])=>pattern.test(candidate))
     if(alias&&!found.some(line=>normalize(line.name)===normalize(alias[1]))){
       const matched=likelyFood(alias[1],foods)

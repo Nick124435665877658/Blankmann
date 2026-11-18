@@ -11,7 +11,7 @@ declare global {
 }
 
 const retailers: Record<string,string> = { aldi_nord:'ALDI Nord', lidl:'Lidl', rewe:'REWE', kaufland:'Kaufland', edeka:'EDEKA', penny:'Penny', other:'Anderer Markt' }
-const normalize = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim()
+const normalize = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9-]+/g,' ').replace(/\s+/g,' ').trim()
 const euro = (value: number) => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(value)
 const categories: [string, RegExp][] = [
   ['Fleisch & Fisch',/huhn|haehnchen|pute|rind|schwein|hack|lachs|fisch|wurst|schinken/],
@@ -27,10 +27,17 @@ function guessCategory(name:string) { const n=normalize(name); return categories
 type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
 function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   const found:Line[]=[]
-  const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|wechselgeld|betrag|zu zahlen|summe eur)\b/i.test(normalize(value))
+  const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|betrag|zu zahlen|summe eur)\b/i.test(normalize(value))
+  const cleanName=(raw:string)=>{
+    let name=raw.replace(/[|_]+/g,' ').replace(/[“”„"'´]/g,' ').replace(/[^\p{L}\p{N}\s-]/gu,' ').replace(/\s+/g,' ').trim()
+    name=name.replace(/\bkokosmi\s+lc\s+dad\s+ight\b/i,'Kokosmilch Light')
+    name=name.replace(/\bkokosmilch\s+d[a4]d?\s*l?i[gq]ht\b/i,'Kokosmilch Light')
+    return name
+  }
   const add=(rawName:string, rawPrice:string, rawQuantity='', rawUnit='')=>{
-    let name=rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/[|_]+/g,' ').replace(/\s+/g,' ').replace(/\s+\*$/,'').trim()
-    if(name.length<3 || isNoise(name) || (name.match(/[a-zäöüß]/gi)||[]).length<3 || (name.match(/[a-zäöüß]/gi)||[]).length/Math.max(1,name.length)<0.35) return
+    const name=cleanName(rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/\s+\*$/,''))
+    const letters=(name.match(/[\p{L}]/gu)||[]).length
+    if(name.length<3 || isNoise(name) || letters<3 || letters/Math.max(1,name.length)<0.35) return
     const price=rawPrice?Number(rawPrice.replace(',','.')):NaN
     if(rawPrice&&(!Number.isFinite(price)||price<=0||price>500)) return
     const norm=normalize(name)
@@ -42,8 +49,6 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     const pack=name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
     found.push({id:crypto.randomUUID(),name,price:Number.isFinite(price)?price.toFixed(2).replace('.',','):'',foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:Number.isFinite(price)})
   }
-  // First pass: group OCR words by their vertical position. Product names and
-  // amounts may be on adjacent rows, so keep a name until its price appears.
   if(words.length){
     const sorted=[...words].filter(w=>w.text.trim()).sort((a,b)=>((a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1))||a.bbox.x0-b.bbox.x0)
     const rows:{y:number;words:OCRWord[]}[]=[]
@@ -58,13 +63,15 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     for(const row of rows){
       const rowWords=row.words.sort((a,b)=>a.bbox.x0-b.bbox.x0)
       const rowText=rowWords.map(w=>w.text).join(' ').replace(/\s+/g,' ').trim()
-      const priceMatch=[...rowText.matchAll(/(-?\d{1,4}[,.]\d{2})/g)].pop()
-      if(!priceMatch)continue
-      const amount=priceMatch[1],amountIndex=rowText.lastIndexOf(amount)
-      const leftText=rowText.slice(0,amountIndex).trim()
-      if(/^\d+\s*(?:stk|stück)?\s*[x×]/i.test(leftText)){
-        const previous=found[found.length-1],qty=leftText.match(/(\d+)\s*(?:stk|stück)?\s*[x×]/i)
-        if(previous&&qty){previous.quantity=qty[1];previous.unit='stk'}
+      const qtyPrice=rowText.match(/(.+?)\s+(\d+(?:[,.]\d+)?)\s*[x×]\s*(\d{1,4}[,.]\d{2})\s+(-?\d{1,4}[,.]\d{2})$/i)
+      if(qtyPrice){add(qtyPrice[1],qtyPrice[4],qtyPrice[2],'stk');continue}
+      const total=[...rowText.matchAll(/(-?\d{1,4}[,.]\d{2})/g)].pop()
+      if(!total)continue
+      const amount=total[1],amountIndex=rowText.lastIndexOf(amount),leftText=rowText.slice(0,amountIndex).trim()
+      const qtyOnly=leftText.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
+      if(qtyOnly){
+        const previous=found[found.length-1]
+        if(previous){previous.quantity=qtyOnly[1].replace('.',',');previous.unit='stk';previous.price=amount.replace('.',',')}
         continue
       }
       if(Number(amount.replace(',','.'))<0||/rabatt|\d+%/i.test(leftText))continue
@@ -73,38 +80,46 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       if(name&&!isNoise(name))add(name,amount)
     }
   }
-  // Second pass: text layout fallback. Also associates a price-only line with
-  // the previous plausible product name instead of silently dropping it.
-  let pendingText=''
+  let pendingText='',pendingQuantity=''
   for(const raw of text.split(/\r?\n/)){
     const line=raw.replace(/\s+/g,' ').trim()
     if(!line)continue
+    const quantityOnly=line.match(/^(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
+    if(quantityOnly){pendingQuantity=quantityOnly[1].replace('.',',');continue}
     const match=line.match(/(.+?)\s+(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
     if(match){
       let name=match[1].trim()
-      const qty=name.match(/(\d+)\s*(?:stk|stück)?\s*[x×]/i)
-      if(qty){const previous=found[found.length-1];if(previous){previous.quantity=qty[1];previous.unit='stk'};continue}
+      const inlineQty=name.match(/^(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
+      if(inlineQty){add(inlineQty[1],match[2],inlineQty[2],'stk');pendingText='';pendingQuantity='';continue}
+      const qty=name.match(/(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
+      if(qty){
+        const productName=name.slice(0,qty.index).trim()
+        if(productName)add(productName,match[2],qty[1],'stk')
+        else if(found.length){found[found.length-1].quantity=qty[1];found[found.length-1].unit='stk';found[found.length-1].price=match[2].replace('.',',')}
+        pendingText='';pendingQuantity='';continue
+      }
       if(Number(match[2].replace(',','.'))<0||/rabatt|pfand|summe|gesamt|mwst|kartenzahlung/i.test(name))continue
       if(!name||/^[\s|:;.-]*$/.test(name))name=pendingText
-      if(name&&!isNoise(name))add(name,match[2])
-      pendingText=''
+      if(name&&!isNoise(name))add(name,match[2],pendingQuantity,pendingQuantity?'stk':'')
+      pendingText='';pendingQuantity=''
       continue
     }
     const priceOnly=line.match(/^[-|:; ]*(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
     if(priceOnly&&pendingText){
-      if(Number(priceOnly[1].replace(',','.'))>0 && pendingText.length>=4 && (pendingText.match(/[a-zäöüß]/gi)||[]).length>=4 && !/\b(?:summe|gesamt|rabatt|pfand|mwst|steuer|karte|bar|ec|gegeben|rückgeld|datum|uhrzeit)\b/i.test(pendingText))add(pendingText,priceOnly[1])
-      pendingText=''
+      if(Number(priceOnly[1].replace(',','.'))>0&&!isNoise(pendingText))add(pendingText,priceOnly[1],pendingQuantity,pendingQuantity?'stk':'')
+      pendingText='';pendingQuantity=''
       continue
     }
-    if(!isNoise(line)&&/[a-zäöüß]/i.test(line))pendingText=line
+    if(!isNoise(line)&&/[\p{L}]/u.test(line))pendingText=cleanName(line)
   }
   const unique:Line[]=[]
   for(const line of found){
-    const key=normalize(line.name)
-    const existing=unique.findIndex(other=>normalize(other.name)===key)
+    const key=normalize(line.name),existing=unique.findIndex(other=>normalize(other.name)===key)
     if(existing<0)unique.push(line)
     else if(!unique[existing].price&&line.price)unique[existing]=line
-    else if(unique[existing].price&&line.price&&unique[existing].price!==line.price)unique.push(line)
+    else if(unique[existing].price&&line.price&&unique[existing].price===line.price){
+      if(line.quantity){unique[existing].quantity=line.quantity;unique[existing].unit=line.unit}
+    }else if(unique[existing].price&&line.price&&unique[existing].price!==line.price)unique.push(line)
   }
   return unique
 }

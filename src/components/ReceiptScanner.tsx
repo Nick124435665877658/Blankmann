@@ -71,7 +71,18 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       const qtyPrice=rowText.match(/(.+?)\s+(\d+(?:[,.]\d+)?)\s*[x×]\s*(\d{1,4}[,.]\d{2})\s+(-?\d{1,4}[,.]\d{2})$/i)
       if(qtyPrice){add(qtyPrice[1],qtyPrice[4],qtyPrice[2],'stk');continue}
       const total=[...rowText.matchAll(/(-?\d{1,4}[,.]\d{2})/g)].pop()
-      if(!total)continue
+      if(!total){
+        // A name-only OCR row with its own word geometry is a real review candidate,
+        // unlike a catalog word found somewhere in the whole OCR document.
+        const candidate=cleanName(rowText)
+        const letters=(candidate.match(/[\\p{L}]/gu)||[]).length
+        const confidence=rowWords.reduce((sum,w)=>sum+(w.confidence??0),0)/Math.max(1,rowWords.length)
+        if(confidence>=35&&candidate.length>=3&&letters>=3&&letters/Math.max(1,candidate.length)>=0.45&&!isNoise(candidate)){
+          const matched=likelyFood(candidate,foods)
+          found.push({id:crypto.randomUUID(),name:matched?.name??candidate,price:'',foodId:matched?.id??'',quantity:'',unit:'',selected:false})
+        }
+        continue
+      }
       const amount=total[1],amountIndex=rowText.lastIndexOf(amount),leftText=rowText.slice(0,amountIndex).trim()
       const qtyOnly=leftText.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
       if(qtyOnly){

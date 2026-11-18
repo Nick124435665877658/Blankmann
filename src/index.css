@@ -457,3 +457,173 @@
 .theme-sophia .nav-item.active{background:#d8f0e2!important;color:#b0001d!important}
 .theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .tip-icon,.theme-sophia .feature-icon,.theme-sophia .avatar{background:#d9f0e2!important;color:#4f9c75!important}
 .theme-sophia .nav-item svg,.theme-sophia .heading-icon svg,.theme-sophia .panel svg,.theme-sophia .page-heading svg{color:#65a982!important;stroke:#65a982}
+
+
+/* Sophia – verbindliche Rosa/Rot-Palette: überschreibt alle älteren Mockup-Regeln */
+.theme-sophia,
+.theme-sophia body,
+.theme-sophia .app-shell,
+.theme-sophia .main-content,
+.theme-sophia .page-wrap,
+.theme-sophia .auth-layout,
+.theme-sophia.loading-screen {
+  background: #FCE8EF !important;
+  color: #C00020 !important;
+  --ink: #C00020;
+  --muted: #C45A70;
+  --green: #C00020;
+  --green-dark: #A8001C;
+  --sage: #F8DCE6;
+  --paper: #FFFAFB;
+  --line: #F0C8D2;
+}
+.theme-sophia .sidebar,
+.theme-sophia .topbar,
+.theme-sophia .device-switch,
+.theme-sophia .device-choice.selected {
+  background: #FCE8EF !important;
+  border-color: #EFBBC9 !important;
+}
+.theme-sophia .sidebar,
+.theme-sophia .main-content,
+.theme-sophia .topbar,
+.theme-sophia .page-wrap { color: #C00020 !important; }
+.theme-sophia .brand-mark,
+.theme-sophia .household-chip,
+.theme-sophia .budget-mini,
+.theme-sophia .nav-item,
+.theme-sophia .nav-item:hover,
+.theme-sophia .nav-item.active,
+.theme-sophia .avatar,
+.theme-sophia .heading-icon,
+.theme-sophia .pantry-icon,
+.theme-sophia .retailer-logo,
+.theme-sophia .tip-icon,
+.theme-sophia .feature-icon,
+.theme-sophia .day-pill,
+.theme-sophia .day-pill.today,
+.theme-sophia .planned-meal,
+.theme-sophia .button-light,
+.theme-sophia .round-icon,
+.theme-sophia .icon-button,
+.theme-sophia .list-counter,
+.theme-sophia .empty-illustration,
+.theme-sophia .device-choice,
+.theme-sophia .theme-choice {
+  background: #F8DCE6 !important;
+  border-color: #EFBBC9 !important;
+  color: #C00020 !important;
+}
+.theme-sophia .stat-card,
+.theme-sophia .panel,
+.theme-sophia .retailer-card,
+.theme-sophia .notice-card,
+.theme-sophia .auth-card,
+.theme-sophia .planner-day,
+.theme-sophia .week-panel,
+.theme-sophia .list-panel,
+.theme-sophia .shopping-list-panel,
+.theme-sophia .add-panel {
+  background: #FFFAFB !important;
+  border-color: #F0C8D2 !important;
+  color: #C00020 !important;
+}
+.theme-sophia .tip-banner,
+.theme-sophia .feature-card,
+.theme-sophia .planned-meal {
+  background: #F9E1E9 !important;
+  border-color: #F0C8D2 !important;
+}
+.theme-sophia .button-dark,
+.theme-sophia .button-dark:hover {
+  background: #C00020 !important;
+  border-color: #C00020 !important;
+  color: #FFFFFF !important;
+}
+.theme-sophia input,
+.theme-sophia select,
+.theme-sophia textarea,
+.theme-sophia .price-input,
+.theme-sophia .receipt-line-edit input,
+.theme-sophia .receipt-line-edit select {
+  background: #FFFFFF !important;
+  border-color: #EFBBC9 !important;
+  color: #C00020 !important;
+  caret-color: #C00020;
+}
+.theme-sophia input::placeholder,
+.theme-sophia textarea::placeholder { color: #C45A70 !important; opacity: .85; }
+.theme-sophia .page-heading h1,
+.theme-sophia .page-heading p,
+.theme-sophia .eyebrow,
+.theme-sophia .panel-head h2,
+.theme-sophia .form-panel h2,
+.theme-sophia .add-panel h2,
+.theme-sophia .feature-card h2,
+.theme-sophia .settings-panel h2,
+.theme-sophia .stat-card > strong,
+.theme-sophia .stat-top,
+.theme-sophia .stat-card > small,
+.theme-sophia .brand strong,
+.theme-sophia .brand span,
+.theme-sophia .breadcrumb,
+.theme-sophia .sync-status,
+.theme-sophia .household-chip,
+.theme-sophia .budget-mini-top,
+.theme-sophia .budget-mini-top strong,
+.theme-sophia .budget-mini > small,
+.theme-sophia .nav-item,
+.theme-sophia .nav-item small,
+.theme-sophia .profile-button,
+.theme-sophia .profile-button b,
+.theme-sophia .profile-button small,
+.theme-sophia .pantry-name b,
+.theme-sophia .pantry-name small,
+.theme-sophia .pantry-row > span,
+.theme-sophia .retailer-card span,
+.theme-sophia .retailer-card small,
+.theme-sophia .footer,
+.theme-sophia .muted,
+.theme-sophia .stack-form label,
+.theme-sophia .form-panel label,
+.theme-sophia .settings-panel label,
+.theme-sophia .toggle-row b,
+.theme-sophia .toggle-row small,
+.theme-sophia .tip-banner b,
+.theme-sophia .tip-banner span,
+.theme-sophia .feature-card p,
+.theme-sophia .shopping-item,
+.theme-sophia .mini-item,
+.theme-sophia .meal-row b,
+.theme-sophia .meal-row small,
+.theme-sophia .receipt-review,
+.theme-sophia .receipt-save-row,
+.theme-sophia .receipt-line-edit,
+.theme-sophia .notice-card,
+.theme-sophia .empty-state,
+.theme-sophia .empty-state b,
+.theme-sophia .empty-state span {
+  color: #C00020 !important;
+}
+.theme-sophia svg,
+.theme-sophia .nav-item svg,
+.theme-sophia .heading-icon svg,
+.theme-sophia .panel svg,
+.theme-sophia .page-heading svg,
+.theme-sophia .icon-button svg,
+.theme-sophia .round-icon svg,
+.theme-sophia .tip-icon svg,
+.theme-sophia .feature-icon svg {
+  color: #C00020 !important;
+  stroke: #C00020 !important;
+}
+.theme-sophia .button-dark svg { color: #FFFFFF !important; stroke: #FFFFFF !important; }
+.theme-sophia .nav-item.active { box-shadow: inset 3px 0 #C00020 !important; }
+.theme-sophia .progress { background: #F2CAD6 !important; }
+.theme-sophia .progress i { background: #C00020 !important; }
+.theme-sophia .topbar,
+.theme-sophia .sidebar,
+.theme-sophia .tip-banner,
+.theme-sophia .feature-card,
+.theme-sophia .stat-card,
+.theme-sophia .panel { box-shadow: none !important; }

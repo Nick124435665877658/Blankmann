@@ -323,7 +323,7 @@
 .receipt-review{margin-top:18px}.receipt-line-edit{display:grid;grid-template-columns:minmax(150px,1.3fr) 95px minmax(180px,1fr);gap:9px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}.receipt-line-edit>input,.receipt-line-edit>select,.receipt-line-edit .form-row input{width:100%;min-width:0;border:1px solid #e5e8df;background:#fffefa;border-radius:8px;padding:10px;color:#3e4e41;font-size:11px}.receipt-line-edit .form-row{gap:7px}.receipt-include{display:flex;align-items:center;gap:7px;color:#6f7c70;font-size:10px;white-space:nowrap}.receipt-include input{accent-color:#557454}.receipt-save-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:17px}.receipt-save-row>b{font-size:12px;color:#536354}@media(max-width:760px){.receipt-line-edit{grid-template-columns:1fr 90px}.receipt-line-edit>select,.receipt-line-edit .form-row,.receipt-include{grid-column:1/-1}.receipt-save-row{align-items:stretch;flex-direction:column}.receipt-save-row .button{width:100%}}
 
 /* Mobile bottom navigation: swipeable, with receipt scanner immediately accessible */
-@media(max-width:720px){.sidebar nav{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:3px;padding:0 3px}.sidebar nav::-webkit-scrollbar{display:none}.nav-item{flex:0 0 68px;min-width:68px;scroll-snap-align:start}.sidebar nav{scroll-snap-type:x proximity}}
+@media(max-width:720px){.sidebar nav{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:3px;padding:0 3px}.sidebar nav::-webkit-scrollbar{display:none}.nav-item{flex:0 0 auto;width:max-content;min-width:max-content;max-width:none;white-space:nowrap;display:flex;flex-direction:row;align-items:center;gap:7px;padding:9px 12px;scroll-snap-align:start}.nav-item>span{white-space:nowrap;display:inline-block;writing-mode:horizontal-tb;transform:none}.sidebar nav{scroll-snap-type:x proximity}}
 
 /* Mobile header and receipt scanner refinements */
 @media(max-width:720px){
@@ -341,6 +341,7 @@
   .receipt-list-actions .button{padding:8px 9px;font-size:9px;white-space:nowrap}
 }
 @media(max-width:370px){
+  .sidebar nav{gap:2px}.nav-item{padding:8px 9px;gap:5px;font-size:10px}
   .mobile-brand-copy small{font-size:6px;letter-spacing:.2px}
   .topbar-right{gap:6px;margin-right:9px}
   .receipt-meta-fields{grid-template-columns:1fr}

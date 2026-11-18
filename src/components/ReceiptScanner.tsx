@@ -7,7 +7,7 @@ type Receipt = { id: string; image_path: string; retailer_code: string | null; p
 type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean }
 
 declare global {
-  interface Window { Tesseract?: { createWorker: (language: string, oem?: number, options?: Record<string, unknown>) => Promise<{ recognize: (image: Blob | File) => Promise<{ data: { text: string; words?: { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }[] } }>; terminate: () => Promise<void> }> } }
+  interface Window { Tesseract?: { createWorker: (language: string, oem?: number, options?: Record<string, unknown>) => Promise<{ recognize: (image: Blob | File) => Promise<{ data: { text: string; confidence?: number; words?: { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }[] } }>; setParameters?: (params: Record<string,string>) => Promise<void>; terminate: () => Promise<void> }> } }
 }
 
 const retailers: Record<string,string> = { aldi_nord:'ALDI Nord', lidl:'Lidl', rewe:'REWE', kaufland:'Kaufland', edeka:'EDEKA', penny:'Penny', other:'Anderer Markt' }
@@ -97,22 +97,31 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   // Remove duplicate detections from overlapping OCR rows/passes.
   return found.filter((line,index,all)=>all.findIndex(other=>normalize(other.name)===normalize(line.name)&&other.price===line.price)===index)
 }
-async function prepareReceiptImage(file:Blob):Promise<Blob>{
+async function prepareReceiptImages(file:Blob):Promise<{label:string;blob:Blob}[]>{
   const bitmap=await createImageBitmap(file)
-  const scale=Math.max(1.5,Math.min(2.5,1800/bitmap.width))
-  const canvas=document.createElement('canvas')
-  canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale)
-  const ctx=canvas.getContext('2d')
-  if(!ctx){bitmap.close();return file}
-  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close()
-  const image=ctx.getImageData(0,0,canvas.width,canvas.height)
-  for(let i=0;i<image.data.length;i+=4){
-    const gray=0.299*image.data[i]+0.587*image.data[i+1]+0.114*image.data[i+2]
-    const contrast=Math.max(0,Math.min(255,(gray-128)*1.35+128))
-    image.data[i]=image.data[i+1]=image.data[i+2]=contrast
-  }
-  ctx.putImageData(image,0,0)
-  return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Bonfoto konnte nicht vorbereitet werden.')),'image/png'))
+  const scale=Math.max(0.75,Math.min(2.2,1800/bitmap.width,6500/bitmap.height))
+  const width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale))
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height
+  const ctx=canvas.getContext('2d',{willReadFrequently:true})
+  if(!ctx){bitmap.close();return [{label:'Original',blob:file}]}
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.drawImage(bitmap,0,0,width,height);bitmap.close()
+  const source=ctx.getImageData(0,0,width,height)
+  const gray=new Uint8ClampedArray(width*height),histogram=new Array<number>(256).fill(0)
+  for(let p=0,i=0;p<gray.length;p++,i+=4){const value=Math.round(0.299*source.data[i]+0.587*source.data[i+1]+0.114*source.data[i+2]);gray[p]=value;histogram[value]++}
+  let total=gray.length,sum=0;for(let i=0;i<256;i++)sum+=i*histogram[i]
+  let sumB=0,wB=0,maxVariance=0,threshold=150
+  for(let i=0;i<256;i++){wB+=histogram[i];if(!wB)continue;const wF=total-wB;if(!wF)break;sumB+=i*histogram[i];const mB=sumB/wB,mF=(sum-sumB)/wF;const variance=wB*wF*(mB-mF)*(mB-mF);if(variance>maxVariance){maxVariance=variance;threshold=i}}
+  const enhanced=ctx.createImageData(width,height),binary=ctx.createImageData(width,height)
+  for(let p=0,i=0;p<gray.length;p++,i+=4){const contrast=Math.max(0,Math.min(255,(gray[p]-128)*1.5+128));enhanced.data[i]=enhanced.data[i+1]=enhanced.data[i+2]=contrast;enhanced.data[i+3]=255;const bw=gray[p]>threshold?255:0;binary.data[i]=binary.data[i+1]=binary.data[i+2]=bw;binary.data[i+3]=255}
+  const toBlob=(data:ImageData)=>new Promise<Blob>((resolve,reject)=>{ctx.putImageData(data,0,0);canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Bild konnte nicht vorbereitet werden.')),'image/png')})
+  const enhancedBlob=await toBlob(enhanced),binaryBlob=await toBlob(binary)
+  return [{label:'Kontrast',blob:enhancedBlob},{label:'Schwarz-Weiß',blob:binaryBlob}]
+}
+function scoreOCR(text:string,words:OCRWord[]=[]){
+  const confidence=words.length?words.reduce((sum,w)=>sum+(w.confidence??0),0)/words.length:0
+  const prices=(text.match(/\b\d{1,4}[,.]\d{2}\b/g)||[]).length
+  const useful=(text.match(/[A-Za-zÄÖÜäöüß0-9]/g)||[]).length/Math.max(1,text.length)
+  return confidence*0.65+prices*7+useful*18
 }
 async function loadTesseract() {
   if(window.Tesseract) return window.Tesseract
@@ -138,6 +147,8 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   const [error,setError]=useState('')
   const [notice,setNotice]=useState('')
   const [ocrText,setOcrText]=useState('')
+  const [receiptPreview,setReceiptPreview]=useState('')
+  const [ocrMethod,setOcrMethod]=useState('')
   const refresh=useCallback(async()=>{
     if(!supabase)return
     const [foodRows,receiptRows]=await Promise.all([
@@ -161,12 +172,29 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       setProgress('Texterkennung wird geladen …')
       const api=await loadTesseract()
       worker=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Bon wird gelesen: '+Math.round(Number(m.progress)*100)+' %')}})
-      const prepared=await prepareReceiptImage(downloaded.data)
-      const result=await worker.recognize(prepared)
-      setOcrText(result.data.text)
-      const parsed=parseReceipt(result.data.text,foods,result.data.words||[])
-      if(!parsed.length)throw new Error('Ich konnte keine Artikelpreise erkennen. Bitte prüfe das Foto oder versuche es mit besserem Licht erneut.')
-      setLines(parsed);setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
+      if(receiptPreview)URL.revokeObjectURL(receiptPreview)
+      setReceiptPreview(URL.createObjectURL(downloaded.data))
+      const variants=await prepareReceiptImages(downloaded.data)
+      let best:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number}|null=null
+      for(const variant of variants){
+        setProgress('Bon wird gelesen ('+variant.label+') …')
+        if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:'6',preserve_interword_spaces:'1'})
+        const result=await worker.recognize(variant.blob)
+        const score=scoreOCR(result.data.text,result.data.words||[])
+        if(!best||score>best.score)best={data:result.data,label:variant.label,score}
+      }
+      if(best&&best.score<28&&worker.setParameters){
+        await worker.setParameters({tessedit_pageseg_mode:'11',preserve_interword_spaces:'1'})
+        const alternate=await worker.recognize(variants[0].blob)
+        const score=scoreOCR(alternate.data.text,alternate.data.words||[])
+        if(score>best.score)best={data:alternate.data,label:'Kontrast · freie Seitensegmentierung',score}
+      }
+      if(!best)throw new Error('Texterkennung lieferte kein Ergebnis.')
+      setOcrText(best.data.text);setOcrMethod(best.label+' · Qualitätswert '+Math.round(best.score))
+      const parsed=parseReceipt(best.data.text,foods,best.data.words||[])
+      setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
+      if(!parsed.length)throw new Error('Die Texterkennung hat noch keine verlässlichen Artikel erkannt. Das erkannte Bild und der Rohtext bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
+      setLines(parsed)
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}
   }
@@ -192,16 +220,19 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   }
   async function deleteReceipt(receipt:Receipt){
     if(!supabase||busy)return
-    if(!window.confirm('Diesen Bon und das hochgeladene Foto endgültig löschen? Bereits gespeicherte Preisverläufe bleiben erhalten.'))return
+    const retailerName=retailers[receipt.retailer_code||'']||'Supermarkt'
+    const dateLabel=receipt.purchase_date?new Date(receipt.purchase_date+'T12:00:00').toLocaleDateString('de-DE'):new Date(receipt.created_at).toLocaleDateString('de-DE')
+    if(!window.confirm('Sicher, dass du das Element „Bon '+retailerName+' vom '+dateLabel+'“ löschen willst? Das Foto wird ebenfalls entfernt. Bereits gespeicherte Preisverläufe bleiben erhalten.'))return
     setBusy(true);setError('');setNotice('')
     try{
-      const removed=await supabase.storage.from('receipt-photos').remove([receipt.image_path])
-      if(removed.error)throw removed.error
-      const deleted=await supabase.from('receipt_uploads').delete().eq('id',receipt.id).eq('household_id',householdId)
+      const deleted=await supabase.from('receipt_uploads').delete().eq('id',receipt.id).eq('household_id',householdId).select('id').maybeSingle()
       if(deleted.error)throw deleted.error
-      if(activeReceipt?.id===receipt.id){setActiveReceipt(null);setLines([]);setOcrText('')}
+      if(!deleted.data)throw new Error('Der Bon wurde nicht aus der Datenbank entfernt. Bitte prüfe die Berechtigung und versuche es erneut.')
+      setReceipts(current=>current.filter(item=>item.id!==receipt.id))
+      if(activeReceipt?.id===receipt.id){setActiveReceipt(null);setLines([]);setOcrText('');if(receiptPreview)URL.revokeObjectURL(receiptPreview);setReceiptPreview('')}
+      const removed=await supabase.storage.from('receipt-photos').remove([receipt.image_path])
+      if(removed.error){setNotice('Bon aus der Liste gelöscht. Das Foto konnte nicht automatisch entfernt werden: '+removed.error.message);return}
       setNotice('Bon und Foto wurden gelöscht. Bereits gespeicherte Preisverläufe bleiben erhalten.')
-      await refresh()
     }catch(e){setError(e instanceof Error?e.message:'Bon konnte nicht gelöscht werden.')}
     finally{setBusy(false)}
   }
@@ -247,17 +278,17 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   return <section>
     <div className="page-heading"><div><div className="eyebrow">PREISDATENBANK FÜTTERN</div><h1>Kassenbon-Auswertung</h1><p>Foto hochladen, Artikel erkennen und Preise in euren Haushaltskatalog übernehmen.</p></div><div className="heading-icon"><ReceiptText size={25}/></div></div>
     <div className="shopping-layout">
-      <div className="panel add-panel stack-form">
+      <div className="panel add-panel stack-form receipt-upload-panel">
         <span className="eyebrow">NEUER KASSENBON</span><h2>Bon fotografieren</h2>
-        <label>Supermarkt<select name="retailer" value={retailer} onChange={e=>setRetailer(e.target.value)}>{Object.entries(retailers).map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
-        <label>Einkaufsdatum<input name="purchase_date" type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label>
-        <label className="receipt-file-label"><Camera size={19}/> Foto mit Kamera aufnehmen<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleFileChange} disabled={busy}/></label>
-        <label className="receipt-file-label"><Upload size={19}/> Bild vom Handy auswählen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} disabled={busy}/></label>
+        <div className="receipt-meta-fields"><label>Supermarkt<select name="retailer" value={retailer} onChange={e=>setRetailer(e.target.value)}>{Object.entries(retailers).map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
+        <label>Einkaufsdatum<input name="purchase_date" type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label></div>
+        <div className="receipt-upload-actions"><label className="receipt-file-label"><Camera size={19}/> Foto aufnehmen<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleFileChange} disabled={busy}/></label>
+        <label className="receipt-file-label"><Upload size={19}/> Bild auswählen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} disabled={busy}/></label></div>
         <small>JPG, PNG oder WebP · maximal 10 MB. Die Texterkennung läuft direkt in eurem Browser; das Bonfoto bleibt im privaten Haushaltsspeicher.</small>
       </div>
       <div className="panel shopping-list-panel">
         <div className="panel-head"><div><span className="eyebrow">EURE BELEGE</span><h2>{receipts.length} hochgeladen</h2></div><ReceiptText size={19}/></div>
-        {receipts.length?receipts.map(r=><div className="pantry-row" key={r.id}><div className="pantry-icon"><ReceiptText size={18}/></div><div className="pantry-name"><b>{retailers[r.retailer_code||'']||'Supermarkt'}</b><small>{r.purchase_date?new Date(r.purchase_date+'T12:00:00').toLocaleDateString('de-DE'):new Date(r.created_at).toLocaleDateString('de-DE')} · {r.status==='processed'?'Ausgewertet':'Wartet auf Auswertung'}</small></div><div className="form-row"><button type="button" className="button button-light button-small" disabled={busy} onClick={()=>analyse(r)}>{r.status==='processed'?'Erneut auswerten':'Auswerten'}</button><button type="button" className="button button-light button-small" disabled={busy} onClick={()=>deleteReceipt(r)} aria-label="Bon löschen">Löschen</button></div></div>):<div className="empty-state"><Camera size={30}/><b>Noch keine Bons gespeichert.</b><span>Der erste Bon legt den Grundstein für eure Preisverläufe.</span></div>}
+        {receipts.length?receipts.map(r=><div className="pantry-row" key={r.id}><div className="pantry-icon"><ReceiptText size={18}/></div><div className="pantry-name"><b>{retailers[r.retailer_code||'']||'Supermarkt'}</b><small>{r.purchase_date?new Date(r.purchase_date+'T12:00:00').toLocaleDateString('de-DE'):new Date(r.created_at).toLocaleDateString('de-DE')} · {r.status==='processed'?'Ausgewertet':'Wartet auf Auswertung'}</small></div><div className="form-row receipt-list-actions"><button type="button" className="button button-light button-small" disabled={busy} onClick={()=>analyse(r)}>{r.status==='processed'?'Erneut auswerten':'Auswerten'}</button><button type="button" className="button button-light button-small" disabled={busy} onClick={()=>deleteReceipt(r)} aria-label="Bon löschen">Löschen</button></div></div>):<div className="empty-state"><Camera size={30}/><b>Noch keine Bons gespeichert.</b><span>Der erste Bon legt den Grundstein für eure Preisverläufe.</span></div>}
       </div>
     </div>
     {progress&&<div className="notice-card"><LoaderCircle size={18}/><span>{progress}</span></div>}
@@ -274,7 +305,8 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       </div>)}
       <div className="receipt-save-row"><b>{selectedCount} Positionen · {euro(lines.filter(l=>l.selected).reduce((sum,l)=>sum+(Number(l.price.replace(',','.'))||0),0))}</b><button className="button button-dark" disabled={busy||!selectedCount} onClick={savePrices}><CircleDollarSign size={16}/> Preise & Nahrungsmittel speichern</button></div>
     </div>}
-    {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
+    {activeReceipt&&receiptPreview&&<div className="panel receipt-image-check"><div className="panel-head"><div><span className="eyebrow">QUELLBILD</span><h2>Bonfoto zur Kontrolle</h2><small>So sieht die Texterkennung die gespeicherte Datei.</small></div></div><img src={receiptPreview} alt="Hochgeladenes Kassenbonfoto"/></div>}
+    {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><small>{ocrMethod}</small><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
     <div className="notice-card"><Sparkles size={18}/><span>Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert.</span></div>
   </section>
 }

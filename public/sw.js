@@ -1,4 +1,4 @@
-const CACHE = 'blankmann-shell-v25'
+const CACHE = 'blankmann-shell-v26'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg']
 
 self.addEventListener('install', event => {
@@ -7,6 +7,10 @@ self.addEventListener('install', event => {
       .then(cache => cache.addAll(SHELL))
       .then(() => self.skipWaiting())
   )
+})
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
 self.addEventListener('activate', event => {
@@ -24,7 +28,7 @@ self.addEventListener('fetch', event => {
   const request = event.request
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return
 
-  if (request.mode === 'navigate') {
+  if (request.mode === 'navigate' || new URL(request.url).pathname === '/index.html') {
     event.respondWith(
       fetch(new Request(request, { cache: 'no-store' }))
         .then(response => {
@@ -39,7 +43,7 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // Vite assets are content-hashed, so cached files remain safe across releases.
+  // Vite assets are content-hashed and safe to cache across releases.
   if (new URL(request.url).pathname.startsWith('/assets/')) {
     event.respondWith(
       caches.match(request).then(cached => cached || fetch(request).then(response => {

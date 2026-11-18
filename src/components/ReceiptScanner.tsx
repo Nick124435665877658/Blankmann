@@ -243,7 +243,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
           const existing=merged.find(same)
           if(!existing){merged.push(line);continue}
           if(!existing.price&&line.price){Object.assign(existing,line);continue}
-          if(existing.price&&line.price&&existing.price!==line.price){merged.push(line);continue}
+          if(existing.price&&line.price&&existing.price!==line.price){continue}
           if(existing.name.length<line.name.length&&line.foodId)existing.name=line.name
           if(!existing.quantity&&line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
         }

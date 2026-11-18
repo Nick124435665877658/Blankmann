@@ -27,11 +27,10 @@ function guessCategory(name:string) { const n=normalize(name); return categories
 type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
 function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   const found:Line[]=[]
-  const pendingNames:string[]=[]
   const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|wechselgeld|betrag|zu zahlen|summe eur)\b/i.test(normalize(value))
   const add=(rawName:string, rawPrice:string, rawQuantity='', rawUnit='')=>{
     let name=rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/[|_]+/g,' ').replace(/\s+/g,' ').replace(/\s+\*$/,'').trim()
-    if(name.length<3 || isNoise(name)) return
+    if(name.length<3 || isNoise(name) || (name.match(/[a-zäöüß]/gi)||[]).length<3 || (name.match(/[a-zäöüß]/gi)||[]).length/Math.max(1,name.length)<0.35) return
     const price=rawPrice?Number(rawPrice.replace(',','.')):NaN
     if(rawPrice&&(!Number.isFinite(price)||price<=0||price>500)) return
     const norm=normalize(name)
@@ -64,7 +63,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       const rowWords=row.words.sort((a,b)=>a.bbox.x0-b.bbox.x0)
       const rowText=rowWords.map(w=>w.text).join(' ').replace(/\s+/g,' ').trim()
       const priceMatch=[...rowText.matchAll(/(-?\d{1,4}[,.]\d{2})/g)].pop()
-      if(!priceMatch){remember(rowText);continue}
+      if(!priceMatch)continue
       const amount=priceMatch[1],amountIndex=rowText.lastIndexOf(amount)
       const leftText=rowText.slice(0,amountIndex).trim()
       if(/^\d+\s*(?:stk|stück)?\s*[x×]/i.test(leftText)){
@@ -76,7 +75,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       const amountWord=rowWords.find(w=>w.text.includes(amount))
       const name=rowWords.filter(w=>!amountWord||w.bbox.x0<amountWord.bbox.x0).map(w=>w.text).join(' ').trim()||leftText
       if(name&&!isNoise(name))add(name,amount)
-      else if(pendingNames.length)add(pendingNames.pop()!,amount)
+
     }
   }
   // Second pass: text layout fallback. Also associates a price-only line with
@@ -98,16 +97,12 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     }
     const priceOnly=line.match(/^[-|:; ]*(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
     if(priceOnly&&pendingText){
-      if(Number(priceOnly[1].replace(',','.'))>0)add(pendingText,priceOnly[1])
+      if(Number(priceOnly[1].replace(',','.'))>0 && pendingText.length>=4 && (pendingText.match(/[a-zäöüß]/gi)||[]).length>=4 && !/\b(?:summe|gesamt|rabatt|pfand|mwst|steuer|karte|bar|ec|gegeben|rückgeld|datum|uhrzeit)\b/i.test(pendingText))add(pendingText,priceOnly[1])
       pendingText=''
       continue
     }
     if(!isNoise(line)&&/[a-zäöüß]/i.test(line))pendingText=line
   }
-  if(pendingText)remember(pendingText)
-  // Keep unresolved product-like rows visible for manual correction. Never
-  // silently discard a possible item just because OCR missed its price.
-  for(const name of pendingNames) add(name,'')
   const unique:Line[]=[]
   for(const line of found){
     const key=normalize(line.name)

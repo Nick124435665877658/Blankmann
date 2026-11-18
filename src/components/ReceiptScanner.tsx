@@ -28,15 +28,15 @@ type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: numb
 function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   const found:Line[]=[]
   const add=(rawName:string, rawPrice:string, rawQuantity='', rawUnit='')=>{
-    let name=rawName.replace(/^\\d+\\s*[xX×]\\s*/,'').replace(/[|_]+/g,' ').replace(/\\s+/g,' ').trim()
-    name=name.replace(/\\s+(?:[A-Z*])$/,'').trim()
-    if(name.length<3 || /^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand)\\b/i.test(name)) return
+    let name=rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/[|_]+/g,' ').replace(/\s+/g,' ').trim()
+    name=name.replace(/\s+(?:[A-Z*])$/,'').trim()
+    if(name.length<3 || /^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand)\b/i.test(name)) return
     const price=Number(rawPrice.replace(',','.'))
     if(!Number.isFinite(price)||price<=0||price>500) return
     const norm=normalize(name)
     const exact=foods.find(f=>f.normalized_name===norm || normalize(f.name)===norm)
     const likely=exact ?? foods.find(f=>norm.length>5 && (norm.includes(normalize(f.name))||normalize(f.name).includes(norm)))
-    const pack=name.match(/(?:^|\\s)(\\d+(?:[,.]\\d+)?)\\s*(kg|g|mg|l|ml|stk|stück)\\b/i)
+    const pack=name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
     found.push({id:crypto.randomUUID(),name,price:price.toFixed(2).replace('.',','),foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:true})
   }
   // Prefer word coordinates: supermarket receipts put the product name on the left
@@ -54,21 +54,21 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     rows.sort((a,b)=>a.y-b.y)
     for(let i=0;i<rows.length;i++){
       const row=rows[i], rowWords=row.words.sort((a,b)=>a.bbox.x0-b.bbox.x0)
-      const rowText=rowWords.map(w=>w.text).join(' ').replace(/\\s+/g,' ').trim()
-      const priceMatch=[...rowText.matchAll(/(-?\\d{1,4}[,.]\\d{2})/g)].pop()
+      const rowText=rowWords.map(w=>w.text).join(' ').replace(/\s+/g,' ').trim()
+      const priceMatch=[...rowText.matchAll(/(-?\d{1,4}[,.]\d{2})/g)].pop()
       if(!priceMatch) continue
       const amount=priceMatch[1]
       const amountIndex=rowText.lastIndexOf(amount)
       const leftText=rowText.slice(0,amountIndex).trim()
-      if(/^\\d+\\s*stk?\\s*[x×]/i.test(leftText) || /^\\d+\\s*[x×]/i.test(leftText)) {
+      if(/^\d+\s*stk?\s*[x×]/i.test(leftText) || /^\d+\s*[x×]/i.test(leftText)) {
         const previous=found[found.length-1]
-        const qty=leftText.match(/(\\d+)\\s*(stk|stück)?\\s*[x×]/i)
+        const qty=leftText.match(/(\d+)\s*(stk|stück)?\s*[x×]/i)
         if(previous&&qty){previous.quantity=qty[1];previous.unit='stk'}
         continue
       }
-      if(Number(amount.replace(',','.'))<0 || /rabatt|\\d+%/i.test(leftText)){
+      if(Number(amount.replace(',','.'))<0 || /rabatt|\d+%/i.test(leftText)){
         const previous=found[found.length-1]
-        if(previous && (normalize(leftText).includes(normalize(previous.name).split(' ')[0]) || /rabatt|\\d+%/i.test(leftText))){
+        if(previous && (normalize(leftText).includes(normalize(previous.name).split(' ')[0]) || /rabatt|\d+%/i.test(leftText))){
           const discounted=Number(previous.price.replace(',','.'))+Number(amount.replace(',','.'))
           if(discounted>0) previous.price=discounted.toFixed(2).replace('.',',')
         }
@@ -81,12 +81,12 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   }
   // Text fallback catches OCR engines/layouts that do not provide useful coordinates.
   {
-    for(const raw of text.split(/\\r?\\n/)){
-      const line=raw.replace(/\\s+/g,' ').trim()
-      const match=line.match(/(.+?)\\s+(-?\\d{1,4}[,.]\\d{2})\\s*(?:[A-Z*])?$/i)
+    for(const raw of text.split(/\r?\n/)){
+      const line=raw.replace(/\s+/g,' ').trim()
+      const match=line.match(/(.+?)\s+(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
       if(!match || /pfand|summe|gesamt|mwst|rabatt|kartenzahlung/i.test(match[1])) continue
-      const name=match[1].replace(/^\\d+\\s*[xX×]\\s*/,'').trim()
-      const qty=name.match(/(\\d+)\\s*(stk|stück)?\\s*[x×]/i)
+      const name=match[1].replace(/^\d+\s*[xX×]\s*/,'').trim()
+      const qty=name.match(/(\d+)\s*(stk|stück)?\s*[x×]/i)
       if(qty){const previous=found[found.length-1];if(previous){previous.quantity=qty[1];previous.unit='stk'};continue}
       if(Number(match[2].replace(',','.'))<0) continue
       const norm=normalize(name)

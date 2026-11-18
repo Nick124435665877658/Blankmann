@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
@@ -170,22 +170,40 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}
   }
-  async function uploadAndAnalyse(e:FormEvent<HTMLFormElement>){
-    e.preventDefault();if(!supabase)return
-    const form=new FormData(e.currentTarget);const file=form.get('receipt')
-    if(!(file instanceof File)||!file.size){setError('Bitte zuerst ein Bonfoto auswählen.');return}
+  async function uploadAndAnalyse(file:File){
+    if(!supabase)return
     if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>10*1024*1024){setError('Bitte JPG, PNG oder WebP bis maximal 10 MB verwenden.');return}
     setBusy(true);setError('');setNotice('');setProgress('Bon wird sicher hochgeladen …')
     try{
       const path=householdId+'/'+crypto.randomUUID()+'-'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_')
       const uploaded=await supabase.storage.from('receipt-photos').upload(path,file,{contentType:file.type,upsert:false})
       if(uploaded.error)throw uploaded.error
-      const inserted=await supabase.from('receipt_uploads').insert({household_id:householdId,image_path:path,retailer_code:String(form.get('retailer')||'other'),purchase_date:String(form.get('purchase_date')||purchaseDate)||null,created_by:userId}).select('id,image_path,retailer_code,purchase_date,status,created_at').single()
+      const inserted=await supabase.from('receipt_uploads').insert({household_id:householdId,image_path:path,retailer_code:retailer,purchase_date:purchaseDate||null,created_by:userId}).select('id,image_path,retailer_code,purchase_date,status,created_at').single()
       if(inserted.error){await supabase.storage.from('receipt-photos').remove([path]);throw inserted.error}
       const receipt=inserted.data as Receipt
       await refresh();setProgress('Upload abgeschlossen – OCR startet …')
       setBusy(false);await analyse(receipt)
     }catch(e){setError(e instanceof Error?e.message:'Upload fehlgeschlagen.');setBusy(false);setProgress('')}
+  }
+  function handleFileChange(e:ChangeEvent<HTMLInputElement>){
+    const file=e.target.files?.[0]
+    e.target.value=''
+    if(file)void uploadAndAnalyse(file)
+  }
+  async function deleteReceipt(receipt:Receipt){
+    if(!supabase||busy)return
+    if(!window.confirm('Diesen Bon und das hochgeladene Foto endgültig löschen? Bereits gespeicherte Preisverläufe bleiben erhalten.'))return
+    setBusy(true);setError('');setNotice('')
+    try{
+      const removed=await supabase.storage.from('receipt-photos').remove([receipt.image_path])
+      if(removed.error)throw removed.error
+      const deleted=await supabase.from('receipt_uploads').delete().eq('id',receipt.id).eq('household_id',householdId)
+      if(deleted.error)throw deleted.error
+      if(activeReceipt?.id===receipt.id){setActiveReceipt(null);setLines([]);setOcrText('')}
+      setNotice('Bon und Foto wurden gelöscht. Bereits gespeicherte Preisverläufe bleiben erhalten.')
+      await refresh()
+    }catch(e){setError(e instanceof Error?e.message:'Bon konnte nicht gelöscht werden.')}
+    finally{setBusy(false)}
   }
   async function savePrices(){
     if(!supabase||!activeReceipt)return
@@ -215,9 +233,9 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
         const receiptNote='receipt:'+activeReceipt.id
         const duplicate=await supabase.from('household_food_prices').select('id').eq('household_id',householdId).eq('food_item_id',foodId).eq('notes',receiptNote).limit(1).maybeSingle()
         if(duplicate.error)throw duplicate.error
-        if(duplicate.data)continue
-        const inserted=await supabase.from('household_food_prices').insert({household_id:householdId,food_item_id:foodId,retailer_code:activeReceipt.retailer_code||retailer,price_eur:price,package_quantity:quantity,package_unit:unit,unit_price_eur:unitPrice,unit_label:unitLabel,price_type:'regular',source_name:'Kassenbon '+(retailers[activeReceipt.retailer_code||retailer]||'Supermarkt'),observed_at:activeReceipt.purchase_date||purchaseDate,notes:receiptNote})
-        if(inserted.error)throw inserted.error
+        const priceData={household_id:householdId,food_item_id:foodId,retailer_code:activeReceipt.retailer_code||retailer,price_eur:price,package_quantity:quantity,package_unit:unit,unit_price_eur:unitPrice,unit_label:unitLabel,price_type:'regular',source_name:'Kassenbon '+(retailers[activeReceipt.retailer_code||retailer]||'Supermarkt'),observed_at:activeReceipt.purchase_date||purchaseDate,notes:receiptNote}
+        if(duplicate.data){const updatedPrice=await supabase.from('household_food_prices').update(priceData).eq('id',duplicate.data.id);if(updatedPrice.error)throw updatedPrice.error}
+        else{const inserted=await supabase.from('household_food_prices').insert(priceData);if(inserted.error)throw inserted.error}
         added++
       }
       const updated=await supabase.from('receipt_uploads').update({status:'processed'}).eq('id',activeReceipt.id).eq('household_id',householdId)
@@ -229,17 +247,17 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   return <section>
     <div className="page-heading"><div><div className="eyebrow">PREISDATENBANK FÜTTERN</div><h1>Kassenbon-Auswertung</h1><p>Foto hochladen, Artikel erkennen und Preise in euren Haushaltskatalog übernehmen.</p></div><div className="heading-icon"><ReceiptText size={25}/></div></div>
     <div className="shopping-layout">
-      <form className="panel add-panel stack-form" onSubmit={uploadAndAnalyse}>
+      <div className="panel add-panel stack-form">
         <span className="eyebrow">NEUER KASSENBON</span><h2>Bon fotografieren</h2>
         <label>Supermarkt<select name="retailer" value={retailer} onChange={e=>setRetailer(e.target.value)}>{Object.entries(retailers).map(([code,name])=><option key={code} value={code}>{name}</option>)}</select></label>
         <label>Einkaufsdatum<input name="purchase_date" type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/></label>
-        <label className="receipt-file-label"><Camera size={19}/> Foto aufnehmen oder auswählen<input name="receipt" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" required/></label>
+        <label className="receipt-file-label"><Camera size={19}/> Foto mit Kamera aufnehmen<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={handleFileChange} disabled={busy}/></label>
+        <label className="receipt-file-label"><Upload size={19}/> Bild vom Handy auswählen<input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleFileChange} disabled={busy}/></label>
         <small>JPG, PNG oder WebP · maximal 10 MB. Die Texterkennung läuft direkt in eurem Browser; das Bonfoto bleibt im privaten Haushaltsspeicher.</small>
-        <button className="button button-dark button-full" disabled={busy}><Upload size={16}/> Bon hochladen & auswerten</button>
-      </form>
+      </div>
       <div className="panel shopping-list-panel">
         <div className="panel-head"><div><span className="eyebrow">EURE BELEGE</span><h2>{receipts.length} hochgeladen</h2></div><ReceiptText size={19}/></div>
-        {receipts.length?receipts.map(r=><div className="pantry-row" key={r.id}><div className="pantry-icon"><ReceiptText size={18}/></div><div className="pantry-name"><b>{retailers[r.retailer_code||'']||'Supermarkt'}</b><small>{r.purchase_date?new Date(r.purchase_date+'T12:00:00').toLocaleDateString('de-DE'):new Date(r.created_at).toLocaleDateString('de-DE')} · {r.status==='processed'?'Ausgewertet':'Wartet auf Auswertung'}</small></div>{r.status!=='processed'&&<button type="button" className="button button-light button-small" disabled={busy} onClick={()=>analyse(r)}>Auswerten</button>}</div>):<div className="empty-state"><Camera size={30}/><b>Noch keine Bons gespeichert.</b><span>Der erste Bon legt den Grundstein für eure Preisverläufe.</span></div>}
+        {receipts.length?receipts.map(r=><div className="pantry-row" key={r.id}><div className="pantry-icon"><ReceiptText size={18}/></div><div className="pantry-name"><b>{retailers[r.retailer_code||'']||'Supermarkt'}</b><small>{r.purchase_date?new Date(r.purchase_date+'T12:00:00').toLocaleDateString('de-DE'):new Date(r.created_at).toLocaleDateString('de-DE')} · {r.status==='processed'?'Ausgewertet':'Wartet auf Auswertung'}</small></div><div className="form-row"><button type="button" className="button button-light button-small" disabled={busy} onClick={()=>analyse(r)}>{r.status==='processed'?'Erneut auswerten':'Auswerten'}</button><button type="button" className="button button-light button-small" disabled={busy} onClick={()=>deleteReceipt(r)} aria-label="Bon löschen">Löschen</button></div></div>):<div className="empty-state"><Camera size={30}/><b>Noch keine Bons gespeichert.</b><span>Der erste Bon legt den Grundstein für eure Preisverläufe.</span></div>}
       </div>
     </div>
     {progress&&<div className="notice-card"><LoaderCircle size={18}/><span>{progress}</span></div>}

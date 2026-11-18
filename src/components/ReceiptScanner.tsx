@@ -206,6 +206,55 @@ function scoreOCR(text:string,words:OCRWord[]=[]){
   const useful=(text.match(/[A-Za-zÄÖÜäöüß0-9]/g)||[]).length/Math.max(1,text.length)
   return confidence*0.65+prices*7+useful*18
 }
+type PaddleOCRItem = { text: string; score?: number; poly: number[][] }
+type PaddleOCRResult = { items: PaddleOCRItem[] }
+type PaddleOCREngine = { predict: (image: Blob) => Promise<PaddleOCRResult[]> }
+let paddleOCRPromise: Promise<PaddleOCREngine> | null = null
+
+async function loadPaddleOCR(): Promise<PaddleOCREngine> {
+  if (!paddleOCRPromise) {
+    paddleOCRPromise = (async () => {
+      // Official PaddleOCR.js SDK: inference runs in this browser; only SDK/model files are downloaded.
+      const moduleUrl = 'https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/+esm'
+      const sdk = await import(/* @vite-ignore */ moduleUrl) as { PaddleOCR: { create: (options: Record<string, unknown>) => Promise<PaddleOCREngine> } }
+      return sdk.PaddleOCR.create({
+        lang: 'german',
+        ocrVersion: 'PP-OCRv6',
+        worker: true,
+        ortOptions: {
+          backend: 'wasm',
+          wasmPaths: 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/',
+          numThreads: 1,
+          simd: true,
+        },
+      })
+    })().catch(error => {
+      paddleOCRPromise = null
+      throw error
+    })
+  }
+  return paddleOCRPromise
+}
+
+function paddleResultToOCR(result: PaddleOCRResult): { text: string; words: OCRWord[] } {
+  const words: OCRWord[] = (result.items || []).map(item => {
+    const points = Array.isArray(item.poly) ? item.poly : []
+    const xs = points.map(point => Number(point[0])).filter(Number.isFinite)
+    const ys = points.map(point => Number(point[1])).filter(Number.isFinite)
+    return {
+      text: String(item.text || ''),
+      confidence: Number(item.score || 0) * 100,
+      bbox: {
+        x0: xs.length ? Math.min(...xs) : 0,
+        y0: ys.length ? Math.min(...ys) : 0,
+        x1: xs.length ? Math.max(...xs) : 0,
+        y1: ys.length ? Math.max(...ys) : 0,
+      },
+    }
+  }).filter(word => word.text.trim() && word.bbox.x1 >= word.bbox.x0 && word.bbox.y1 >= word.bbox.y0)
+  return { text: words.map(word => word.text).join('\\n'), words }
+}
+
 async function loadTesseract() {
   if(window.Tesseract) return window.Tesseract
   await new Promise<void>((resolve,reject)=>{
@@ -251,16 +300,34 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     if(!supabase)return
     setBusy(true);setError('');setNotice('');setProgress('Privaten Bon laden …');setActiveReceipt(receipt);setLines([]);setOcrText('')
     let worker:Awaited<ReturnType<NonNullable<typeof window.Tesseract>['createWorker']>>|null=null
+    let paddleWarning=''
     try{
       const downloaded=await supabase.storage.from('receipt-photos').download(receipt.image_path)
       if(downloaded.error)throw downloaded.error
-      setProgress('Texterkennung wird geladen …')
-      const api=await loadTesseract()
-      worker=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Bon wird gelesen: '+Math.round(Number(m.progress)*100)+' %')}})
       if(receiptPreview)URL.revokeObjectURL(receiptPreview)
       setReceiptPreview(URL.createObjectURL(downloaded.data))
       const variants=await prepareReceiptImages(downloaded.data)
       const attempts:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number;parsed:Line[]}[]=[]
+
+      // Independent second engine. PaddleOCR runs locally in the browser and never receives the receipt image on a server.
+      try{
+        setProgress('Kostenlose PaddleOCR-Engine wird geladen (beim ersten Mal kann das länger dauern) …')
+        const paddle=await loadPaddleOCR()
+        for(const variant of variants.slice(0,2)){
+          setProgress('PaddleOCR liest den Bon ('+variant.label+') …')
+          const [result]=await paddle.predict(variant.blob)
+          if(!result)continue
+          const converted=paddleResultToOCR(result)
+          const parsed=parseReceipt(converted.text,foods,converted.words)
+          attempts.push({data:{text:converted.text,confidence:converted.words.reduce((sum,w)=>sum+(w.confidence??0),0)/Math.max(1,converted.words.length),words:converted.words},label:'PaddleOCR · '+variant.label,score:scoreOCR(converted.text,converted.words),parsed})
+        }
+      }catch(error){
+        paddleWarning=error instanceof Error?error.message:'PaddleOCR konnte nicht gestartet werden.'
+      }
+
+      setProgress('Tesseract-Rückfallebene wird geladen …')
+      const api=await loadTesseract()
+      worker=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Tesseract liest den Bon: '+Math.round(Number(m.progress)*100)+' %')}})
       for(const variant of variants)for(const mode of ['4','6','11']){
         setProgress('Bon wird gelesen ('+variant.label+', Modus '+mode+') …')
         if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:'1',user_defined_dpi:'300'})
@@ -301,7 +368,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       const priceCount=parsed.filter(line=>line.price).length
       const reviewCount=parsed.length-priceCount
       const textResults=attempts.map(a=>'--- '+a.label+' ---\\n'+a.data.text).join('\\n\\n')
-      setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe zusammengeführt · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
+      setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe aus PaddleOCR + Tesseract zusammengeführt · '+(paddleWarning?'PaddleOCR nicht verfügbar: '+paddleWarning:'PaddleOCR aktiv')+' · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
       setLines(parsed)

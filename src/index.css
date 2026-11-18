@@ -374,3 +374,66 @@
   .theme-choice{padding:5px 5px;font-size:8px}
   .device-choice{padding:4px 5px}
 }
+
+/* Sophia – phone palette refresh: soft blush canvas, true red typography, mint icons. */
+@media(max-width:720px){
+  .theme-sophia .main-content,
+  .theme-sophia .topbar,
+  .theme-sophia .page-wrap{background:#fff0f4}
+  .theme-sophia .main-content{background:linear-gradient(180deg,#fff0f4 0%,#ffe9ef 100%)}
+  .theme-sophia .topbar{background:#fff0f4ed;border-color:#f4cbd4}
+  .theme-sophia,
+  .theme-sophia .breadcrumb,
+  .theme-sophia .page-heading h1,
+  .theme-sophia .page-heading p,
+  .theme-sophia .eyebrow,
+  .theme-sophia .panel-head h2,
+  .theme-sophia .form-panel h2,
+  .theme-sophia .add-panel h2,
+  .theme-sophia .settings-panel h2,
+  .theme-sophia .stat-card>strong,
+  .theme-sophia .stat-top,
+  .theme-sophia .stat-card>small,
+  .theme-sophia .nav-item,
+  .theme-sophia .household-chip,
+  .theme-sophia .profile-button,
+  .theme-sophia .profile-button b,
+  .theme-sophia .stack-form label,
+  .theme-sophia .form-panel label,
+  .theme-sophia .settings-panel label,
+  .theme-sophia .toggle-row b,
+  .theme-sophia .muted,
+  .theme-sophia .footer{color:#c00020}
+  .theme-sophia .nav-item.active{background:#d8f0e2;color:#b0001d;box-shadow:inset 0 3px #a8d8bb}
+  .theme-sophia .nav-item svg,
+  .theme-sophia .heading-icon svg,
+  .theme-sophia .stat-top svg,
+  .theme-sophia .pantry-icon svg,
+  .theme-sophia .retailer-logo svg,
+  .theme-sophia .tip-icon svg,
+  .theme-sophia .feature-icon svg,
+  .theme-sophia .round-icon svg,
+  .theme-sophia .icon-button svg,
+  .theme-sophia .panel svg,
+  .theme-sophia .page-heading svg{color:#79b997!important;stroke:#79b997}
+  .theme-sophia .heading-icon,
+  .theme-sophia .pantry-icon,
+  .theme-sophia .retailer-logo,
+  .theme-sophia .tip-icon,
+  .theme-sophia .feature-icon,
+  .theme-sophia .avatar{background:#d9f0e2!important;color:#79b997!important;border-color:#bfe3ce}
+  .theme-sophia .stat-card,
+  .theme-sophia .panel,
+  .theme-sophia .retailer-card,
+  .theme-sophia .notice-card{background:#fff9fa;border-color:#f2cbd4}
+  .theme-sophia .button-dark{background:#c00020;color:#fff}
+  .theme-sophia .button-light,
+  .theme-sophia .round-icon,
+  .theme-sophia .icon-button{background:#d9f0e2;border-color:#bfe3ce;color:#c00020}
+  .theme-sophia .sidebar{background:#e4f4e9;border-color:#cfe8d8}
+  .theme-sophia .topbar-right .theme-choice.selected{background:#c00020;color:#fff}
+  .theme-sophia .device-choice.selected{background:#d9f0e2;color:#c00020;border-color:#bfe3ce}
+  .theme-sophia input,
+  .theme-sophia select,
+  .theme-sophia textarea{color:#c00020}
+}

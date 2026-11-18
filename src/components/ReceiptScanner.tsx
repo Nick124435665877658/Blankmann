@@ -42,10 +42,6 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     const pack=name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
     found.push({id:crypto.randomUUID(),name,price:Number.isFinite(price)?price.toFixed(2).replace('.',','):'',foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:Number.isFinite(price)})
   }
-  const remember=(candidate:string)=>{
-    const clean=candidate.replace(/\s+/g,' ').replace(/^[|:;.\-]+|[|:;.\-]+$/g,'').trim()
-    if(clean.length>=3&&!isNoise(clean)&&/[a-zäöüß]/i.test(clean)&&!/\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/.test(clean))pendingNames.push(clean)
-  }
   // First pass: group OCR words by their vertical position. Product names and
   // amounts may be on adjacent rows, so keep a name until its price appears.
   if(words.length){
@@ -75,7 +71,6 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       const amountWord=rowWords.find(w=>w.text.includes(amount))
       const name=rowWords.filter(w=>!amountWord||w.bbox.x0<amountWord.bbox.x0).map(w=>w.text).join(' ').trim()||leftText
       if(name&&!isNoise(name))add(name,amount)
-
     }
   }
   // Second pass: text layout fallback. Also associates a price-only line with

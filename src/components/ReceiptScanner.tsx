@@ -30,7 +30,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|betrag|zu zahlen|summe eur)\b/i.test(normalize(value))
   const cleanName=(raw:string)=>{
     let name=raw.replace(/[|_]+/g,' ').replace(/[“”„"'´]/g,' ').replace(/[^\p{L}\p{N}\s-]/gu,' ').replace(/\s+/g,' ').trim()
-    name=name.replace(/\bkokosmi\s+lc\s+dad\s+ight\b/i,'Kokosmilch Light')
+    name=name.replace(/\bkokosmi\s+lc\s+dad\s+ight(?:\s+.*)?$/i,'Kokosmilch Light')
     name=name.replace(/\bkokosmilch\s+d[a4]d?\s*l?i[gq]ht\b/i,'Kokosmilch Light')
     return name
   }

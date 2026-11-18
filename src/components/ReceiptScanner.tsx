@@ -80,7 +80,7 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     }
   }
   // Text fallback catches OCR engines/layouts that do not provide useful coordinates.
-  if(found.length<3){
+  {
     for(const raw of text.split(/\\r?\\n/)){
       const line=raw.replace(/\\s+/g,' ').trim()
       const match=line.match(/(.+?)\\s+(-?\\d{1,4}[,.]\\d{2})\\s*(?:[A-Z*])?$/i)

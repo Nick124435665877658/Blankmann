@@ -40,8 +40,11 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     const name=cleanName(rawName.replace(/^\d+\s*[xX×]\s*/,'').replace(/\s+\*$/,''))
     const letters=(name.match(/[\p{L}]/gu)||[]).length
     if(name.length<3 || isNoise(name) || letters<3 || letters/Math.max(1,name.length)<0.35) return
-    const price=rawPrice?Number(rawPrice.replace(',','.')):NaN
-    if(rawPrice&&(!Number.isFinite(price)||price<=0||price>500)) return
+    // Only create a receipt position when this OCR row contains a real, parsed price.
+    // Catalog matches are labels for detected receipt lines, never a source of new lines.
+    if(!rawPrice) return
+    const price=Number(rawPrice.replace(',','.'))
+    if(!Number.isFinite(price)||price<=0||price>500) return
     const norm=normalize(name)
     const exact=likelyFood(name,foods)
     const likely=exact ?? foods.find(f=>{
@@ -115,16 +118,11 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
       continue
     }
     if(!isNoise(line)&&/[\\p{L}]/u.test(line)){
-      const candidate=cleanName(line),known=likelyFood(candidate,foods)
-      if(known&&!found.some(item=>normalize(item.name)===normalize(known.name)))found.push({id:crypto.randomUUID(),name:known.name,price:'',foodId:known.id,quantity:'',unit:'',selected:false})
-      pendingText=candidate
+      // Keep a name-only line as context for a following price-only OCR line.
+      // It is deliberately NOT emitted as an item unless a price is found.
+      pendingText=cleanName(line)
     }
   }
-  const rawNormalized=normalize(text)
-  const knownEier=foods.find(f=>/^(eier|ei)$/.test(normalize(f.name)))
-  const knownZucchini=foods.find(f=>/^zucchin/.test(normalize(f.name)))
-  if(knownEier&&/eier|e1er/.test(rawNormalized)&&!found.some(item=>/eier/.test(normalize(item.name))))found.push({id:crypto.randomUUID(),name:knownEier.name,price:'',foodId:knownEier.id,quantity:'',unit:'',selected:false})
-  if(knownZucchini&&/zucchin[i1l]?|zuchini|zucch1ni/.test(rawNormalized)&&!found.some(item=>/zucchin/.test(normalize(item.name))))found.push({id:crypto.randomUUID(),name:knownZucchini.name,price:'',foodId:knownZucchini.id,quantity:'',unit:'',selected:false})
   const unique:Line[]=[]
   for(const line of found){
     const key=normalize(line.name),existing=unique.findIndex(other=>normalize(other.name)===key)
@@ -224,8 +222,8 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       }
       best=attempts.sort((a,b)=>b.score-a.score)[0]??null
       if(!best)throw new Error('Texterkennung lieferte kein Ergebnis.')
-      setOcrText(best.data.text);setOcrMethod(best.label+' · Qualitätswert '+Math.round(best.score))
       const parsed=parseReceipt(best.data.text,foods,best.data.words||[])
+      setOcrText(best.data.text);setOcrMethod(best.label+' · Qualitätswert '+Math.round(best.score)+' · '+parsed.length+' Preispositionen')
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat noch keine verlässlichen Artikel erkannt. Das erkannte Bild und der Rohtext bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
       setLines(parsed)

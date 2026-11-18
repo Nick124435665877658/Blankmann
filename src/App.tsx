@@ -26,7 +26,6 @@ type Meal = { id: string; meal_date: string; meal_type: string; custom_title: st
 type RecipeIngredient = { id: string; food_item_id: string | null; name: string; quantity: number | null; unit: string | null; aisle: string | null; is_optional: boolean }
 type Recipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; notes: string | null; recipe_ingredients?: RecipeIngredient[] }
 
-type ReceiptUpload = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
 const nav: { id: Tab; label: string; icon: typeof CalendarDays }[] = [
   { id: 'overview', label: 'Übersicht', icon: Sprout },
@@ -73,11 +72,9 @@ export default function App() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [editingMealId, setEditingMealId] = useState<string | null>(null)
   const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null)
-  const [receipts, setReceipts] = useState<ReceiptUpload[]>([])
   const [weekStart, setWeekStart] = useState(mondayISO())
   const [listId, setListId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [receiptBusy, setReceiptBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
   const [visualTheme, setVisualTheme] = useState<'nick' | 'sophia'>(() => {
@@ -141,9 +138,6 @@ export default function App() {
     setFoods((foodRows.data ?? []) as FoodItem[])
     setFoodPrices((priceRows.data ?? []) as FoodPrice[])
     setRecipes((recipeRows.data ?? []) as Recipe[])
-    const receiptRows = await supabase.from('receipt_uploads').select('id,image_path,retailer_code,purchase_date,status,created_at').eq('household_id', household.id).order('created_at', { ascending: false })
-    if (receiptRows.error) throw receiptRows.error
-    setReceipts((receiptRows.data ?? []) as ReceiptUpload[])
     setShopping((shop.data ?? []) as ShoppingItem[])
     setPantry((stock.data ?? []) as PantryItem[])
     if (plan.data) {
@@ -189,25 +183,6 @@ export default function App() {
   const budget = Number(settings?.weekly_budget ?? 100)
 
   async function signOut() { await supabase?.auth.signOut() }
-
-  async function uploadReceipt(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!supabase || !household || !session?.user) return
-    const formElement = e.currentTarget
-    const form = new FormData(formElement)
-    const file = form.get('receipt') as File | null
-    if (!file || !file.size) { setError('Bitte fotografiere oder wähle zuerst einen Kassenbon aus.'); return }
-    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { setError('Bitte nutze ein Foto im JPG-, PNG- oder WebP-Format.'); return }
-    if (file.size > 10 * 1024 * 1024) { setError('Das Foto darf maximal 10 MB groß sein.'); return }
-    setReceiptBusy(true); setError(''); setNotice('')
-    const path = household.id + '/' + crypto.randomUUID() + '-' + file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-    const uploaded = await supabase.storage.from('receipt-photos').upload(path, file, { contentType: file.type, upsert: false })
-    if (uploaded.error) { setReceiptBusy(false); setError(uploaded.error.message); return }
-    const inserted = await supabase.from('receipt_uploads').insert({ household_id: household.id, image_path: path, retailer_code: String(form.get('retailer') || '') || null, purchase_date: String(form.get('purchase_date') || '') || null, created_by: session.user.id })
-    setReceiptBusy(false)
-    if (inserted.error) { await supabase.storage.from('receipt-photos').remove([path]); setError(inserted.error.message); return }
-    formElement.reset(); setNotice('Bon sicher hochgeladen. Er wartet jetzt auf die Preiserfassung.'); await refreshData()
-  }
 
   if (!isSupabaseConfigured || !supabase) return <SetupScreen />
   if (!authReady) return <div className="loading-screen"><div className="brand-mark">B.</div><p>BLANKMANN wird vorbereitet …</p></div>

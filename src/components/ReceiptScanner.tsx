@@ -7,7 +7,7 @@ type Receipt = { id: string; image_path: string; retailer_code: string | null; p
 type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean }
 
 declare global {
-  interface Window { Tesseract?: { createWorker: (language: string, oem?: number, options?: Record<string, unknown>) => Promise<{ recognize: (image: Blob | File) => Promise<{ data: { text: string } }>; terminate: () => Promise<void> }> } }
+  interface Window { Tesseract?: { createWorker: (language: string, oem?: number, options?: Record<string, unknown>) => Promise<{ recognize: (image: Blob | File) => Promise<{ data: { text: string; words?: { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }[] } }>; terminate: () => Promise<void> }> } }
 }
 
 const retailers: Record<string,string> = { aldi_nord:'ALDI Nord', lidl:'Lidl', rewe:'REWE', kaufland:'Kaufland', edeka:'EDEKA', penny:'Penny', other:'Anderer Markt' }
@@ -24,25 +24,95 @@ const categories: [string, RegExp][] = [
   ['Backen & Süßes',/schokolade|keks|zucker|honig|marmelade/],
 ]
 function guessCategory(name:string) { const n=normalize(name); return categories.find(([,re])=>re.test(n))?.[0] ?? 'Sonstiges' }
-function parseReceipt(text:string, foods:Food[]):Line[] {
-  const ignored=/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|eur\s)/i
+type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
+function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   const found:Line[]=[]
-  for (const raw of text.split(/\r?\n/)) {
-    const line=raw.replace(/\s+/g,' ').trim()
-    if(line.length<4 || ignored.test(line)) continue
-    const match=line.match(/(.+?)\s+(-?\d{1,4}[,.]\d{2})\s*(?:[A-Z*])?$/i)
-    if(!match) continue
-    let name=match[1].replace(/^\d+\s*[xX×]\s*/,'').replace(/[|_]+/g,' ').replace(/\s{2,}/g,' ').trim()
-    if(name.length<3 || /summe|gesamt|mwst|pfand|rabatt|kartenzahlung/i.test(name)) continue
-    const price=Number(match[2].replace(',','.'))
-    if(!Number.isFinite(price)||price<=0||price>500) continue
+  const add=(rawName:string, rawPrice:string, rawQuantity='', rawUnit='')=>{
+    let name=rawName.replace(/^\\d+\\s*[xX×]\\s*/,'').replace(/[|_]+/g,' ').replace(/\\s+/g,' ').trim()
+    name=name.replace(/\\s+(?:[A-Z*])$/,'').trim()
+    if(name.length<3 || /^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|datum|uhrzeit|bon|kasse|bedienung|artikel|anzahl|eur|pfand)\\b/i.test(name)) return
+    const price=Number(rawPrice.replace(',','.'))
+    if(!Number.isFinite(price)||price<=0||price>500) return
     const norm=normalize(name)
     const exact=foods.find(f=>f.normalized_name===norm || normalize(f.name)===norm)
     const likely=exact ?? foods.find(f=>norm.length>5 && (norm.includes(normalize(f.name))||normalize(f.name).includes(norm)))
-    const pack=name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
-    found.push({id:crypto.randomUUID(),name,price:price.toFixed(2).replace('.',','),foodId:likely?.id??'',quantity:pack?.[1]?.replace('.',',')??'',unit:pack?.[2]?.toLowerCase()??'',selected:true})
+    const pack=name.match(/(?:^|\\s)(\\d+(?:[,.]\\d+)?)\\s*(kg|g|mg|l|ml|stk|stück)\\b/i)
+    found.push({id:crypto.randomUUID(),name,price:price.toFixed(2).replace('.',','),foodId:likely?.id??'',quantity:rawQuantity||pack?.[1]?.replace('.',',')||'',unit:rawUnit||pack?.[2]?.toLowerCase()||'',selected:true})
   }
-  return found
+  // Prefer word coordinates: supermarket receipts put the product name on the left
+  // and the amount in a separate right-hand column.
+  if(words.length){
+    const sorted=[...words].filter(w=>w.text.trim()).sort((a,b)=>((a.bbox.y0+a.bbox.y1)-(b.bbox.y0+b.bbox.y1))||a.bbox.x0-b.bbox.x0)
+    const rows:{y:number;words:OCRWord[]}[]=[]
+    for(const word of sorted){
+      const y=(word.bbox.y0+word.bbox.y1)/2
+      let row=rows.find(r=>Math.abs(r.y-y)<=Math.max(10,(word.bbox.y1-word.bbox.y0)*0.55))
+      if(!row){row={y,words:[]};rows.push(row)}
+      row.words.push(word)
+      row.y=row.words.reduce((s,w)=>s+(w.bbox.y0+w.bbox.y1)/2,0)/row.words.length
+    }
+    rows.sort((a,b)=>a.y-b.y)
+    for(let i=0;i<rows.length;i++){
+      const row=rows[i], rowWords=row.words.sort((a,b)=>a.bbox.x0-b.bbox.x0)
+      const rowText=rowWords.map(w=>w.text).join(' ').replace(/\\s+/g,' ').trim()
+      const priceMatch=[...rowText.matchAll(/(-?\\d{1,4}[,.]\\d{2})/g)].pop()
+      if(!priceMatch) continue
+      const amount=priceMatch[1]
+      const amountIndex=rowText.lastIndexOf(amount)
+      const leftText=rowText.slice(0,amountIndex).trim()
+      if(/^\\d+\\s*stk?\\s*[x×]/i.test(leftText) || /^\\d+\\s*[x×]/i.test(leftText)) {
+        const previous=found[found.length-1]
+        const qty=leftText.match(/(\\d+)\\s*(stk|stück)?\\s*[x×]/i)
+        if(previous&&qty){previous.quantity=qty[1];previous.unit='stk'}
+        continue
+      }
+      if(Number(amount.replace(',','.'))<0 || /rabatt|\\d+%/i.test(leftText)){
+        const previous=found[found.length-1]
+        if(previous && (normalize(leftText).includes(normalize(previous.name).split(' ')[0]) || /rabatt|\\d+%/i.test(leftText))){
+          const discounted=Number(previous.price.replace(',','.'))+Number(amount.replace(',','.'))
+          if(discounted>0) previous.price=discounted.toFixed(2).replace('.',',')
+        }
+        continue
+      }
+      const nameWords=rowWords.filter(w=>w.bbox.x0 < (rowWords.find(w=>w.text.includes(amount))?.bbox.x0 ?? Infinity))
+      const name=nameWords.map(w=>w.text).join(' ').trim() || leftText
+      if(name && !/^(summe|gesamt|gegeben|mwst|pfand|ec-cash)/i.test(name)) add(name,amount)
+    }
+  }
+  // Text fallback catches OCR engines/layouts that do not provide useful coordinates.
+  if(found.length<3){
+    for(const raw of text.split(/\\r?\\n/)){
+      const line=raw.replace(/\\s+/g,' ').trim()
+      const match=line.match(/(.+?)\\s+(-?\\d{1,4}[,.]\\d{2})\\s*(?:[A-Z*])?$/i)
+      if(!match || /pfand|summe|gesamt|mwst|rabatt|kartenzahlung/i.test(match[1])) continue
+      const name=match[1].replace(/^\\d+\\s*[xX×]\\s*/,'').trim()
+      const qty=name.match(/(\\d+)\\s*(stk|stück)?\\s*[x×]/i)
+      if(qty){const previous=found[found.length-1];if(previous){previous.quantity=qty[1];previous.unit='stk'};continue}
+      if(Number(match[2].replace(',','.'))<0) continue
+      const norm=normalize(name)
+      if(found.some(l=>normalize(l.name)===norm && l.price===match[2].replace('.',','))) continue
+      add(name,match[2])
+    }
+  }
+  // Remove duplicate detections from overlapping OCR rows/passes.
+  return found.filter((line,index,all)=>all.findIndex(other=>normalize(other.name)===normalize(line.name)&&other.price===line.price)===index)
+}
+async function prepareReceiptImage(file:Blob):Promise<Blob>{
+  const bitmap=await createImageBitmap(file)
+  const scale=Math.max(1.5,Math.min(2.5,1800/bitmap.width))
+  const canvas=document.createElement('canvas')
+  canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale)
+  const ctx=canvas.getContext('2d')
+  if(!ctx){bitmap.close();return file}
+  ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close()
+  const image=ctx.getImageData(0,0,canvas.width,canvas.height)
+  for(let i=0;i<image.data.length;i+=4){
+    const gray=0.299*image.data[i]+0.587*image.data[i+1]+0.114*image.data[i+2]
+    const contrast=Math.max(0,Math.min(255,(gray-128)*1.35+128))
+    image.data[i]=image.data[i+1]=image.data[i+2]=contrast
+  }
+  ctx.putImageData(image,0,0)
+  return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Bonfoto konnte nicht vorbereitet werden.')),'image/png'))
 }
 async function loadTesseract() {
   if(window.Tesseract) return window.Tesseract
@@ -67,6 +137,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   const [progress,setProgress]=useState('')
   const [error,setError]=useState('')
   const [notice,setNotice]=useState('')
+  const [ocrText,setOcrText]=useState('')
   const refresh=useCallback(async()=>{
     if(!supabase)return
     const [foodRows,receiptRows]=await Promise.all([
@@ -82,7 +153,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   function updateLine(id:string,patch:Partial<Line>){setLines(current=>current.map(line=>line.id===id?{...line,...patch}:line))}
   async function analyse(receipt:Receipt) {
     if(!supabase)return
-    setBusy(true);setError('');setNotice('');setProgress('Privaten Bon laden …');setActiveReceipt(receipt);setLines([])
+    setBusy(true);setError('');setNotice('');setProgress('Privaten Bon laden …');setActiveReceipt(receipt);setLines([]);setOcrText('')
     let worker:Awaited<ReturnType<NonNullable<typeof window.Tesseract>['createWorker']>>|null=null
     try{
       const downloaded=await supabase.storage.from('receipt-photos').download(receipt.image_path)
@@ -90,9 +161,11 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       setProgress('Texterkennung wird geladen …')
       const api=await loadTesseract()
       worker=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Bon wird gelesen: '+Math.round(Number(m.progress)*100)+' %')}})
-      const result=await worker.recognize(downloaded.data)
-      const parsed=parseReceipt(result.data.text,foods)
-      if(!parsed.length)throw new Error('Ich konnte keine sicheren Artikelpreise erkennen. Bitte fotografiere den Bon möglichst gerade, vollständig und scharf.')
+      const prepared=await prepareReceiptImage(downloaded.data)
+      const result=await worker.recognize(prepared)
+      setOcrText(result.data.text)
+      const parsed=parseReceipt(result.data.text,foods,result.data.words||[])
+      if(!parsed.length)throw new Error('Ich konnte keine Artikelpreise erkennen. Bitte prüfe das Foto oder versuche es mit besserem Licht erneut.')
       setLines(parsed);setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}
@@ -183,6 +256,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       </div>)}
       <div className="receipt-save-row"><b>{selectedCount} Positionen · {euro(lines.filter(l=>l.selected).reduce((sum,l)=>sum+(Number(l.price.replace(',','.'))||0),0))}</b><button className="button button-dark" disabled={busy||!selectedCount} onClick={savePrices}><CircleDollarSign size={16}/> Preise & Nahrungsmittel speichern</button></div>
     </div>}
+    {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
     <div className="notice-card"><Sparkles size={18}/><span>Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert.</span></div>
   </section>
 }

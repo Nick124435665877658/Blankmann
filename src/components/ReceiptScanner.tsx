@@ -253,15 +253,16 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     if(!window.confirm('Sicher, dass du das Element „Bon '+retailerName+' vom '+dateLabel+'“ löschen willst? Das Foto wird ebenfalls entfernt. Bereits gespeicherte Preisverläufe bleiben erhalten.'))return
     setBusy(true);setError('');setNotice('')
     try{
+      // Remove the private file first. If this fails, keep the receipt row so the user can retry.
+      const removed=await supabase.storage.from('receipt-photos').remove([receipt.image_path])
+      if(removed.error)throw new Error('Das Bonfoto konnte nicht gelöscht werden. Der Bon bleibt deshalb in der Liste: '+removed.error.message)
       const deleted=await supabase.from('receipt_uploads').delete().eq('id',receipt.id).eq('household_id',householdId).select('id').maybeSingle()
-      if(deleted.error)throw deleted.error
-      if(!deleted.data)throw new Error('Der Bon wurde nicht aus der Datenbank entfernt. Bitte prüfe die Berechtigung und versuche es erneut.')
+      if(deleted.error)throw new Error('Das Foto wurde entfernt, aber der Bon-Datensatz blieb bestehen. Bitte erneut auf Löschen tippen: '+deleted.error.message)
+      if(!deleted.data)throw new Error('Das Foto wurde entfernt, aber der Bon-Datensatz blieb bestehen. Bitte erneut auf Löschen tippen.')
       setReceipts(current=>current.filter(item=>item.id!==receipt.id))
       if(activeReceipt?.id===receipt.id){setActiveReceipt(null);setLines([]);setOcrText('');if(receiptPreview)URL.revokeObjectURL(receiptPreview);setReceiptPreview('')}
-      const removed=await supabase.storage.from('receipt-photos').remove([receipt.image_path])
-      if(removed.error){setNotice('Bon aus der Liste gelöscht. Das Foto konnte nicht automatisch entfernt werden: '+removed.error.message);return}
       setNotice('Bon und Foto wurden gelöscht. Bereits gespeicherte Preisverläufe bleiben erhalten.')
-    }catch(e){setError(e instanceof Error?e.message:'Bon konnte nicht gelöscht werden.')}
+    }catch(e){setError(e instanceof Error?e.message:'Bon konnte nicht vollständig gelöscht werden.')}
     finally{setBusy(false)}
   }
   async function savePrices(){

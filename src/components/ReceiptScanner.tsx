@@ -38,8 +38,8 @@ function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
     if(/^bio\s+zucch/i.test(name)) name='Bio Zucchini'
     else if(/^bio\s+eier/i.test(name)||/^bid\s+eier/i.test(name)) name='Bio Eier'
     else if(/^milprima/i.test(name)) name='Milprima Butter'
-    else if(/^kartof+el?f?ree?chips/i.test(name)||/^kartoffel.*chips/i.test(name)) name='Kartoffelchips'
-    else if(/^knorr\s+kraeu?ter/i.test(normalize(name))) name='Knorr Kräuter'
+    else if(/^kartof.*chips/i.test(name)||/^kartoffel.*chips/i.test(name)) name='Kartoffelchips'
+    else if(/^knorr\s+krauter/i.test(normalize(name))) name='Knorr Kräuter'
     else if(/^knorr\s*26/i.test(name)) name='Knorr 26 %'
     else if(/^meersalz/i.test(name)) name='Meersalz Grob'
     return name

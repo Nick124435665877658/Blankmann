@@ -653,3 +653,68 @@
 }
 .theme-sophia .toggle-switch:after { background: #FFFFFF !important; }
 .theme-sophia .shopping-item.checked .check-circle { background: #C00020 !important; color: #FFFFFF !important; }
+
+
+/* Sophia – dezente Mint-Akzente auf der bestehenden Rosa/Rot-Basis */
+.theme-sophia {
+  --sophia-mint: #BDE8D2;
+  --sophia-mint-strong: #78B997;
+  --sophia-mint-border: #A8DCC0;
+}
+.theme-sophia .nav-item.active,
+.theme-sophia .nav-item.active:hover {
+  background: #BDE8D2 !important;
+  border-color: #A8DCC0 !important;
+  color: #C00020 !important;
+  box-shadow: inset 3px 0 #78B997 !important;
+}
+.theme-sophia .nav-item.active *,
+.theme-sophia .nav-item.active svg,
+.theme-sophia .nav-item.active svg * {
+  color: #C00020 !important;
+  stroke: #C00020 !important;
+}
+.theme-sophia .heading-icon,
+.theme-sophia .pantry-icon,
+.theme-sophia .retailer-logo,
+.theme-sophia .tip-icon,
+.theme-sophia .feature-icon,
+.theme-sophia .avatar,
+.theme-sophia .list-counter,
+.theme-sophia .empty-illustration {
+  background: #E1F4E9 !important;
+  border-color: #BDE8D2 !important;
+}
+.theme-sophia .heading-icon svg,
+.theme-sophia .pantry-icon svg,
+.theme-sophia .retailer-logo svg,
+.theme-sophia .tip-icon svg,
+.theme-sophia .feature-icon svg,
+.theme-sophia .empty-illustration svg {
+  color: #78B997 !important;
+  stroke: #78B997 !important;
+}
+.theme-sophia .progress { background: #E5F3EA !important; }
+.theme-sophia .progress i { background: #78B997 !important; }
+.theme-sophia .toggle-row input:checked + .toggle-switch,
+.theme-sophia .device-choice.selected,
+.theme-sophia .theme-choice.selected {
+  background: #BDE8D2 !important;
+  border-color: #78B997 !important;
+  color: #C00020 !important;
+}
+.theme-sophia .check-circle:hover,
+.theme-sophia .shopping-item.checked .check-circle {
+  background: #78B997 !important;
+  border-color: #78B997 !important;
+  color: #FFFFFF !important;
+}
+.theme-sophia .check-circle:hover svg,
+.theme-sophia .shopping-item.checked .check-circle svg {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+.theme-sophia .tip-banner {
+  background: #EAF6EF !important;
+  border-color: #BDE8D2 !important;
+}

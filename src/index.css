@@ -437,3 +437,7 @@
   .theme-sophia select,
   .theme-sophia textarea{color:#c00020}
 }
+
+/* Mobile build/version metadata: keep both labels readable on narrow screens. */
+@media(max-width:720px){.mobile-brand-copy{display:grid;grid-template-columns:max-content;gap:2px;align-content:center;overflow:visible}.mobile-brand-copy small{display:block;font-size:7px;line-height:1.25;letter-spacing:.35px;white-space:nowrap;overflow:visible}}
+@media(max-width:390px){.mobile-brand-copy small{font-size:6.5px;letter-spacing:.1px}}

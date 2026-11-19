@@ -789,3 +789,10 @@
 .recipe-photo-edit .inline-check{display:flex;align-items:center;gap:6px}
 .rating-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 4px}
 .rating-form input{width:90px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:13px}
+/* 0.3.38: Design- und Ansichtswahl in den Einstellungen */
+.settings-display{margin-bottom:18px}
+.settings-display-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:14px}
+.settings-display-row>b{min-width:70px;font-size:12px}
+.settings-display .theme-choice{padding:10px 18px;font-size:12px}
+.settings-display .device-choice{min-height:38px;padding:8px 14px;font-size:12px;gap:6px}
+.settings-display .device-choice span,.device-phone .settings-display .device-choice span{display:inline}

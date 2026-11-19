@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
 import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
 import { normalizeUnit, pantryAmountFromReceipt, planPantryAddition, type PantryRow } from '../lib/kitchen'
+import { localISO } from '../lib/dates'
 
 type Receipt = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
@@ -47,7 +48,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   const [foods,setFoods]=useState<Food[]>([])
   const [receipts,setReceipts]=useState<Receipt[]>([])
   const [retailer,setRetailer]=useState('penny')
-  const [purchaseDate,setPurchaseDate]=useState(new Date().toISOString().slice(0,10))
+  const [purchaseDate,setPurchaseDate]=useState(localISO())
   const [lines,setLines]=useState<Line[]>([])
   const [activeReceipt,setActiveReceipt]=useState<Receipt|null>(null)
   const [busy,setBusy]=useState(false)
@@ -125,7 +126,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       const textResults=attempts.map(a=>'--- '+a.label+' ---\n'+a.data.text).join('\n\n')
       setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe (Tesseract, Lichtausgleich) · '+combined.summary+' · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
       setReceiptTotal(billTotal)
-      setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
+      setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||localISO(new Date(receipt.created_at)));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
       setLines(parsed)
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 import { manualPriceRow } from '../lib/kitchen'
+import { localISO } from '../lib/dates'
 
 // Fehlender Preis: von Hand eintragen. Wird wie ein Bon-Preis in household_food_prices gespeichert (Quelle „Manuell“).
 export default function ManualPriceForm({ householdId, foodId, foodName, defaultQuantity, defaultUnit, onSaved, onError }: {
@@ -24,7 +25,7 @@ export default function ManualPriceForm({ householdId, foodId, foodName, default
     setBusy(true)
     const { error } = await supabase.from('household_food_prices').insert({
       household_id: householdId, food_item_id: foodId, retailer_code: 'other', price_type: 'regular', source_name: 'Manuell',
-      observed_at: new Date().toISOString().slice(0, 10), notes: 'Von Hand eingetragen', ...manualPriceRow(price, quantity, unit),
+      observed_at: localISO(), notes: 'Von Hand eingetragen', ...manualPriceRow(price, quantity, unit),
     })
     setBusy(false)
     if (error) { onError('Preis für ' + foodName + ' konnte nicht gespeichert werden: ' + error.message); return }

@@ -5,6 +5,7 @@ export type AiIngredient = { id: string; name: string; quantity: number | null; 
 export type AiRecipe = { title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null }
 export type AiQuantity = { id: string; quantity: number; unit: string | null }
 export type AiTimes = { prepMinutes: number | null; cookMinutes: number | null }
+export type AiHistamine = { score: number | null; note: string | null }
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
 const amount = (i: AiIngredient) => (i.quantity !== null ? String(i.quantity).replace('.', ',') + (i.unit ? ' ' + i.unit : '') + ' ' : '') + i.name
@@ -27,11 +28,13 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     'Schreibe dann eine Schritt-für-Schritt-Kochanleitung mit 4 bis 10 Schritten. Verwende nur die genannten Zutaten; Salz, Pfeffer, Öl und Wasser sind erlaubt. Füge keine Tomaten und keine Sahne hinzu. Nenne Mengen und realistische Garzeiten.',
     'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
     'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
+    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei. Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
     '',
     'Antworte genau in diesem Format, ohne Einleitung und ohne Schlusswort:',
     'MENGEN:',
     missing.length ? missing.map(i => '- ' + i.name + ' | Zahl | Einheit').join('\n') : '- keine',
     'ZEIT: Vorbereitung Zahl Min | Kochen Zahl Min',
+    'HISTAMIN: Zahl von 1 bis 10 | kurze Begründung',
     'SCHRITTE:',
     '1. …',
     '2. …',
@@ -66,13 +69,21 @@ function parseTimes(lines: string[]): AiTimes {
   return { prepMinutes: minutes(/vorbereit\w*\D{0,12}?(\d{1,3})/i), cookMinutes: minutes(/(?:kochen|kochzeit|garen|garzeit|backen|backzeit)\D{0,12}?(\d{1,3})/i) }
 }
 
-export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { steps: string[]; quantities: AiQuantity[]; times: AiTimes } {
+function parseHistamine(lines: string[]): AiHistamine {
+  const line = lines.find(l => /^histamin/i.test(l)) ?? ''
+  const match = line.match(/^histamin\w*\s*:?\s*(\d{1,2})\s*(?:\/\s*10)?\s*(?:[|–—:-]\s*(.*))?$/i)
+  const score = match ? Number(match[1]) : NaN
+  if (!Number.isInteger(score) || score < 1 || score > 10) return { score: null, note: null }
+  return { score, note: (match?.[2] ?? '').trim().slice(0, 240) || null }
+}
+
+export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { steps: string[]; quantities: AiQuantity[]; times: AiTimes; histamine: AiHistamine } {
   const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').trim()
   const lines = clean.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
   const mengenAt = lines.findIndex(line => /^(mengen|zutaten)\s*:?\s*$/i.test(line))
   const schritteAt = lines.findIndex(line => /^(schritte|anleitung|zubereitung)\s*:?\s*$/i.test(line))
   const quantityLines = mengenAt >= 0 ? lines.slice(mengenAt + 1, schritteAt > mengenAt ? schritteAt : undefined) : []
-  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 ? [] : lines).filter(line => !/^zeit\b/i.test(line))
+  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 ? [] : lines).filter(line => !/^(zeit|histamin)/i.test(line))
   const missing = ingredients.filter(i => i.quantity === null)
   const quantities: AiQuantity[] = []
   for (const raw of quantityLines) {
@@ -87,5 +98,5 @@ export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { 
     const unit = unitAliases[keyOf(unitRaw)] ?? (unitRaw && unitRaw.length <= 12 ? unitRaw : match.unit)
     quantities.push({ id: match.id, quantity: Math.round(quantity * 100) / 100, unit: unit || null })
   }
-  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines) }
+  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines), histamine: parseHistamine(lines) }
 }

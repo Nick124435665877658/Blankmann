@@ -5,7 +5,7 @@ import { estimateRecipeCost, formatAmount, instructionSteps, planPantryDeduction
 import ManualPriceForm from './ManualPriceForm'
 import { completeRecipeWithAi } from '../lib/recipeAiClient'
 
-export type DetailsRecipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; recipe_ingredients?: IngredientRef[] }
+export type DetailsRecipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; histamine_score?: number | null; histamine_note?: string | null; rating?: number | null; recipe_ingredients?: IngredientRef[] }
 export type DetailsMeal = { id: string; servings: number; cooked_at: string | null; meal_date: string }
 
 const euro = (n: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
@@ -32,6 +32,13 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
   }
   const missingQuantities = (recipe.recipe_ingredients ?? []).filter(i => i.quantity === null).length
   const missingTimes = recipe.prep_minutes === null || recipe.cook_minutes === null
+  const missingHistamine = !recipe.histamine_score
+  async function setRating(value: number | null) {
+    if (!supabase) return
+    const { error } = await supabase.from('recipes').update({ rating: value }).eq('id', recipe.id).eq('household_id', householdId)
+    if (error) { onError('Bewertung konnte nicht gespeichert werden: ' + error.message); return }
+    await onChanged()
+  }
   const timeText = [recipe.prep_minutes !== null ? 'Vorbereitung ' + recipe.prep_minutes + ' Min' : '', recipe.cook_minutes !== null ? 'Kochen ' + recipe.cook_minutes + ' Min' : ''].filter(Boolean).join(' · ')
   // KI: Anleitung erzeugen und fehlende Mengen ergänzen. Vorhandene Anleitung nur nach Rückfrage ersetzen.
   async function generate(replaceSteps: boolean) {
@@ -40,7 +47,7 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
     try {
       const result = await completeRecipeWithAi(recipe.id, householdId, accessToken, replaceSteps)
       await onChanged()
-      onNotice('KI für „' + recipe.title + '“: ' + ([result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : '', result.times ? 'Kochzeit eingetragen' : ''].filter(Boolean).join(', ') || 'nichts mehr zu ergänzen') + '. Du kannst alles bearbeiten.')
+      onNotice('KI für „' + recipe.title + '“: ' + ([result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : '', result.times ? 'Kochzeit eingetragen' : '', result.histamine ? 'Histaminwert ' + result.histamine + '/10' : ''].filter(Boolean).join(', ') || 'nichts mehr zu ergänzen') + '. Du kannst alles bearbeiten.')
     } catch (error) { onError(error instanceof Error ? error.message : 'Die KI konnte das Rezept nicht ergänzen.') }
     finally { setBusy('') }
   }
@@ -79,6 +86,13 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
   return <div className="panel recipe-details">
     <div className="panel-head"><div><span className="eyebrow">{meal ? 'GEPLANTES GERICHT · ' + new Date(meal.meal_date + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : 'REZEPT'}</span><h2>{recipe.title}</h2><small className="muted">{String(servings).replace('.', ',')} Portionen · geschätzter Einkaufswert ≈ {euro(cost.total)}{missingFoods.length ? ' · ' + missingFoods.length + ' Preis(e) fehlen' : ''}{cost.approximate && !missingFoods.length ? ' · teils Packungspreise' : ''}{timeText ? ' · ⏱ ' + timeText : ''}</small></div><button type="button" className="icon-button" onClick={onClose} aria-label="Schließen"><X size={18} /></button></div>
 
+    <div className="recipe-scores">
+      <div><span className="eyebrow">HISTAMIN</span>{recipe.histamine_score
+        ? <p><span className={'badge histamine h' + (recipe.histamine_score >= 7 ? 'good' : recipe.histamine_score >= 4 ? 'mid' : 'bad')}>{recipe.histamine_score}/10</span> <small className="muted">{recipe.histamine_note || ''} {recipe.histamine_note === 'Von Hand gesetzt' ? '' : '(KI-Schätzung, keine medizinische Beratung – 1 = histaminreich, 10 = kein Histamin)'}</small></p>
+        : <p className="muted">Noch kein Wert – „Mit KI ergänzen“ vergibt ihn.</p>}</div>
+      <div><span className="eyebrow">EURE BEWERTUNG</span><div className="rating-picker">{[1,2,3,4,5,6,7,8,9,10].map(n => <button type="button" key={n} className={recipe.rating === n ? 'selected' : (recipe.rating ?? 0) >= n ? 'filled' : ''} onClick={() => setRating(recipe.rating === n ? null : n)} aria-label={'Bewertung ' + n + ' von 10'}>{n}</button>)}</div><small className="muted">1 = schlecht, 10 = super. Nochmal auf die Zahl tippen entfernt die Bewertung.</small></div>
+    </div>
+
     <span className="eyebrow">ZUTATEN & EINKAUFSWERT</span>
     {cost.lines.length ? cost.lines.map((line, index) => <div className="cost-line" key={line.name + index}>
       <div><b>{line.name}</b><small>{formatAmount(line.quantity, line.unit)}{line.hint && line.basis !== 'missing' ? ' · ' + line.hint : ''}</small>
@@ -94,7 +108,7 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
     </div> : steps.length ? <ol className="recipe-steps">{steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
       : <p className="muted">Noch keine Anleitung. Die KI erstellt sie aus den Zutaten und ergänzt fehlende Mengen – kostenlos über Cloudflare. Von dir eingetragene Mengen bleiben unverändert.</p>}
     {!editing && <div className="details-actions">
-      {(!steps.length || missingQuantities > 0 || missingTimes) && <button type="button" className="button button-dark" disabled={busy !== ''} onClick={() => generate(!steps.length)}>{busy === 'ai' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'ai' ? 'KI schreibt …' : 'Mit KI ergänzen: ' + [!steps.length ? 'Anleitung' : '', missingQuantities ? missingQuantities + ' Mengen' : '', missingTimes ? 'Kochzeit' : ''].filter(Boolean).join(' + ')}</button>}
+      {(!steps.length || missingQuantities > 0 || missingTimes || missingHistamine) && <button type="button" className="button button-dark" disabled={busy !== ''} onClick={() => generate(!steps.length)}>{busy === 'ai' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'ai' ? 'KI schreibt …' : 'Mit KI ergänzen: ' + [!steps.length ? 'Anleitung' : '', missingQuantities ? missingQuantities + ' Mengen' : '', missingTimes ? 'Kochzeit' : '', missingHistamine ? 'Histaminwert' : ''].filter(Boolean).join(' + ')}</button>}
       {steps.length > 0 && <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => generate(true)}><Sparkles size={16} /> Anleitung neu erzeugen</button>}
       <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => { setDraft(steps.map((s, i) => (i + 1) + '. ' + s).join('\n')); setEditing(true) }}><BookOpen size={16} /> {steps.length ? 'Bearbeiten' : 'Selbst schreiben'}</button>
     </div>}

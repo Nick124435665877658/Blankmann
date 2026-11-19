@@ -762,3 +762,21 @@
 .shopping-fix{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 6px}
 .shopping-fix input{min-width:0;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:12px}
 .shopping-view-switch button{padding:10px 6px}
+/* 0.3.35: Histaminwert und eigene Bewertung */
+.recipe-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin:0 0 12px}
+.recipe-filters label{display:grid;gap:5px;font-size:10px;font-weight:600;color:var(--muted)}
+.recipe-filters select{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:12px}
+.recipe-badges{display:flex;flex-wrap:wrap;gap:5px;margin:3px 0}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;line-height:1.5;white-space:nowrap}
+.badge.histamine.hgood{background:#dcefdc;color:#1f5a2c}
+.badge.histamine.hmid{background:#f6ebc8;color:#6b5210}
+.badge.histamine.hbad{background:#f6d6d2;color:#8a2318}
+.badge.rating{background:#e8e4f6;color:#3f3478}
+.recipe-scores{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.recipe-scores p{margin:6px 0 0}
+.rating-picker{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 4px}
+.rating-picker button{width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.rating-picker button.filled{background:#e8e4f6;color:#3f3478}
+.rating-picker button.selected{background:#3f3478;color:#fff;border-color:#3f3478}
+@media(max-width:720px){.recipe-scores{grid-template-columns:1fr}}
+.device-phone .recipe-scores{grid-template-columns:1fr}

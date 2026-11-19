@@ -1,7 +1,7 @@
 // Cloudflare Pages Function: POST /api/recipe-instructions  { recipeId }
 // Ergänzt mit Cloudflare Workers AI (Gratis-Kontingent) die Kochanleitung und fehlende Zutatenmengen eines Rezepts.
 // Antwort: { steps: string[], quantities: { id, quantity, unit }[], model } – gespeichert wird in der App.
-// Voraussetzung: Im Pages-Projekt unter Einstellungen → Bindungen eine „Workers AI“-Bindung mit dem Namen AI.
+// Die Workers-AI-Bindung „AI“ kommt aus wrangler.toml (Produktion und Vorschau) – kein Klick im Dashboard nötig.
 // Sicherheit: Das Rezept wird mit dem Login des Nutzers aus Supabase geladen (Zeilenschutz/RLS) –
 // nur Haushaltsmitglieder können ihre eigenen Rezepte ergänzen lassen, beliebige Texte gehen nicht an die KI.
 import { buildRecipeMessages, parseRecipeAnswer, type AiIngredient, type AiRecipe } from '../../src/lib/recipeAi'

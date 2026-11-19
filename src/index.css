@@ -780,3 +780,12 @@
 .rating-picker button.selected{background:#3f3478;color:#fff;border-color:#3f3478}
 @media(max-width:720px){.recipe-scores{grid-template-columns:1fr}}
 .device-phone .recipe-scores{grid-template-columns:1fr}
+/* 0.3.36: Rezeptfotos, Bewertung mit Komma */
+.recipe-thumb{width:44px;height:44px;flex:0 0 44px;border-radius:12px;object-fit:cover;background:var(--paper)}
+.recipe-thumb.large{width:120px;height:90px;flex-basis:120px}
+.recipe-photo{display:block;width:100%;max-height:320px;object-fit:cover;border-radius:14px;margin-bottom:16px}
+.recipe-photo-edit{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:6px 0 12px}
+.recipe-photo-edit label{display:grid;gap:5px;font-size:10px;font-weight:600;color:var(--muted)}
+.recipe-photo-edit .inline-check{display:flex;align-items:center;gap:6px}
+.rating-form{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0 4px}
+.rating-form input{width:90px;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:13px}

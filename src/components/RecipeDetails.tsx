@@ -5,14 +5,14 @@ import { estimateRecipeCost, formatAmount, instructionSteps, planPantryDeduction
 import ManualPriceForm from './ManualPriceForm'
 import { completeRecipeWithAi } from '../lib/recipeAiClient'
 
-export type DetailsRecipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; histamine_score?: number | null; histamine_note?: string | null; rating?: number | null; recipe_ingredients?: IngredientRef[] }
+export type DetailsRecipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; histamine_score?: number | null; histamine_note?: string | null; rating?: number | null; photo_path?: string | null; recipe_ingredients?: IngredientRef[] }
 export type DetailsMeal = { id: string; servings: number; cooked_at: string | null; meal_date: string }
 
 const euro = (n: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
 
 // Rezept öffnen: Zutaten mit geschätztem Einkaufswert, KI-Kochanleitung und „Gekocht“ (zieht die Zutaten vom Vorrat ab).
-export default function RecipeDetails({ recipe, meal, foods, prices, pantry, householdId, accessToken, onChanged, onClose, onNotice, onError }: {
-  recipe: DetailsRecipe; meal: DetailsMeal | null; foods: FoodRef[]; prices: PriceRow[]; pantry: PantryRow[]; householdId: string; accessToken: string
+export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, pantry, householdId, accessToken, onChanged, onClose, onNotice, onError }: {
+  photoUrl: string | null; recipe: DetailsRecipe; meal: DetailsMeal | null; foods: FoodRef[]; prices: PriceRow[]; pantry: PantryRow[]; householdId: string; accessToken: string
   onChanged: () => Promise<void>; onClose: () => void; onNotice: (message: string) => void; onError: (message: string) => void
 }) {
   const servings = Number(meal?.servings || recipe.servings || 2)
@@ -37,6 +37,7 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
     if (!supabase) return
     const { error } = await supabase.from('recipes').update({ rating: value }).eq('id', recipe.id).eq('household_id', householdId)
     if (error) { onError('Bewertung konnte nicht gespeichert werden: ' + error.message); return }
+    onNotice(value === null ? 'Bewertung entfernt.' : 'Bewertung ' + String(value).replace('.', ',') + '/10 gespeichert.')
     await onChanged()
   }
   const timeText = [recipe.prep_minutes !== null ? 'Vorbereitung ' + recipe.prep_minutes + ' Min' : '', recipe.cook_minutes !== null ? 'Kochen ' + recipe.cook_minutes + ' Min' : ''].filter(Boolean).join(' · ')
@@ -86,11 +87,19 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
   return <div className="panel recipe-details">
     <div className="panel-head"><div><span className="eyebrow">{meal ? 'GEPLANTES GERICHT · ' + new Date(meal.meal_date + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : 'REZEPT'}</span><h2>{recipe.title}</h2><small className="muted">{String(servings).replace('.', ',')} Portionen · geschätzter Einkaufswert ≈ {euro(cost.total)}{missingFoods.length ? ' · ' + missingFoods.length + ' Preis(e) fehlen' : ''}{cost.approximate && !missingFoods.length ? ' · teils Packungspreise' : ''}{timeText ? ' · ⏱ ' + timeText : ''}</small></div><button type="button" className="icon-button" onClick={onClose} aria-label="Schließen"><X size={18} /></button></div>
 
+    {photoUrl && <img className="recipe-photo" src={photoUrl} alt={'Foto von ' + recipe.title} />}
     <div className="recipe-scores">
       <div><span className="eyebrow">HISTAMIN</span>{recipe.histamine_score
         ? <p><span className={'badge histamine h' + (recipe.histamine_score >= 7 ? 'good' : recipe.histamine_score >= 4 ? 'mid' : 'bad')}>{recipe.histamine_score}/10</span> <small className="muted">{recipe.histamine_note || ''} {recipe.histamine_note === 'Von Hand gesetzt' ? '' : '(KI-Schätzung, keine medizinische Beratung – 1 = histaminreich, 10 = kein Histamin)'}</small></p>
         : <p className="muted">Noch kein Wert – „Mit KI ergänzen“ vergibt ihn.</p>}</div>
-      <div><span className="eyebrow">EURE BEWERTUNG</span><div className="rating-picker">{[1,2,3,4,5,6,7,8,9,10].map(n => <button type="button" key={n} className={recipe.rating === n ? 'selected' : (recipe.rating ?? 0) >= n ? 'filled' : ''} onClick={() => setRating(recipe.rating === n ? null : n)} aria-label={'Bewertung ' + n + ' von 10'}>{n}</button>)}</div><small className="muted">1 = schlecht, 10 = super. Nochmal auf die Zahl tippen entfernt die Bewertung.</small></div>
+      <div><span className="eyebrow">EURE BEWERTUNG</span>
+        <form className="rating-form" onSubmit={e => { e.preventDefault(); const text = String(new FormData(e.currentTarget).get('rating') || '').replace(',', '.').trim(); const value = Number(text); if (!text || !(value >= 1 && value <= 10)) { onError('Bitte eine Bewertung zwischen 1 und 10 eintragen, z. B. 6,7.'); return } void setRating(Math.round(value * 10) / 10) }}>
+          <input name="rating" inputMode="decimal" placeholder="z. B. 6,7" defaultValue={recipe.rating != null ? String(Number(recipe.rating)).replace('.', ',') : ''} aria-label="Eigene Bewertung von 1 bis 10" />
+          <span className="muted">/ 10</span>
+          <button className="button button-dark button-small">Speichern</button>
+          {recipe.rating != null && <button type="button" className="text-link" onClick={() => setRating(null)}>Entfernen</button>}
+        </form>
+        <small className="muted">1 = schlecht, 10 = super – Kommazahlen wie 6,7 sind möglich.</small></div>
     </div>
 
     <span className="eyebrow">ZUTATEN & EINKAUFSWERT</span>

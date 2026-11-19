@@ -4,6 +4,7 @@
 export type AiIngredient = { id: string; name: string; quantity: number | null; unit: string | null; is_optional: boolean }
 export type AiRecipe = { title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null }
 export type AiQuantity = { id: string; quantity: number; unit: string | null }
+export type AiTimes = { prepMinutes: number | null; cookMinutes: number | null }
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
 const amount = (i: AiIngredient) => (i.quantity !== null ? String(i.quantity).replace('.', ',') + (i.unit ? ' ' + i.unit : '') + ' ' : '') + i.name
@@ -23,11 +24,14 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     missing.length
       ? 'Ergänze zuerst übliche Mengen für ' + servings + ' Portionen für jede Zutat mit „(Menge fehlt)“. Verwende als Einheit nur g, ml, Stk, EL, TL, Bund oder Prise.'
       : 'Alle Mengen sind vorhanden.',
-    'Schreibe dann eine Schritt-für-Schritt-Kochanleitung mit 4 bis 10 Schritten. Verwende nur die genannten Zutaten; Salz, Pfeffer, Öl und Wasser sind erlaubt. Füge keine Tomaten und keine Sahne hinzu. Nenne Mengen, Hitze/Temperatur und Garzeiten.',
+    'Schreibe dann eine Schritt-für-Schritt-Kochanleitung mit 4 bis 10 Schritten. Verwende nur die genannten Zutaten; Salz, Pfeffer, Öl und Wasser sind erlaubt. Füge keine Tomaten und keine Sahne hinzu. Nenne Mengen und realistische Garzeiten.',
+    'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
+    'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
     '',
     'Antworte genau in diesem Format, ohne Einleitung und ohne Schlusswort:',
     'MENGEN:',
     missing.length ? missing.map(i => '- ' + i.name + ' | Zahl | Einheit').join('\n') : '- keine',
+    'ZEIT: Vorbereitung Zahl Min | Kochen Zahl Min',
     'SCHRITTE:',
     '1. …',
     '2. …',
@@ -56,13 +60,19 @@ function stepsOf(lines: string[]): string[] {
 }
 
 // Antwort der KI → Schritte + Mengen für die Zutaten, denen bisher eine Menge fehlt.
-export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { steps: string[]; quantities: AiQuantity[] } {
+function parseTimes(lines: string[]): AiTimes {
+  const line = lines.find(l => /^zeit\b/i.test(l)) ?? lines.find(l => /vorbereitung/i.test(l) && /(kochen|garen|kochzeit|backen)/i.test(l)) ?? ''
+  const minutes = (re: RegExp) => { const m = line.match(re); const n = m ? Number(m[1]) : NaN; return Number.isInteger(n) && n >= 0 && n <= 600 ? n : null }
+  return { prepMinutes: minutes(/vorbereit\w*\D{0,12}?(\d{1,3})/i), cookMinutes: minutes(/(?:kochen|kochzeit|garen|garzeit|backen|backzeit)\D{0,12}?(\d{1,3})/i) }
+}
+
+export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { steps: string[]; quantities: AiQuantity[]; times: AiTimes } {
   const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').trim()
   const lines = clean.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
   const mengenAt = lines.findIndex(line => /^(mengen|zutaten)\s*:?\s*$/i.test(line))
   const schritteAt = lines.findIndex(line => /^(schritte|anleitung|zubereitung)\s*:?\s*$/i.test(line))
   const quantityLines = mengenAt >= 0 ? lines.slice(mengenAt + 1, schritteAt > mengenAt ? schritteAt : undefined) : []
-  const stepLines = schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 ? [] : lines
+  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 ? [] : lines).filter(line => !/^zeit\b/i.test(line))
   const missing = ingredients.filter(i => i.quantity === null)
   const quantities: AiQuantity[] = []
   for (const raw of quantityLines) {
@@ -77,5 +87,5 @@ export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { 
     const unit = unitAliases[keyOf(unitRaw)] ?? (unitRaw && unitRaw.length <= 12 ? unitRaw : match.unit)
     quantities.push({ id: match.id, quantity: Math.round(quantity * 100) / 100, unit: unit || null })
   }
-  return { steps: stepsOf(stepLines), quantities }
+  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines) }
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
-import { checkReceiptTotal, editDistance, findReceiptTotal, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
 
 type Receipt = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
@@ -84,59 +84,45 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       if(receiptPreview)URL.revokeObjectURL(receiptPreview)
       setReceiptPreview(URL.createObjectURL(downloaded.data))
       setProgress('Bild wird aufbereitet (Lichtausgleich) …')
-      const variants=await prepareReceiptImages(downloaded.data)
       const attempts:{data:{text:string;confidence?:number;words?:OCRWord[]};label:string;score:number;parsed:Line[]}[]=[]
 
       setProgress('Texterkennung wird geladen …')
       const api=await loadTesseract()
-      worker=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Tesseract liest den Bon: '+Math.round(Number(m.progress)*100)+' %')}})
-      for(const variant of variants)for(const mode of ['6','4']){
-        setProgress('Bon wird gelesen ('+variant.label+', Modus '+mode+') …')
-        if(worker.setParameters)await worker.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:'1',user_defined_dpi:'300'})
-        const result=await worker.recognize(variant.blob)
-        const parsed=parseReceipt(result.data.text,foods,result.data.words||[])
-        attempts.push({data:result.data,label:variant.label+' · PSM '+mode,score:scoreOCR(result.data.text,result.data.words||[]),parsed})
-      }
-      if(!attempts.length)throw new Error('Texterkennung lieferte kein Ergebnis.')
-      // OCR-Durchläufe ergänzen einander: eine Position wird nicht verworfen,
-      // nur weil eine andere Bildaufbereitung oder Segmentierung besser bewertet wurde.
-      const merged:Line[]=[]
-      for(const attempt of [...attempts].sort((a,b)=>(b.parsed.filter(x=>x.price).length*100+b.parsed.length*10+b.score/100)-(a.parsed.filter(x=>x.price).length*100+a.parsed.length*10+a.score/100))){
-        for(const line of attempt.parsed){
-          const same=(candidate:Line)=>{
-            const a=normalize(candidate.name),b=normalize(line.name)
-            if(a===b)return true
-            const aliases:Record<string,string>={'bio zucch':'bio zucchini','bio zucchini':'bio zucchini','bid eier':'bio eier','bio eier':'bio eier','milprima':'milprima butter','milprima butter':'milprima butter','kartofreechips':'kartoffelchips','kartoffelchips':'kartoffelchips','meersalz':'meersalz grob','meersalz grob':'meersalz grob'}
-            if((aliases[a]||a)===(aliases[b]||b))return true
-            return Boolean(candidate.foodId&&line.foodId&&candidate.foodId===line.foodId&&
-              Math.abs(a.length-b.length)<=4&&editDistance(a,b)<=Math.max(2,Math.floor(Math.min(a.length,b.length)*0.22)))
-          }
-          const existing=merged.find(same)
-          if(!existing){merged.push(line);continue}
-          if(!existing.price&&line.price){
-            existing.price=line.price;existing.selected=true
-            if(line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
-            if(line.foodId){existing.foodId=line.foodId;existing.name=line.name}
-            continue
-          }
-          if(existing.price&&line.price&&existing.price!==line.price)continue
-          if(existing.name.length<line.name.length&&line.foodId){existing.name=line.name;existing.foodId=line.foodId}
-          if(!existing.quantity&&line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
-          if(!existing.quantity&&line.quantity){existing.quantity=line.quantity;existing.unit=line.unit}
+      const ocr=await api.createWorker('deu+eng',1,{logger:(m:any)=>{if(typeof m.progress==='number')setProgress('Tesseract liest den Bon: '+Math.round(Number(m.progress)*100)+' %')}})
+      worker=ocr
+      const readVariant=async(variant:{label:string;blob:Blob})=>{
+        for(const mode of ['6','4']){
+          setProgress('Bon wird gelesen ('+variant.label+', Modus '+mode+') …')
+          if(ocr.setParameters)await ocr.setParameters({tessedit_pageseg_mode:mode,preserve_interword_spaces:'1',user_defined_dpi:'300'})
+          const result=await ocr.recognize(variant.blob)
+          const parsed=parseReceipt(result.data.text,foods,result.data.words||[])
+          attempts.push({data:result.data,label:variant.label+' · PSM '+mode,score:scoreOCR(result.data.text,result.data.words||[]),parsed})
         }
       }
-      const best=[...attempts].sort((a,b)=>b.parsed.filter(x=>x.price).length-a.parsed.filter(x=>x.price).length||b.parsed.length-a.parsed.length||b.score-a.score)[0]
       // Bon-Summe: der am häufigsten gelesene Wert aus allen Durchläufen.
-      const totalCounts=new Map<number,number>()
-      for(const attempt of attempts){const value=findReceiptTotal(attempt.data.text,attempt.data.words||[]);if(value!==null)totalCounts.set(value,(totalCounts.get(value)||0)+1)}
-      const billTotal=[...totalCounts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]??null
-      // Stimmt ein einzelner Durchlauf exakt mit der Bon-Summe überein, wird nur dieser genommen (keine Doppelzeilen durch das Zusammenführen).
-      const exact=billTotal===null?undefined:[...attempts].filter(a=>checkReceiptTotal(a.parsed,billTotal).ok).sort((a,b)=>b.parsed.filter(x=>x.price).length-a.parsed.filter(x=>x.price).length||b.score-a.score)[0]
-      const parsed=exact?exact.parsed:merged
+      const readTotal=()=>{
+        const totalCounts=new Map<number,number>()
+        for(const attempt of attempts){const value=findReceiptTotal(attempt.data.text,attempt.data.words||[]);if(value!==null)totalCounts.set(value,(totalCounts.get(value)||0)+1)}
+        return [...totalCounts.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]??null
+      }
+      // Durchläufe Zeile für Zeile abgleichen (keine Doppelzeilen) und mit der Bon-Summe gegenprüfen.
+      const combine=()=>combineReceiptRuns(attempts.map(a=>({label:a.label,lines:a.parsed})),readTotal())
+      for(const variant of await prepareReceiptImages(downloaded.data))await readVariant(variant)
+      let combined=combine()
+      if(!checkReceiptTotal(combined.lines,readTotal()).ok||combined.lines.some(line=>line.review==='derived')){
+        // Summe passt noch nicht (oder nur mit berechnetem Preis): dieselbe Aufbereitung in anderer Größe liest Ziffern oft anders.
+        setProgress('Summe passt noch nicht – zweiter Lesedurchgang mit anderer Bildgröße …')
+        for(const variant of await prepareReceiptImages(downloaded.data,0.8))await readVariant(variant)
+        combined=combine()
+      }
+      if(!attempts.length)throw new Error('Texterkennung lieferte kein Ergebnis.')
+      const best=[...attempts].sort((a,b)=>b.parsed.filter(x=>x.price).length-a.parsed.filter(x=>x.price).length||b.parsed.length-a.parsed.length||b.score-a.score)[0]
+      const billTotal=readTotal()
+      const parsed=combined.lines
       const priceCount=parsed.filter(line=>line.price).length
       const reviewCount=parsed.length-priceCount
       const textResults=attempts.map(a=>'--- '+a.label+' ---\n'+a.data.text).join('\n\n')
-      setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe (Tesseract, Lichtausgleich) · '+(exact?'Summe stimmt im Lauf '+exact.label:'keine Übereinstimmung mit der Bon-Summe, Durchläufe zusammengeführt')+' · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
+      setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe (Tesseract, Lichtausgleich) · '+combined.summary+' · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
       setReceiptTotal(billTotal)
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||new Date(receipt.created_at).toISOString().slice(0,10));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
@@ -248,6 +234,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       {check.total!==null
         ?<div className={'alert '+(check.ok?'success':'error')} role={check.ok?undefined:'alert'}>{check.ok&&<Check size={16}/>}{check.ok?'Summe stimmt mit dem Bon überein: ':'Summe weicht vom Bon ab: '}Bon {euro(check.total)} · erkannt {euro(check.itemsTotal)}{!check.ok&&<> · Differenz {euro(check.diff??0)}. Bitte Positionen und Preise mit dem Bon vergleichen.</>}</div>
         :<div className="notice-card"><Sparkles size={18}/><span>Die Bon-Summe konnte nicht gelesen werden. Bitte die Preise selbst mit dem Bon vergleichen.</span></div>}
+      {lines.some(l=>l.note)&&<div className="notice-card"><Sparkles size={18}/><span>{lines.filter(l=>l.note).length} Zeile(n) haben einen Hinweis{lines.some(l=>l.review==='derived')?' – ein unleserlicher Preis wurde aus der Bon-Summe berechnet, die Summe stimmt dadurch automatisch':''}. Bitte diese Zeilen mit dem Bon vergleichen.</span></div>}
       <div className="receipt-review-tools"><button type="button" className="button button-light button-small" onClick={addManualLine} disabled={busy}>+ Artikel manuell ergänzen</button></div>
       {lines.map(line=><div className="receipt-line-edit" key={line.id}>
         <input aria-label="Artikelname" value={line.name} onChange={e=>updateLine(line.id,{name:e.target.value})}/>
@@ -255,6 +242,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
         <select aria-label="Nahrungsmittel zuordnen" value={line.foodId} onChange={e=>updateLine(line.id,{foodId:e.target.value})}><option value="">+ Neu anlegen: {line.name}</option>{foods.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
         <div className="form-row"><input aria-label="Packungsmenge" placeholder="Menge" value={line.quantity} onChange={e=>updateLine(line.id,{quantity:e.target.value})}/><input aria-label="Einheit" placeholder="g, kg, ml …" value={line.unit} onChange={e=>updateLine(line.id,{unit:e.target.value})}/></div>
         <div className="receipt-include"><label><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label><button type="button" className="button button-light button-small" onClick={()=>removeLine(line.id)} aria-label="Artikelzeile entfernen">Entfernen</button></div>
+        {line.note&&<small className="muted" style={{gridColumn:'1/-1',fontSize:10}}>⚠ {line.note}</small>}
       </div>)}
       <div className="receipt-save-row"><b>{selectedCount} Positionen · {euro(lines.filter(l=>l.selected).reduce((sum,l)=>sum+(Number(l.price.replace(',','.'))||0),0))}</b><button className="button button-dark" disabled={busy||!selectedCount} onClick={savePrices}><CircleDollarSign size={16}/> Preise & Nahrungsmittel speichern</button></div>
     </div>}

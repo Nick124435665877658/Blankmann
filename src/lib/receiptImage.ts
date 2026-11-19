@@ -102,7 +102,8 @@ export function normalizeIllumination(gray: Uint8ClampedArray, width: number, he
   return out
 }
 
-export async function prepareReceiptImages(file: Blob): Promise<{ label: string; blob: Blob }[]> {
+// sizeFactor < 1 liefert dieselbe Aufbereitung kleiner – ein zweiter Lesedurchgang liest Ziffern dann oft anders.
+export async function prepareReceiptImages(file: Blob, sizeFactor = 1): Promise<{ label: string; blob: Blob }[]> {
   let bitmap: ImageBitmap
   try {
     // Foto-Ausrichtung (EXIF) ausdrücklich übernehmen, damit der Bon aufrecht gelesen wird.
@@ -110,7 +111,7 @@ export async function prepareReceiptImages(file: Blob): Promise<{ label: string;
   } catch {
     bitmap = await createImageBitmap(file)
   }
-  const scale = Math.max(0.75, Math.min(2.2, 1800 / bitmap.width, 6500 / bitmap.height))
+  const scale = Math.max(0.75, Math.min(2.2, 1800 / bitmap.width, 6500 / bitmap.height)) * sizeFactor
   const width = Math.max(1, Math.round(bitmap.width * scale))
   const height = Math.max(1, Math.round(bitmap.height * scale))
   const canvas = document.createElement('canvas')
@@ -137,5 +138,5 @@ export async function prepareReceiptImages(file: Blob): Promise<{ label: string;
   const blob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(value => (value ? resolve(value) : reject(new Error('Bild konnte nicht vorbereitet werden.'))), 'image/png')
   })
-  return [{ label: 'Lichtausgleich', blob }]
+  return [{ label: sizeFactor === 1 ? 'Lichtausgleich' : 'Lichtausgleich ' + Math.round(sizeFactor * 100) + ' %', blob }]
 }

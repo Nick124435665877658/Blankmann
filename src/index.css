@@ -744,3 +744,9 @@
 .shopping-forecast{display:block;font-size:12px;font-weight:700;color:var(--green);margin-top:4px}
 .shopping-cost{font-size:11px;font-weight:700;white-space:nowrap;color:var(--ink)}
 .shopping-cost.missing{color:var(--muted);font-weight:600}
+/* 0.3.31: Ganze-Woche-Liste in der Übersicht; Handy-Ansicht mit wischbarem Menü wie die Auto-Ansicht */
+.week-overview-items{margin-top:16px}
+.device-phone .sidebar nav{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:3px;padding:0 3px;scroll-snap-type:x proximity}
+.device-phone .sidebar nav::-webkit-scrollbar{display:none}
+.device-phone .nav-item{flex:0 0 auto;width:max-content;min-width:max-content;max-width:none;white-space:nowrap;display:flex;flex-direction:row;align-items:center;gap:7px;padding:9px 12px;scroll-snap-align:start}
+.device-phone .nav-item>span{white-space:nowrap;display:inline-block;writing-mode:horizontal-tb;transform:none}

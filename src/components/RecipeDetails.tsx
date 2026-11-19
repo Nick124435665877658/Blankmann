@@ -3,6 +3,7 @@ import { BookOpen, Check, ChefHat, LoaderCircle, Sparkles, X } from 'lucide-reac
 import { supabase } from '../lib/supabase'
 import { estimateRecipeCost, formatAmount, instructionSteps, planPantryDeduction, recipeNeeds, type DeductionPlan, type FoodRef, type IngredientRef, type PantryRow, type PriceRow } from '../lib/kitchen'
 import ManualPriceForm from './ManualPriceForm'
+import { completeRecipeWithAi } from '../lib/recipeAiClient'
 
 export type DetailsRecipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; recipe_ingredients?: IngredientRef[] }
 export type DetailsMeal = { id: string; servings: number; cooked_at: string | null; meal_date: string }
@@ -29,15 +30,16 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
     await onChanged()
     return true
   }
-  async function generate() {
-    if (steps.length && !window.confirm('Sicher, dass du die bisherige Anleitung von „' + recipe.title + '“ durch eine neue KI-Anleitung ersetzen willst?')) return
+  const missingQuantities = (recipe.recipe_ingredients ?? []).filter(i => i.quantity === null).length
+  // KI: Anleitung erzeugen und fehlende Mengen ergänzen. Vorhandene Anleitung nur nach Rückfrage ersetzen.
+  async function generate(replaceSteps: boolean) {
+    if (replaceSteps && steps.length && !window.confirm('Sicher, dass du die bisherige Anleitung von „' + recipe.title + '“ durch eine neue KI-Anleitung ersetzen willst?')) return
     setBusy('ai')
     try {
-      const response = await fetch('/api/recipe-instructions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ recipeId: recipe.id }) })
-      const body = await response.json().catch(() => null) as { steps?: string[]; error?: string } | null
-      if (!response.ok || !body?.steps?.length) throw new Error(body?.error || 'Die KI-Funktion ist nicht erreichbar (' + response.status + ').')
-      if (await saveSteps(body.steps)) onNotice('KI-Anleitung für „' + recipe.title + '“ erstellt. Du kannst sie jederzeit bearbeiten.')
-    } catch (error) { onError(error instanceof Error ? error.message : 'Die KI-Anleitung konnte nicht erzeugt werden.') }
+      const result = await completeRecipeWithAi(recipe.id, householdId, accessToken, replaceSteps)
+      await onChanged()
+      onNotice('KI für „' + recipe.title + '“: ' + [result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : ''].filter(Boolean).join(', ') + '. Du kannst alles bearbeiten.')
+    } catch (error) { onError(error instanceof Error ? error.message : 'Die KI konnte das Rezept nicht ergänzen.') }
     finally { setBusy('') }
   }
   async function saveEdit() {
@@ -88,9 +90,10 @@ export default function RecipeDetails({ recipe, meal, foods, prices, pantry, hou
       <small className="muted">Ein Schritt pro Zeile.</small>
       <div className="details-actions"><button type="button" className="button button-dark" disabled={busy !== ''} onClick={saveEdit}>Anleitung speichern</button><button type="button" className="button button-light" onClick={() => setEditing(false)}>Abbrechen</button></div>
     </div> : steps.length ? <ol className="recipe-steps">{steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
-      : <p className="muted">Noch keine Anleitung. Die KI erstellt sie aus Zutaten und Mengen – kostenlos über Cloudflare.</p>}
+      : <p className="muted">Noch keine Anleitung. Die KI erstellt sie aus den Zutaten und ergänzt fehlende Mengen – kostenlos über Cloudflare. Von dir eingetragene Mengen bleiben unverändert.</p>}
     {!editing && <div className="details-actions">
-      <button type="button" className="button button-dark" disabled={busy !== ''} onClick={generate}>{busy === 'ai' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'ai' ? 'KI schreibt …' : steps.length ? 'Neu erzeugen' : 'Mit KI erzeugen'}</button>
+      {(!steps.length || missingQuantities > 0) && <button type="button" className="button button-dark" disabled={busy !== ''} onClick={() => generate(!steps.length)}>{busy === 'ai' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'ai' ? 'KI schreibt …' : !steps.length && missingQuantities ? 'Mit KI ergänzen: Anleitung + ' + missingQuantities + ' Mengen' : !steps.length ? 'Anleitung mit KI erzeugen' : 'Mit KI ' + missingQuantities + ' fehlende Mengen ergänzen'}</button>}
+      {steps.length > 0 && <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => generate(true)}><Sparkles size={16} /> Anleitung neu erzeugen</button>}
       <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => { setDraft(steps.map((s, i) => (i + 1) + '. ' + s).join('\n')); setEditing(true) }}><BookOpen size={16} /> {steps.length ? 'Bearbeiten' : 'Selbst schreiben'}</button>
     </div>}
 

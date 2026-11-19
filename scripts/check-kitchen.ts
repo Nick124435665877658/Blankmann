@@ -1,4 +1,5 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
+import { buildRecipeMessages, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
 
 let failed = 0
@@ -101,6 +102,27 @@ console.log('\n3) „Gekocht“ → Vorrat abziehen')
 console.log('\n4) Anleitung')
 expect(instructionSteps(['Zubereitung und genaue Mengen noch ergänzen – bisherige Unterhaltung enthält nicht alle Details.']).length === 0, 'Import-Platzhalter zählt nicht als Anleitung')
 expect(instructionSteps(['Wasser kochen.', ' Nudeln garen. ', '']).length === 2, 'echte Schritte werden übernommen')
+
+console.log('\n5) KI-Antwort auslesen (Anleitung + fehlende Mengen)')
+{
+  const ingredients = [
+    { id: 'i1', name: 'Kartoffeln', quantity: null, unit: 'g', is_optional: false },
+    { id: 'i2', name: 'Zucchini', quantity: 1, unit: 'Stk', is_optional: false },
+    { id: 'i3', name: 'Feta', quantity: null, unit: null, is_optional: false },
+    { id: 'i4', name: 'Petersilie', quantity: null, unit: 'Bund', is_optional: true },
+  ]
+  const prompt = buildRecipeMessages({ title: 'Kartoffel-Feta-Pfanne', description: null, servings: 2, prep_minutes: 10, cook_minutes: 25 }, ingredients)[1].content
+  expect(prompt.includes('Kartoffeln (Menge fehlt)') && !prompt.includes('Zucchini (Menge fehlt)'), 'Prompt fragt nur fehlende Mengen ab (Zucchini hat schon 1 Stk)')
+  const answer = ['**MENGEN:**', '- Kartoffeln | 500 | Gramm', '- Feta | 1/2 | Stück', '- Petersilie | ½ | Bund', '- Zucchini | 3 | Stk', '', '**SCHRITTE:**', '1. Kartoffeln schälen und würfeln.', '2. In Öl 15 Minuten braten.', '3. Zucchini dazugeben, 5 Minuten mitbraten.', '4. Feta zerbröseln und darüber streuen.'].join('\n')
+  const parsed = parseRecipeAnswer(answer, ingredients)
+  expect(parsed.steps.length === 4 && parsed.steps[0] === 'Kartoffeln schälen und würfeln.', '4 Schritte ohne Nummern gelesen')
+  expect(parsed.quantities.some(q => q.id === 'i1' && q.quantity === 500 && q.unit === 'g'), 'Kartoffeln 500 „Gramm“ → 500 g')
+  expect(parsed.quantities.some(q => q.id === 'i3' && q.quantity === 0.5 && q.unit === 'Stk'), 'Feta „1/2 Stück“ → 0,5 Stk')
+  expect(parsed.quantities.some(q => q.id === 'i4' && q.quantity === 0.5 && q.unit === 'Bund'), 'Petersilie „½ Bund“ → 0,5 Bund')
+  expect(!parsed.quantities.some(q => q.id === 'i2'), 'vorhandene Menge (Zucchini) wird nie überschrieben')
+  const plain = parseRecipeAnswer('1. Wasser kochen.\n2. Nudeln 9 Minuten garen.\n3. Abgießen.', ingredients)
+  expect(plain.steps.length === 3 && plain.quantities.length === 0, 'Antwort ohne Abschnitte → nur Schritte')
+}
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')
 process.exit(failed ? 1 : 0)

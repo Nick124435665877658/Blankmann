@@ -750,3 +750,15 @@
 .device-phone .sidebar nav::-webkit-scrollbar{display:none}
 .device-phone .nav-item{flex:0 0 auto;width:max-content;min-width:max-content;max-width:none;white-space:nowrap;display:flex;flex-direction:row;align-items:center;gap:7px;padding:9px 12px;scroll-snap-align:start}
 .device-phone .nav-item>span{white-space:nowrap;display:inline-block;writing-mode:horizontal-tb;transform:none}
+/* 0.3.32: Einkaufsliste „Abhaken“ / „Bearbeiten“ */
+.shopping-check-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.shopping-check-row .shopping-total-main{cursor:pointer}
+.shopping-check-row.checked .shopping-total-main b{text-decoration:line-through;color:var(--muted)}
+.shopping-check-row.checked .shopping-cost{color:var(--muted)}
+.check-circle.checked{background:#719071;border-color:#719071}
+.shopping-add-form{padding:12px 0 16px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.shopping-edit-row{padding:4px 0 10px;border-bottom:1px solid var(--line)}
+.shopping-edit-row>.cost-line{border-bottom:0}
+.shopping-fix{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:4px 0 6px}
+.shopping-fix input{min-width:0;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:12px}
+.shopping-view-switch button{padding:10px 6px}

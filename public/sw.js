@@ -1,3 +1,4 @@
+// Der Cache-Name wird bei jedem Build automatisch erneuert (vite.config.ts), nicht von Hand hochzählen.
 const CACHE = 'blankmann-shell-v26'
 const SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg']
 

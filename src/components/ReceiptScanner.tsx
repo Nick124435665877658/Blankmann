@@ -3,6 +3,7 @@ import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, U
 import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
 import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
+import { normalizeUnit, pantryAmountFromReceipt, planPantryAddition, type PantryRow } from '../lib/kitchen'
 
 type Receipt = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
@@ -173,8 +174,26 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     if(!supabase||!activeReceipt)return
     setBusy(true);setError('');setNotice('');setProgress('Artikel und Preise werden gespeichert …')
     try{
-      let added=0
+      let added=0,stocked=0
       const foodIdByName=new Map(foods.map(food=>[normalize(food.name),food.id]))
+      // Vorrat: nur beim ersten Speichern eines Bons ergänzen (erneutes Auswerten zählt sonst doppelt).
+      const fillPantry=activeReceipt.status!=='processed'
+      const pantryRows:PantryRow[]=[]
+      const packages=new Map<string,{package_quantity:number|null;package_unit:string|null}>()
+      if(fillPantry){
+        const [stock,packs]=await Promise.all([
+          supabase.from('pantry_items').select('id,name,quantity,unit,food_item_id,best_before').eq('household_id',householdId),
+          supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at').eq('household_id',householdId).not('package_quantity','is',null).order('observed_at',{ascending:false}),
+        ])
+        if(stock.error)throw stock.error
+        if(packs.error)throw packs.error
+        pantryRows.push(...((stock.data??[]) as PantryRow[]))
+        // Packungsgröße je Nahrungsmittel: bevorzugt eine echte Menge (g/ml), sonst die neueste Angabe.
+        for(const row of (packs.data??[]) as {food_item_id:string;package_quantity:number|null;package_unit:string|null}[]){
+          const known=packages.get(row.food_item_id)
+          if(!known||(normalizeUnit(known.package_unit).base==='stk'&&normalizeUnit(row.package_unit).base!=='stk'))packages.set(row.food_item_id,row)
+        }
+      }
       for(const line of lines.filter(l=>l.selected)){
         const price=Number(line.price.replace(',','.'))
         if(!line.name.trim()||!Number.isFinite(price)||price<=0)continue
@@ -203,10 +222,25 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
         if(duplicate.data){const updatedPrice=await supabase.from('household_food_prices').update(priceData).eq('id',duplicate.data.id);if(updatedPrice.error)throw updatedPrice.error}
         else{const inserted=await supabase.from('household_food_prices').insert(priceData);if(inserted.error)throw inserted.error}
         added++
+        if(fillPantry&&normalize(line.name)!=='pfand'){
+          const amount=pantryAmountFromReceipt({quantity,unit},packages.get(foodId))
+          const plan=planPantryAddition(pantryRows,{name:line.name.trim(),foodId,quantity:amount.quantity,unit:amount.unit})
+          if(plan.update){
+            const changed=await supabase.from('pantry_items').update({quantity:plan.update.quantity,updated_at:new Date().toISOString()}).eq('id',plan.update.id).eq('household_id',householdId)
+            if(changed.error)throw changed.error
+            const row=pantryRows.find(r=>r.id===plan.update!.id);if(row)row.quantity=plan.update.quantity
+          }else if(plan.insert){
+            const category=guessCategory(line.name)
+            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,storage_location:category==='Milchprodukte & Eier'||category==='Fleisch & Fisch'?'Kühlschrank':'Vorratsschrank',notes:'Aus Kassenbon vom '+new Date((activeReceipt.purchase_date||purchaseDate)+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before').single()
+            if(created.error)throw created.error
+            pantryRows.push(created.data as PantryRow)
+          }
+          stocked++
+        }
       }
       const updated=await supabase.from('receipt_uploads').update({status:'processed'}).eq('id',activeReceipt.id).eq('household_id',householdId)
       if(updated.error)throw updated.error
-      setNotice(added+' Preispositionen gespeichert. Neue Nahrungsmittel wurden automatisch ergänzt.');setLines([]);setActiveReceipt(null);setProgress('');await refresh();await onDone()
+      setNotice(added+' Preispositionen gespeichert. Neue Nahrungsmittel wurden automatisch ergänzt. '+(fillPantry?stocked+' Positionen im Vorrat ergänzt.':'Der Vorrat wurde bei diesem Bon bereits beim ersten Speichern ergänzt.'));setLines([]);setActiveReceipt(null);setProgress('');await refresh();await onDone()
     }catch(e){setError(e instanceof Error?e.message:'Preise konnten nicht vollständig gespeichert werden.');setProgress('')}
     finally{setBusy(false)}
   }
@@ -248,6 +282,6 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     </div>}
     {activeReceipt&&receiptPreview&&<div className="panel receipt-image-check"><div className="panel-head"><div><span className="eyebrow">QUELLBILD</span><h2>Bonfoto zur Kontrolle</h2><small>So sieht die Texterkennung die gespeicherte Datei.</small></div></div><img src={receiptPreview} alt="Hochgeladenes Kassenbonfoto"/></div>}
     {activeReceipt&&ocrText&&<details className="panel"><summary>Erkannten Bontext zur Kontrolle anzeigen</summary><small>{ocrMethod}</small><p>Die Rohtexte aller Durchläufe dienen der Diagnose. Nur plausible Artikelzeilen erscheinen oben in der Prüfliste; unklare Zeilen werden nicht automatisch als Lebensmittel gespeichert.</p><pre style={{whiteSpace:'pre-wrap',fontSize:12,overflowWrap:'anywhere'}}>{ocrText}</pre></details>}
-    <div className="notice-card"><Sparkles size={18}/><span>Unsichere oder unvollständige Zeilen bleiben zur manuellen Prüfung sichtbar. Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert.</span></div>
+    <div className="notice-card"><Sparkles size={18}/><span>Unsichere oder unvollständige Zeilen bleiben zur manuellen Prüfung sichtbar. Unbekannte Artikel werden beim Speichern automatisch als neue Nahrungsmittel angelegt. Die Erkennung erfolgt lokal im Browser; nur die von euch bestätigten Positionen werden als Preise gespeichert. Erneut ausgewertete Bons werden nach dem Speichern als erledigt markiert. Beim ersten Speichern eines Bons kommen die übernommenen Positionen außerdem in euren Vorrat.</span></div>
   </section>
 }

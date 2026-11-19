@@ -1,13 +1,14 @@
 {
   "name": "blankmann",
   "private": true,
-  "version": "0.3.28",
+  "version": "0.3.29",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:receipt": "node --experimental-strip-types scripts/check-receipt-parser.ts"
+    "test:receipt": "node --experimental-strip-types scripts/check-receipt-parser.ts",
+    "test:kitchen": "node --experimental-strip-types scripts/check-kitchen.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.1",

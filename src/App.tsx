@@ -87,7 +87,9 @@ export default function App() {
     const missing = photoPaths ? photoPaths.split('|').filter(path => !photoUrls[path]) : []
     if (!client || !missing.length) return
     client.storage.from('recipe-photos').createSignedUrls(missing, 60 * 60 * 12).then(({ data }) => {
-      if (data) setPhotoUrls(current => ({ ...current, ...Object.fromEntries(data.filter(item => item.signedUrl && item.path).map(item => [item.path as string, item.signedUrl])) }))
+      const fresh: Record<string, string> = {}
+      for (const item of data ?? []) if (item.path && item.signedUrl) fresh[item.path] = item.signedUrl
+      if (Object.keys(fresh).length) setPhotoUrls(current => ({ ...current, ...fresh }))
     })
   }, [photoPaths]) // eslint-disable-line react-hooks/exhaustive-deps
   const [editingMealId, setEditingMealId] = useState<string | null>(null)

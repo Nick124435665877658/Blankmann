@@ -1,0 +1,10 @@
+# Cloudflare Pages – Projekt „blankmann“ (https://blankmann.pages.dev).
+# Diese Datei ist für Bindungen die Quelle der Wahrheit; Build-Befehl und Ausgabeordner bleiben im Dashboard.
+name = "blankmann"
+pages_build_output_dir = "./dist"
+compatibility_date = "2026-11-01"
+
+# Workers AI (kostenloses Tageskontingent) für die KI-Kochanleitung: functions/api/recipe-instructions.ts
+# Gilt für Produktion und Vorschau.
+[ai]
+binding = "AI"

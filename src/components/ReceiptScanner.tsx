@@ -7,6 +7,7 @@ import { canSplitToOne, normalizeUnit, pantryAmountFromReceipt, planPantryAdditi
 import { localISO } from '../lib/dates'
 import { saveMarketPrice } from '../lib/priceStore'
 import { retailers } from '../lib/retailers'
+import { guessCategory } from '../lib/categories'
 
 type Receipt = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
@@ -26,17 +27,6 @@ function markOrganic(line:Line,foods:Food[]):Line{
   return {...line,name:match?.name??split.base,foodId:match?.id??'',organic:true}
 }
 const euro = (value: number) => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(value)
-const categories: [string, RegExp][] = [
-  ['Fleisch & Fisch',/huhn|haehnchen|pute|rind|schwein|hack|lachs|fisch|wurst|schinken/],
-  ['Milchprodukte & Eier',/milch|joghurt|quark|kaese|butter|ei(er)?|skyr/],
-  ['Gemüse',/paprika|gurke|zucchini|kartoffel|tomate|brokkoli|salat|karotte|zwiebel|pilz|champignon/],
-  ['Obst',/apfel|banane|traube|beere|orange|zitrone|birne/],
-  ['Getreide & Backwaren',/brot|broetchen|toast|mehl|reis|nudel|pasta|wrap|hafer/],
-  ['Hülsenfrüchte & Konserven',/bohne|linse|kichererbse|dose|mais/],
-  ['Öle & Saucen',/oel|essig|sauce|pesto/],
-  ['Backen & Süßes',/schokolade|keks|zucker|honig|marmelade/],
-]
-function guessCategory(name:string) { const n=normalize(name); return categories.find(([,re])=>re.test(n))?.[0] ?? 'Sonstiges' }
 function scoreOCR(text:string,words:OCRWord[]=[]){
   const confidence=words.length?words.reduce((sum,w)=>sum+(w.confidence??0),0)/words.length:0
   const prices=(text.match(/\b\d{1,4}[,.]\d{2}\b/g)||[]).length

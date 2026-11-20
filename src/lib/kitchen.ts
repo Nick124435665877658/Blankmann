@@ -2,8 +2,8 @@
 // Testbar mit: npm run test:kitchen (scripts/check-kitchen.ts)
 
 export type PriceRow = { food_item_id: string; price_eur: number; package_quantity: number | null; package_unit: string | null; unit_price_eur: number | null; unit_label: string | null; observed_at: string; retailer_code?: string | null; is_organic?: boolean | null }
-export type FoodRef = { id: string; name: string; normalized_name: string; default_unit: string | null }
-export type IngredientRef = { name: string; food_item_id: string | null; quantity: number | null; unit: string | null; is_optional?: boolean }
+export type FoodRef = { id: string; name: string; normalized_name: string; default_unit: string | null; is_staple?: boolean | null }
+export type IngredientRef = { name: string; food_item_id: string | null; quantity: number | null; unit: string | null; is_optional?: boolean; ai_added?: boolean | null }
 export type PantryRow = { id: string; name: string; quantity: number | null; unit: string | null; food_item_id?: string | null; best_before?: string | null; is_organic?: boolean | null }
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()

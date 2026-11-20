@@ -813,3 +813,14 @@
 .receipt-include label{display:inline-flex;align-items:center;gap:5px}
 .manual-price-form select{max-width:140px}
 .manual-price-form .inline-check{font-size:11px}
+/* 0.3.41: Zutatensuche, KI-Zutaten, Grundausstattung */
+.ai-tag,.staple-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:20px;font-size:9px;font-weight:700;letter-spacing:.3px;vertical-align:middle}
+.ai-tag{background:#e6e1f5;color:#5a4a8c}
+.staple-tag{background:#efe8d6;color:#7a6433;font-weight:600}
+.picker-search{display:flex;align-items:center;gap:8px;margin:10px 0 6px;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface,#fff)}
+.picker-search input{flex:1;border:0;background:transparent;padding:9px 0;font:inherit;font-size:13px;color:inherit;outline:none;min-width:0}
+.picker-selected{display:grid;gap:4px;margin:10px 0 4px;padding:8px 10px;border-radius:10px;background:var(--paper,#f6f4ee)}
+.picker-options{display:grid;gap:2px;max-height:320px;overflow-y:auto;padding-right:4px}
+.picker-option{display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer}
+.picker-option small{margin-left:auto;font-size:9px}
+.staple-toggle{display:block;margin-top:2px;padding:0;font-size:10px;text-align:left}

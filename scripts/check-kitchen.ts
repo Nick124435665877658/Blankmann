@@ -128,8 +128,15 @@ console.log('\n5) KI-Antwort auslesen (Anleitung + fehlende Mengen)')
   expect(parseRecipeAnswer('HISTAMIN: 8/10\n1. a\n2. b', ingredients).histamine.score === 8, 'Histaminwert „8/10“ gelesen')
   expect(parseRecipeAnswer('HISTAMIN: 12\n1. a\n2. b', ingredients).histamine.score === null, 'ungültiger Histaminwert (12) wird verworfen')
   expect(prompt.includes('HISTAMIN: Zahl von 1 bis 10'), 'Prompt fragt den Histaminwert ab')
+  expect(!prompt.includes('ERGÄNZT:') && prompt.includes('Verwende nur die genannten Zutaten'), 'Ohne „Zutaten ergänzen“: KI nutzt nur vorhandene Zutaten, kein ERGÄNZT-Abschnitt')
+  const addPrompt = buildRecipeMessages({ title: 'Kartoffel-Feta-Pfanne', description: null, servings: 2, prep_minutes: 10, cook_minutes: 25 }, ingredients, { addIngredients: true, rules: { tomatoFree: true, creamFree: true, histamineLow: true, vegetableRich: false, notes: 'Kein Koriander' } })[1].content
+  expect(addPrompt.includes('ERGÄNZT:') && addPrompt.includes('Grundausstattung ja') && addPrompt.includes('Keine Tomaten') && addPrompt.includes('Kein Koriander'), 'Mit „Zutaten ergänzen“: ERGÄNZT-Abschnitt, Grundausstattung und Haushaltsregeln im Prompt')
+  const added = parseRecipeAnswer(['MENGEN:', '- Kartoffeln | 500 | g', 'ERGÄNZT:', '- Salz | 1 | TL | Grundausstattung ja', '- Olivenöl | 2 | EL | ja', '- Zwiebel | 1 | Stk | nein', '- Paprikapulver | 1 | TL | ja', '- Kartoffel | 200 | g | nein', '- Tomatenmark | 1 | EL | nein', '- Sahne | 100 | ml | nein', '- Parmesan | 30 | g | nein', '- keine', 'ZEIT: Vorbereitung 10 Min | Kochen 20 Min', 'HISTAMIN: 6 | Feta', 'SCHRITTE:', '1. Zwiebel würfeln.', '2. Alles braten.'].join('\n'), [...ingredients, { id: 'i5', name: 'Paprika', quantity: 1, unit: 'Stk', is_optional: false }])
+  expect(added.additions.map(a => a.name).join(',') === 'Salz,Olivenöl,Zwiebel,Paprikapulver', 'Ergänzt: Salz, Olivenöl, Zwiebel, Paprikapulver – nicht „Kartoffel“ (schon da), nicht Tomatenmark/Sahne/Parmesan (Haushaltsregeln)')
+  expect(added.additions[0].staple && added.additions[1].staple && !added.additions[2].staple && added.additions[0].unit === 'TL' && added.additions[1].quantity === 2, 'Salz und Öl als Grundausstattung, Zwiebel nicht; Menge und Einheit gelesen')
+  expect(added.quantities.some(q => q.id === 'i1' && q.quantity === 500) && added.steps.length === 2 && added.histamine.score === 6, 'Mengen, Schritte und Histamin weiterhin richtig gelesen, Ergänzungen nicht als Mengen gezählt')
   const plain = parseRecipeAnswer('1. Wasser kochen.\n2. Nudeln 9 Minuten garen.\n3. Abgießen.', ingredients)
-  expect(plain.steps.length === 3 && plain.quantities.length === 0, 'Antwort ohne Abschnitte → nur Schritte')
+  expect(plain.steps.length === 3 && plain.quantities.length === 0 && plain.additions.length === 0, 'Antwort ohne Abschnitte → nur Schritte')
 }
 
 console.log('\n6) Bio-Status')

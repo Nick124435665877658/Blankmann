@@ -11,12 +11,12 @@ export type DetailsMeal = { id: string; servings: number; cooked_at: string | nu
 const euro = (n: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
 
 // Rezept öffnen: Zutaten mit geschätztem Einkaufswert, KI-Kochanleitung und „Gekocht“ (zieht die Zutaten vom Vorrat ab).
-export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, pantry, householdId, accessToken, onChanged, onClose, onNotice, onError }: {
-  photoUrl: string | null; recipe: DetailsRecipe; meal: DetailsMeal | null; foods: FoodRef[]; prices: PriceRow[]; pantry: PantryRow[]; householdId: string; accessToken: string
+export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, preferOrganic = false, pantry, householdId, accessToken, onChanged, onClose, onNotice, onError }: {
+  photoUrl: string | null; recipe: DetailsRecipe; meal: DetailsMeal | null; foods: FoodRef[]; prices: PriceRow[]; preferOrganic?: boolean; pantry: PantryRow[]; householdId: string; accessToken: string
   onChanged: () => Promise<void>; onClose: () => void; onNotice: (message: string) => void; onError: (message: string) => void
 }) {
   const servings = Number(meal?.servings || recipe.servings || 2)
-  const cost = useMemo(() => estimateRecipeCost(recipe, servings, foods, prices), [recipe, servings, foods, prices])
+  const cost = useMemo(() => estimateRecipeCost(recipe, servings, foods, prices, { preferOrganic }), [recipe, servings, foods, prices, preferOrganic])
   const steps = instructionSteps(recipe.instructions)
   const [busy, setBusy] = useState<'' | 'ai' | 'save' | 'cook'>('')
   const [editing, setEditing] = useState(false)
@@ -105,7 +105,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
     <span className="eyebrow">ZUTATEN & EINKAUFSWERT</span>
     {cost.lines.length ? cost.lines.map((line, index) => <div className="cost-line" key={line.name + index}>
       <div><b>{line.name}</b><small>{formatAmount(line.quantity, line.unit)}{line.hint && line.basis !== 'missing' ? ' · ' + line.hint : ''}</small>
-        {line.basis === 'missing' && <ManualPriceForm householdId={householdId} foodId={line.foodId} foodName={line.name} defaultQuantity={line.quantity} defaultUnit={line.unit} onSaved={onChanged} onError={onError} />}</div>
+        {line.basis === 'missing' && <ManualPriceForm householdId={householdId} foodId={line.foodId} foodName={line.name} defaultQuantity={line.quantity} defaultUnit={line.unit} defaultOrganic={preferOrganic} onSaved={onChanged} onError={onError} />}</div>
       <strong>{line.cost === null ? 'Preis fehlt' : '≈ ' + euro(line.cost)}</strong>
     </div>) : <p className="muted">Für dieses Rezept sind noch keine Zutaten hinterlegt.</p>}
 

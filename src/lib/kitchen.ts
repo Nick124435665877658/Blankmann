@@ -1,13 +1,35 @@
 // Küchenlogik ohne Browser/Datenbank: Einheiten, Preisschätzung, Vorrat ergänzen und abziehen.
 // Testbar mit: npm run test:kitchen (scripts/check-kitchen.ts)
 
-export type PriceRow = { food_item_id: string; price_eur: number; package_quantity: number | null; package_unit: string | null; unit_price_eur: number | null; unit_label: string | null; observed_at: string }
+export type PriceRow = { food_item_id: string; price_eur: number; package_quantity: number | null; package_unit: string | null; unit_price_eur: number | null; unit_label: string | null; observed_at: string; retailer_code?: string | null; is_organic?: boolean | null }
 export type FoodRef = { id: string; name: string; normalized_name: string; default_unit: string | null }
 export type IngredientRef = { name: string; food_item_id: string | null; quantity: number | null; unit: string | null; is_optional?: boolean }
-export type PantryRow = { id: string; name: string; quantity: number | null; unit: string | null; food_item_id?: string | null; best_before?: string | null }
+export type PantryRow = { id: string; name: string; quantity: number | null; unit: string | null; food_item_id?: string | null; best_before?: string | null; is_organic?: boolean | null }
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
 const round = (value: number, digits = 3) => Math.round(value * 10 ** digits) / 10 ** digits
+
+// ---------------------------------------------------------------- Bio
+// „Bio“ ist kein eigenes Nahrungsmittel, sondern ein Merkmal: „BIO EIER 6ER“ → Grundname „EIER 6ER“ + Bio.
+// Erkannt werden „Bio“/„Öko“ als eigenes Wort, mit Bindestrich („Bio-Eier“), als Vorsilbe („Biomilch“)
+// und die Bio-Siegel Bioland, Demeter und Naturland.
+const organicWord = /^(?:bio|oeko|öko|biologisch|oekologisch|ökologisch|bioland|demeter|naturland)$/i
+const organicCompoundExceptions = /^(?:biotin|biotta|biologie|bioethanol)/i
+export function splitOrganic(name: string): { base: string; organic: boolean } {
+  let organic = false
+  const words = name.trim().split(/\s+/).flatMap(word => {
+    const hyphen = word.match(/^(bio|öko|oeko)-(.+)$/i)
+    if (hyphen) { organic = true; return [hyphen[2]] }
+    if (organicWord.test(word.replace(/[.,:;]+$/, ''))) { organic = true; return [] }
+    const compound = word.match(/^(bio)(\p{L}{4,})$/iu)
+    if (compound && !organicCompoundExceptions.test(word)) { organic = true; const rest = compound[2]; return [word === word.toUpperCase() ? rest : rest.charAt(0).toUpperCase() + rest.slice(1)] }
+    return [word]
+  })
+  const base = words.join(' ').replace(/^[-–\s]+|[-–\s]+$/g, '').trim()
+  return base ? { base, organic } : { base: name.trim(), organic: false }
+}
+// Schlüssel zum Vergleichen von Namen: ohne Bio, ohne Groß/Klein, Umlaute ausgeschrieben.
+export const baseKey = (name: string) => keyOf(splitOrganic(name).base)
 
 // ---------------------------------------------------------------- Einheiten
 // Grundeinheiten: g (Masse), ml (Volumen), stk (Stück). Andere Einheiten (Bund, EL, Kopf …) bleiben eigene Einheiten.
@@ -34,44 +56,69 @@ export function formatAmount(quantity: number | null, unit: string | null) {
 // ---------------------------------------------------------------- Preise
 export function findFood(ref: { food_item_id: string | null; name: string }, foods: FoodRef[]) {
   if (ref.food_item_id) { const byId = foods.find(f => f.id === ref.food_item_id); if (byId) return byId }
-  const key = keyOf(ref.name)
-  return foods.find(f => keyOf(f.normalized_name) === key || keyOf(f.name) === key)
+  const key = keyOf(ref.name), base = baseKey(ref.name)
+  return foods.find(f => keyOf(f.normalized_name) === key || keyOf(f.name) === key) ?? foods.find(f => baseKey(f.name) === base || baseKey(f.normalized_name) === base)
 }
-// Preise kommen sortiert (neueste zuerst). Der neueste Preis eines Nahrungsmittels gilt.
-export const latestPrice = (foodId: string, prices: PriceRow[]) => prices.find(p => p.food_item_id === foodId)
+export type PriceOptions = { preferOrganic?: boolean }
+// Preise eines Nahrungsmittels für die Schätzung: je Supermarkt (und Bio/normal) der neueste Eintrag.
+// „Bio bevorzugen“ an → Bio-Preise, sonst normale; fehlt die gewünschte Sorte, zählt die andere.
+export function pricesForFood(foodId: string, prices: PriceRow[], options: PriceOptions = {}) {
+  const newest = new Map<string, PriceRow>()
+  for (const row of prices) {
+    if (row.food_item_id !== foodId) continue
+    const key = (row.retailer_code ?? '') + '|' + (row.is_organic ? 'bio' : 'normal')
+    const known = newest.get(key)
+    if (!known || String(row.observed_at) > String(known.observed_at)) newest.set(key, row)
+  }
+  const all = [...newest.values()]
+  const organic = all.filter(r => r.is_organic), regular = all.filter(r => !r.is_organic)
+  const wanted = options.preferOrganic ? organic : regular
+  return wanted.length ? wanted : options.preferOrganic ? regular : organic
+}
 
 export type CostBasis = 'exact' | 'package' | 'missing'
-export type CostLine = { name: string; foodId: string | null; quantity: number | null; unit: string | null; cost: number | null; basis: CostBasis; hint: string }
+export type CostLine = { name: string; foodId: string | null; quantity: number | null; unit: string | null; cost: number | null; basis: CostBasis; hint: string; markets: number; organic: boolean }
 
-// Geschätzter Einkaufswert einer Menge eines Nahrungsmittels.
-// exact: Menge lässt sich mit dem Preis verrechnen. package: ganze Packung angesetzt (Menge offen oder Einheit passt nicht). missing: kein Preis.
-export function estimateCost(ref: { name: string; food_item_id: string | null; quantity: number | null; unit: string | null }, foods: FoodRef[], prices: PriceRow[]): CostLine {
-  const food = findFood(ref, foods)
-  const base = { name: ref.name, foodId: food?.id ?? null, quantity: ref.quantity, unit: ref.unit }
-  const price = food ? latestPrice(food.id, prices) : undefined
-  if (!price) return { ...base, cost: null, basis: 'missing', hint: 'Preis fehlt' }
+// Kosten einer Menge mit genau einem Preis-Eintrag.
+function costWithPrice(ref: { quantity: number | null; unit: string | null }, price: PriceRow): { cost: number; basis: 'exact' | 'package'; hint: string } {
   const packagePrice = Number(price.price_eur)
-  if (ref.quantity === null || !(ref.quantity > 0)) return { ...base, cost: packagePrice, basis: 'package', hint: 'Menge offen – eine Packung angesetzt' }
+  if (ref.quantity === null || !(ref.quantity > 0)) return { cost: packagePrice, basis: 'package', hint: 'Menge offen – eine Packung angesetzt' }
   const need = toBase(ref.quantity, ref.unit)
   if (price.package_quantity && price.package_quantity > 0) {
     const pack = toBase(Number(price.package_quantity), price.package_unit)
-    if (pack.base === need.base && pack.quantity > 0) return { ...base, cost: packagePrice * need.quantity / pack.quantity, basis: 'exact', hint: '' }
+    if (pack.base === need.base && pack.quantity > 0) return { cost: packagePrice * need.quantity / pack.quantity, basis: 'exact', hint: '' }
   }
   if (price.unit_price_eur && price.unit_label) {
     const perBase = /kg/i.test(price.unit_label) ? { base: 'g', per: 1000 } : /\bl\b|liter/i.test(price.unit_label) ? { base: 'ml', per: 1000 } : null
-    if (perBase && perBase.base === need.base) return { ...base, cost: Number(price.unit_price_eur) * need.quantity / perBase.per, basis: 'exact', hint: '' }
+    if (perBase && perBase.base === need.base) return { cost: Number(price.unit_price_eur) * need.quantity / perBase.per, basis: 'exact', hint: '' }
   }
   if (need.base === 'stk' && (!price.package_quantity || normalizeUnit(price.package_unit).base === 'stk')) {
-    return { ...base, cost: packagePrice / Number(price.package_quantity || 1) * need.quantity, basis: 'exact', hint: '' }
+    return { cost: packagePrice / Number(price.package_quantity || 1) * need.quantity, basis: 'exact', hint: '' }
   }
-  return { ...base, cost: packagePrice, basis: 'package', hint: 'Einheit passt nicht zum Preis – eine Packung angesetzt' }
+  return { cost: packagePrice, basis: 'package', hint: 'Einheit passt nicht zum Preis – eine Packung angesetzt' }
+}
+
+// Geschätzter Einkaufswert einer Menge eines Nahrungsmittels: Mittelwert über die Supermärkte (je Markt ein Preis).
+// exact: Menge lässt sich mit dem Preis verrechnen. package: ganze Packung angesetzt (Menge offen oder Einheit passt nicht). missing: kein Preis.
+export function estimateCost(ref: { name: string; food_item_id: string | null; quantity: number | null; unit: string | null }, foods: FoodRef[], prices: PriceRow[], options: PriceOptions = {}): CostLine {
+  const food = findFood(ref, foods)
+  const base = { name: ref.name, foodId: food?.id ?? null, quantity: ref.quantity, unit: ref.unit }
+  const rows = food ? pricesForFood(food.id, prices, options) : []
+  if (!rows.length) return { ...base, cost: null, basis: 'missing', hint: 'Preis fehlt', markets: 0, organic: false }
+  const results = rows.map(row => costWithPrice(ref, row))
+  const exact = results.filter(r => r.basis === 'exact')
+  const used = exact.length ? exact : results
+  const cost = used.reduce((sum, r) => sum + r.cost, 0) / used.length
+  const organic = Boolean(rows[0].is_organic)
+  const hint = [exact.length ? '' : used[0].hint, used.length > 1 ? 'Ø aus ' + used.length + ' Märkten' : '', organic ? 'Bio-Preis' : ''].filter(Boolean).join(' · ')
+  return { ...base, cost, basis: exact.length ? 'exact' : 'package', hint, markets: used.length, organic }
 }
 
 export type RecipeCost = { total: number; lines: CostLine[]; missing: CostLine[]; approximate: boolean }
-export function estimateRecipeCost(recipe: { servings: number; recipe_ingredients?: IngredientRef[] }, servings: number, foods: FoodRef[], prices: PriceRow[]): RecipeCost {
+export function estimateRecipeCost(recipe: { servings: number; recipe_ingredients?: IngredientRef[] }, servings: number, foods: FoodRef[], prices: PriceRow[], options: PriceOptions = {}): RecipeCost {
   const factor = Number(servings || recipe.servings || 1) / Math.max(1, Number(recipe.servings || 1))
   const lines = (recipe.recipe_ingredients ?? []).filter(i => !i.is_optional).map(i =>
-    estimateCost({ name: i.name, food_item_id: i.food_item_id, quantity: i.quantity === null ? null : Number(i.quantity) * factor, unit: i.unit }, foods, prices))
+    estimateCost({ name: i.name, food_item_id: i.food_item_id, quantity: i.quantity === null ? null : Number(i.quantity) * factor, unit: i.unit }, foods, prices, options))
   const total = lines.reduce((sum, line) => sum + (line.cost ?? 0), 0)
   return { total: round(total, 2), lines, missing: lines.filter(l => l.basis === 'missing'), approximate: lines.some(l => l.basis !== 'exact') }
 }
@@ -83,9 +130,21 @@ export function manualPriceRow(price: number, quantity: number | null, unit: str
   return { price_eur: round(price, 2), package_quantity: quantity && quantity > 0 ? quantity : null, package_unit: unit || null, unit_price_eur: unitPrice, unit_label: unitPrice === null ? null : pack!.base === 'g' ? '€/kg' : '€/l' }
 }
 
+// „Auf 1 Stk runterrechnen“: nur bei Stückzahlen über 1 (Stk, Packung, Dose …), nicht bei g/ml.
+export function canSplitToOne(quantity: number | null, unit: string | null) {
+  if (quantity === null || !(quantity > 1)) return false
+  const base = normalizeUnit(unit).base
+  return base !== 'g' && base !== 'ml'
+}
+// 2 Stk für 3,00 € → 1 Stk für 1,50 €. Ohne Einheit gilt „Stk“.
+export function splitToOne(price: number, quantity: number, unit: string | null) {
+  return { price: round(price / quantity, 2), quantity: 1, unit: unit || 'Stk' }
+}
+
 // ---------------------------------------------------------------- Vorrat
+// Bio und normal zählen als dasselbe Nahrungsmittel („Bio Eier“ deckt „Eier“).
 const matchesFood = (row: PantryRow, need: { name: string; foodId: string | null }) =>
-  (need.foodId && row.food_item_id === need.foodId) || keyOf(row.name) === keyOf(need.name)
+  Boolean(need.foodId && row.food_item_id === need.foodId) || keyOf(row.name) === keyOf(need.name) || baseKey(row.name) === baseKey(need.name)
 
 // Menge, die ein Bon-Artikel dem Vorrat hinzufügt. „2 Stk“ Butter mit bekannter Packung 250 g → 500 g.
 export function pantryAmountFromReceipt(line: { quantity: number | null; unit: string | null }, packageInfo?: { package_quantity: number | null; package_unit: string | null }) {
@@ -101,10 +160,11 @@ export function pantryAmountFromReceipt(line: { quantity: number | null; unit: s
 }
 
 // Bon-Artikel in den Vorrat: passende Zeile (gleiches Nahrungsmittel, umrechenbare Einheit) aufstocken, sonst neu anlegen.
-export function planPantryAddition(pantry: PantryRow[], item: { name: string; foodId: string | null; quantity: number; unit: string | null }) {
-  const row = pantry.find(r => matchesFood(r, item) && r.quantity !== null && sameKind(r.unit, item.unit))
+// Bio und normal bekommen getrennte Vorratszeilen (Anzeige „Bio“), beim Kochen zählen beide.
+export function planPantryAddition(pantry: PantryRow[], item: { name: string; foodId: string | null; quantity: number; unit: string | null; organic?: boolean }) {
+  const row = pantry.find(r => matchesFood(r, item) && Boolean(r.is_organic) === Boolean(item.organic) && r.quantity !== null && sameKind(r.unit, item.unit))
   if (row) return { update: { id: row.id, quantity: round(Number(row.quantity) + fromBase(toBase(item.quantity, item.unit).quantity, row.unit)) } }
-  return { insert: { name: item.name, food_item_id: item.foodId, quantity: round(item.quantity), unit: item.unit } }
+  return { insert: { name: item.name, food_item_id: item.foodId, quantity: round(item.quantity), unit: item.unit, is_organic: Boolean(item.organic) } }
 }
 
 export type Need = { name: string; foodId: string | null; quantity: number | null; unit: string | null }

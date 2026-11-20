@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
-import { normalizeUnit, pantryAmountFromReceipt, planPantryAddition, type PantryRow } from '../lib/kitchen'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, likelyFood, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
+import { canSplitToOne, normalizeUnit, pantryAmountFromReceipt, planPantryAddition, splitOrganic, type PantryRow } from '../lib/kitchen'
 import { localISO } from '../lib/dates'
+import { saveMarketPrice } from '../lib/priceStore'
+import { retailers } from '../lib/retailers'
 
 type Receipt = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
@@ -12,7 +14,17 @@ declare global {
   interface Window { Tesseract?: { createWorker: (language: string, oem?: number, options?: Record<string, unknown>) => Promise<{ recognize: (image: Blob | File) => Promise<{ data: { text: string; confidence?: number; words?: { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }[] } }>; setParameters?: (params: Record<string,string>) => Promise<void>; terminate: () => Promise<void> }> } }
 }
 
-const retailers: Record<string,string> = { aldi_nord:'ALDI Nord', lidl:'Lidl', rewe:'REWE', kaufland:'Kaufland', edeka:'EDEKA', penny:'Penny', other:'Anderer Markt' }
+// Bio ist ein Merkmal, kein eigenes Nahrungsmittel: „BIO EIER 6ER“ → „EIER 6ER“ + Bio, zugeordnet zu „Eier“.
+// Für die Zuordnung zählen Packungsangaben wie „6ER“ oder „500G“ nicht mit.
+const withoutPack=(name:string)=>name.replace(/\b\d+(?:[,.]\d+)?\s*(?:er|stk|st|stück|g|kg|ml|l)\b/gi,' ').replace(/\s+/g,' ').trim()
+function markOrganic(line:Line,foods:Food[]):Line{
+  const split=splitOrganic(line.name)
+  if(!split.organic)return line
+  const current=line.foodId?foods.find(f=>f.id===line.foodId):undefined
+  const keep=current&&!splitOrganic(current.name).organic?current:undefined
+  const match=keep??likelyFood(split.base,foods)??likelyFood(withoutPack(split.base),foods)
+  return {...line,name:match?.name??split.base,foodId:match?.id??'',organic:true}
+}
 const euro = (value: number) => new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(value)
 const categories: [string, RegExp][] = [
   ['Fleisch & Fisch',/huhn|haehnchen|pute|rind|schwein|hack|lachs|fisch|wurst|schinken/],
@@ -74,7 +86,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   // Summenkontrolle: erkannte Preise (inkl. Rabatt und Pfand) gegen die SUMME auf dem Bon, live bei jeder Änderung.
   const check=useMemo(()=>checkReceiptTotal(lines,receiptTotal),[lines,receiptTotal])
   function updateLine(id:string,patch:Partial<Line>){setLines(current=>current.map(line=>line.id===id?{...line,...patch}:line))}
-  function addManualLine(){setLines(current=>[...current,{id:crypto.randomUUID(),name:'',price:'',foodId:'',quantity:'',unit:'',selected:true}])}
+  function addManualLine(){setLines(current=>[...current,{id:crypto.randomUUID(),name:'',price:'',foodId:'',quantity:'',unit:'',selected:true,organic:false}])}
   function removeLine(id:string){setLines(current=>current.filter(line=>line.id!==id))}
   async function analyse(receipt:Receipt) {
     if(!supabase)return
@@ -128,7 +140,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       setReceiptTotal(billTotal)
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||localISO(new Date(receipt.created_at)));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
-      setLines(parsed)
+      setLines(parsed.map(line=>markOrganic(line,foods)))
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}
   }
@@ -156,7 +168,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     if(!supabase||busy)return
     const retailerName=retailers[receipt.retailer_code||'']||'Supermarkt'
     const dateLabel=receipt.purchase_date?new Date(receipt.purchase_date+'T12:00:00').toLocaleDateString('de-DE'):new Date(receipt.created_at).toLocaleDateString('de-DE')
-    if(!window.confirm('Sicher, dass du das Element „Bon '+retailerName+' vom '+dateLabel+'“ löschen willst? Das Foto wird ebenfalls entfernt. Bereits gespeicherte Preisverläufe bleiben erhalten.'))return
+    if(!window.confirm('Sicher, dass du das Element „Bon '+retailerName+' vom '+dateLabel+'“ löschen willst? Das Foto wird ebenfalls entfernt. Bereits gespeicherte Preise bleiben erhalten.'))return
     setBusy(true);setError('');setNotice('')
     try{
       // Remove the private file first. If this fails, keep the receipt row so the user can retry.
@@ -167,7 +179,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       if(!deleted.data)throw new Error('Das Foto wurde entfernt, aber der Bon-Datensatz blieb bestehen. Bitte erneut auf Löschen tippen.')
       setReceipts(current=>current.filter(item=>item.id!==receipt.id))
       if(activeReceipt?.id===receipt.id){setActiveReceipt(null);setLines([]);setOcrText('');if(receiptPreview)URL.revokeObjectURL(receiptPreview);setReceiptPreview('')}
-      setNotice('Bon und Foto wurden gelöscht. Bereits gespeicherte Preisverläufe bleiben erhalten.')
+      setNotice('Bon und Foto wurden gelöscht. Bereits gespeicherte Preise bleiben erhalten.')
     }catch(e){setError(e instanceof Error?e.message:'Bon konnte nicht vollständig gelöscht werden.')}
     finally{setBusy(false)}
   }
@@ -183,7 +195,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       const packages=new Map<string,{package_quantity:number|null;package_unit:string|null}>()
       if(fillPantry){
         const [stock,packs]=await Promise.all([
-          supabase.from('pantry_items').select('id,name,quantity,unit,food_item_id,best_before').eq('household_id',householdId),
+          supabase.from('pantry_items').select('id,name,quantity,unit,food_item_id,best_before,is_organic').eq('household_id',householdId),
           supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at').eq('household_id',householdId).not('package_quantity','is',null).order('observed_at',{ascending:false}),
         ])
         if(stock.error)throw stock.error
@@ -195,53 +207,53 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
           if(!known||(normalizeUnit(known.package_unit).base==='stk'&&normalizeUnit(row.package_unit).base!=='stk'))packages.set(row.food_item_id,row)
         }
       }
+      // Ein Preis je Nahrungsmittel + Supermarkt + Bio/normal: vorhandener Preis desselben Markts wird überschrieben.
+      const market=retailer||activeReceipt.retailer_code||'other'
+      const observedAt=purchaseDate||activeReceipt.purchase_date||localISO()
       for(const line of lines.filter(l=>l.selected)){
         const price=Number(line.price.replace(',','.'))
-        if(!line.name.trim()||!Number.isFinite(price)||price<=0)continue
+        const split=splitOrganic(line.name.trim())
+        const organic=Boolean(line.organic)||split.organic
+        const name=split.base
+        if(!name||!Number.isFinite(price)||price<=0)continue
         let foodId=line.foodId
         if(!foodId){
-          const norm=normalize(line.name)
+          const norm=normalize(name)
           const existingId=foodIdByName.get(norm)
           if(existingId)foodId=existingId
           else{
-            const created=await supabase.from('household_foods').insert({household_id:householdId,name:line.name.trim(),normalized_name:norm,category:guessCategory(line.name),default_unit:line.unit||null,notes:'Automatisch aus Kassenbon ergänzt',source_name:'receipt',created_by:userId}).select('id').single()
+            const created=await supabase.from('household_foods').insert({household_id:householdId,name,normalized_name:norm,category:guessCategory(name),default_unit:line.unit||null,notes:'Automatisch aus Kassenbon ergänzt',source_name:'receipt',created_by:userId}).select('id').single()
             if(created.error)throw created.error
             foodId=created.data.id
             foodIdByName.set(norm,foodId)
-            setFoods(current=>[...current,{id:foodId,name:line.name.trim(),normalized_name:norm,category:guessCategory(line.name),default_unit:line.unit||null}])
+            setFoods(current=>[...current,{id:foodId,name,normalized_name:norm,category:guessCategory(name),default_unit:line.unit||null}])
           }
         }
         const qtyText=line.quantity.replace(',','.')
-        const quantity=qtyText&&Number.isFinite(Number(qtyText))?Number(qtyText):null
+        const quantity=qtyText&&Number.isFinite(Number(qtyText))&&Number(qtyText)>0?Number(qtyText):null
         const unit=line.unit||null
-        let unitPrice:number|null=null;let unitLabel:string|null=null
-        if(quantity&&unit){const factor=unit==='kg'||unit==='l'?1:unit==='g'||unit==='ml'?0.001:null;if(factor){unitPrice=price/(quantity*factor);unitLabel=unit==='kg'||unit==='g'?'€/kg':'€/l'}}
-        const receiptNote='receipt:'+activeReceipt.id
-        const duplicate=await supabase.from('household_food_prices').select('id').eq('household_id',householdId).eq('food_item_id',foodId).eq('notes',receiptNote).limit(1).maybeSingle()
-        if(duplicate.error)throw duplicate.error
-        const priceData={household_id:householdId,food_item_id:foodId,retailer_code:activeReceipt.retailer_code||retailer,price_eur:price,package_quantity:quantity,package_unit:unit,unit_price_eur:unitPrice,unit_label:unitLabel,price_type:'regular',source_name:'Kassenbon '+(retailers[activeReceipt.retailer_code||retailer]||'Supermarkt'),observed_at:activeReceipt.purchase_date||purchaseDate,notes:receiptNote}
-        if(duplicate.data){const updatedPrice=await supabase.from('household_food_prices').update(priceData).eq('id',duplicate.data.id);if(updatedPrice.error)throw updatedPrice.error}
-        else{const inserted=await supabase.from('household_food_prices').insert(priceData);if(inserted.error)throw inserted.error}
+        await saveMarketPrice({householdId,foodId,retailerCode:market,organic,price,quantity,unit,splitToOne:Boolean(line.splitToOne),sourceName:'Kassenbon '+(retailers[market]||'Supermarkt'),observedAt,notes:'receipt:'+activeReceipt.id})
         added++
-        if(fillPantry&&normalize(line.name)!=='pfand'){
+        if(fillPantry&&normalize(name)!=='pfand'){
+          // Der Vorrat bekommt die gekaufte Menge (z. B. 2 Stk), auch wenn der Preis auf 1 Stk runtergerechnet wird.
           const amount=pantryAmountFromReceipt({quantity,unit},packages.get(foodId))
-          const plan=planPantryAddition(pantryRows,{name:line.name.trim(),foodId,quantity:amount.quantity,unit:amount.unit})
+          const plan=planPantryAddition(pantryRows,{name,foodId,quantity:amount.quantity,unit:amount.unit,organic})
           if(plan.update){
             const changed=await supabase.from('pantry_items').update({quantity:plan.update.quantity,updated_at:new Date().toISOString()}).eq('id',plan.update.id).eq('household_id',householdId)
             if(changed.error)throw changed.error
             const row=pantryRows.find(r=>r.id===plan.update!.id);if(row)row.quantity=plan.update.quantity
           }else if(plan.insert){
-            const category=guessCategory(line.name)
-            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,storage_location:category==='Milchprodukte & Eier'||category==='Fleisch & Fisch'?'Kühlschrank':'Vorratsschrank',notes:'Aus Kassenbon vom '+new Date((activeReceipt.purchase_date||purchaseDate)+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before').single()
+            const category=guessCategory(name)
+            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,is_organic:organic,storage_location:category==='Milchprodukte & Eier'||category==='Fleisch & Fisch'?'Kühlschrank':'Vorratsschrank',notes:'Aus Kassenbon vom '+new Date(observedAt+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before,is_organic').single()
             if(created.error)throw created.error
             pantryRows.push(created.data as PantryRow)
           }
           stocked++
         }
       }
-      const updated=await supabase.from('receipt_uploads').update({status:'processed'}).eq('id',activeReceipt.id).eq('household_id',householdId)
+      const updated=await supabase.from('receipt_uploads').update({status:'processed',retailer_code:market,purchase_date:observedAt}).eq('id',activeReceipt.id).eq('household_id',householdId)
       if(updated.error)throw updated.error
-      setNotice(added+' Preispositionen gespeichert. Neue Nahrungsmittel wurden automatisch ergänzt. '+(fillPantry?stocked+' Positionen im Vorrat ergänzt.':'Der Vorrat wurde bei diesem Bon bereits beim ersten Speichern ergänzt.'));setLines([]);setActiveReceipt(null);setProgress('');await refresh();await onDone()
+      setNotice(added+' Preise für '+(retailers[market]||'den Supermarkt')+' gespeichert (je Nahrungsmittel ein Preis pro Markt – geänderte Preise überschrieben). Neue Nahrungsmittel wurden automatisch ergänzt. '+(fillPantry?stocked+' Positionen im Vorrat ergänzt.':'Der Vorrat wurde bei diesem Bon bereits beim ersten Speichern ergänzt.'));setLines([]);setActiveReceipt(null);setProgress('');await refresh();await onDone()
     }catch(e){setError(e instanceof Error?e.message:'Preise konnten nicht vollständig gespeichert werden.');setProgress('')}
     finally{setBusy(false)}
   }
@@ -265,7 +277,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     {error&&<div className="alert error" role="alert">{error}</div>}
     {notice&&<div className="alert success"><Check size={16}/>{notice}</div>}
     {activeReceipt&&lines.length>0&&<div className="panel receipt-review">
-      <div className="panel-head"><div><span className="eyebrow">OCR-ERGEBNIS PRÜFEN</span><h2>{lines.filter(l=>Number(l.price.replace(',','.'))>0).length} Positionen mit Preis · {lines.filter(l=>!Number(l.price.replace(',','.'))).length} zur Prüfung</h2><small>Auch Zeilen ohne erkannten Preis bleiben sichtbar. Ergänze fehlende Preise und prüfe die Zuordnung, bevor du speicherst.</small></div><Sparkles size={20}/></div>
+      <div className="panel-head"><div><span className="eyebrow">OCR-ERGEBNIS PRÜFEN</span><h2>{lines.filter(l=>Number(l.price.replace(',','.'))>0).length} Positionen mit Preis · {lines.filter(l=>!Number(l.price.replace(',','.'))).length} zur Prüfung</h2><small>Auch Zeilen ohne erkannten Preis bleiben sichtbar. Ergänze fehlende Preise und prüfe die Zuordnung, bevor du speicherst.</small><small><b>Supermarkt: {retailers[retailer]||'Anderer Markt'}</b> (oben unter „Supermarkt“ änderbar) · je Nahrungsmittel wird ein Preis für diesen Markt gespeichert, ein älterer Preis desselben Markts wird ersetzt. „Bio“ wird automatisch erkannt.</small></div><Sparkles size={20}/></div>
       {check.total!==null
         ?<div className={'alert '+(check.ok?'success':'error')} role={check.ok?undefined:'alert'}>{check.ok&&<Check size={16}/>}{check.ok?'Summe stimmt mit dem Bon überein: ':'Summe weicht vom Bon ab: '}Bon {euro(check.total)} · erkannt {euro(check.itemsTotal)}{!check.ok&&<> · Differenz {euro(check.diff??0)}. Bitte Positionen und Preise mit dem Bon vergleichen.</>}</div>
         :<div className="notice-card"><Sparkles size={18}/><span>Die Bon-Summe konnte nicht gelesen werden. Bitte die Preise selbst mit dem Bon vergleichen.</span></div>}
@@ -276,7 +288,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
         <input aria-label="Preis in Euro" placeholder="Preis €" inputMode="decimal" value={line.price} onChange={e=>updateLine(line.id,{price:e.target.value})}/>
         <select aria-label="Nahrungsmittel zuordnen" value={line.foodId} onChange={e=>updateLine(line.id,{foodId:e.target.value})}><option value="">+ Neu anlegen: {line.name}</option>{foods.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
         <div className="form-row"><input aria-label="Packungsmenge" placeholder="Menge" value={line.quantity} onChange={e=>updateLine(line.id,{quantity:e.target.value})}/><input aria-label="Einheit" placeholder="g, kg, ml …" value={line.unit} onChange={e=>updateLine(line.id,{unit:e.target.value})}/></div>
-        <div className="receipt-include"><label><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label><button type="button" className="button button-light button-small" onClick={()=>removeLine(line.id)} aria-label="Artikelzeile entfernen">Entfernen</button></div>
+        <div className="receipt-include"><label><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label><label><input type="checkbox" checked={Boolean(line.organic)} onChange={e=>updateLine(line.id,{organic:e.target.checked})}/> Bio</label>{canSplitToOne(Number(line.quantity.replace(',','.'))||null,line.unit||null)&&<label title="Preis wird für 1 Stück gespeichert, der Vorrat bekommt die ganze Menge"><input type="checkbox" checked={Boolean(line.splitToOne)} onChange={e=>updateLine(line.id,{splitToOne:e.target.checked})}/> Auf 1 {line.unit||'Stk'} runterrechnen{line.splitToOne&&Number(line.price.replace(',','.'))>0?' ('+euro(Math.round(Number(line.price.replace(',','.'))/Number(line.quantity.replace(',','.'))*100)/100)+')':''}</label>}<button type="button" className="button button-light button-small" onClick={()=>removeLine(line.id)} aria-label="Artikelzeile entfernen">Entfernen</button></div>
         {line.note&&<small className="muted" style={{gridColumn:'1/-1',fontSize:10}}>⚠ {line.note}</small>}
       </div>)}
       <div className="receipt-save-row"><b>{selectedCount} Positionen · {euro(lines.filter(l=>l.selected).reduce((sum,l)=>sum+(Number(l.price.replace(',','.'))||0),0))}</b><button className="button button-dark" disabled={busy||!selectedCount} onClick={savePrices}><CircleDollarSign size={16}/> Preise & Nahrungsmittel speichern</button></div>

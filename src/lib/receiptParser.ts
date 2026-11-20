@@ -4,7 +4,7 @@
 export type Food = { id: string; name: string; normalized_name: string; category: string; default_unit: string | null }
 // review: warum eine Zeile geprüft werden sollte. note: Hinweis, der in der Prüfliste unter der Zeile steht.
 export type LineReview = 'price-missing' | 'doubtful' | 'second-run' | 'derived' | 'corrected'
-export type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean; review?: LineReview; note?: string; ocrPrice?: string }
+export type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean; review?: LineReview; note?: string; ocrPrice?: string; organic?: boolean; splitToOne?: boolean }
 export type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
 
 export const normalize = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9-]+/g,' ').replace(/\s+/g,' ').trim()

@@ -1,6 +1,6 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
 import { buildRecipeMessages, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
-import { estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
+import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
 
 let failed = 0
 const expect = (condition: boolean, message: string) => {
@@ -130,6 +130,66 @@ console.log('\n5) KI-Antwort auslesen (Anleitung + fehlende Mengen)')
   expect(prompt.includes('HISTAMIN: Zahl von 1 bis 10'), 'Prompt fragt den Histaminwert ab')
   const plain = parseRecipeAnswer('1. Wasser kochen.\n2. Nudeln 9 Minuten garen.\n3. Abgießen.', ingredients)
   expect(plain.steps.length === 3 && plain.quantities.length === 0, 'Antwort ohne Abschnitte → nur Schritte')
+}
+
+console.log('\n6) Bio-Status')
+{
+  const cases: [string, string, boolean][] = [
+    ['BIO EIER 6ER', 'EIER 6ER', true], ['Bio Zucchini', 'Zucchini', true], ['Bio-Eier', 'Eier', true], ['Eier bio', 'Eier', true],
+    ['BIOMILCH', 'MILCH', true], ['Biojoghurt', 'Joghurt', true], ['Demeter Möhren', 'Möhren', true], ['Öko Äpfel', 'Äpfel', true],
+    ['Eier', 'Eier', false], ['Biotin Kapseln', 'Biotin Kapseln', false], ['Bio', 'Bio', false], ['Brombeeren', 'Brombeeren', false],
+  ]
+  for (const [input, base, organic] of cases) {
+    const r = splitOrganic(input)
+    expect(r.base === base && r.organic === organic, '„' + input + '“ → „' + r.base + '“' + (r.organic ? ' + Bio' : ' (kein Bio)'))
+  }
+  const eggs: PriceRow[] = [
+    { food_item_id: 'ei', price_eur: 2.49, package_quantity: 10, package_unit: 'Stk', unit_price_eur: null, unit_label: null, observed_at: '2026-06-30', retailer_code: 'discounter', is_organic: false },
+    { food_item_id: 'ei', price_eur: 3.29, package_quantity: 6, package_unit: 'Stk', unit_price_eur: null, unit_label: null, observed_at: '2026-11-18', retailer_code: 'penny', is_organic: true },
+  ]
+  const normal = estimateCost({ name: 'Eier', food_item_id: null, quantity: 2, unit: 'Stk' }, foods, eggs)
+  expect(near(normal.cost, 0.498) && !normal.organic, 'Bio bevorzugen aus → normaler Preis: 2 Eier = 0,50 €')
+  const bio = estimateCost({ name: 'Eier', food_item_id: null, quantity: 2, unit: 'Stk' }, foods, eggs, { preferOrganic: true })
+  expect(near(bio.cost, 1.097) && bio.organic, 'Bio bevorzugen an → Bio-Preis: 2 Eier = 1,10 €')
+  const onlyBio = estimateCost({ name: 'Eier', food_item_id: null, quantity: 2, unit: 'Stk' }, foods, [eggs[1]])
+  expect(near(onlyBio.cost, 1.097), 'Nur Bio-Preis vorhanden → wird auch ohne „Bio bevorzugen“ genutzt')
+  const bioName = estimateCost({ name: 'Bio Eier', food_item_id: null, quantity: 2, unit: 'Stk' }, foods, eggs)
+  expect(bioName.foodId === 'ei', '„Bio Eier“ findet das Nahrungsmittel „Eier“')
+  const pantry: PantryRow[] = [
+    { id: 'p1', name: 'Bio Eier', quantity: 4, unit: 'Stk', food_item_id: null, is_organic: true },
+    { id: 'p2', name: 'Eier', quantity: 3, unit: 'Stk', food_item_id: 'ei', is_organic: false },
+  ]
+  const cooked = planPantryDeduction([{ name: 'Eier', foodId: 'ei', quantity: 6, unit: 'Stk' }], pantry)
+  expect(cooked.used.length === 1 && cooked.deletes.length + cooked.updates.length === 2, 'Rezept „6 Eier“: Bio- und normale Eier aus dem Vorrat zählen beide')
+  const addBio = planPantryAddition(pantry, { name: 'Eier', foodId: 'ei', quantity: 6, unit: 'Stk', organic: true })
+  expect(addBio.update?.id === 'p1' && addBio.update.quantity === 10, 'Bon „Bio Eier“ stockt die Bio-Zeile im Vorrat auf')
+  const addNormal = planPantryAddition([pantry[0]], { name: 'Eier', foodId: 'ei', quantity: 6, unit: 'Stk', organic: false })
+  expect(Boolean(addNormal.insert) && addNormal.insert?.is_organic === false, 'Normale Eier bekommen eine eigene Vorratszeile neben den Bio-Eiern')
+}
+
+console.log('\n7) Mittelwert über Supermärkte')
+{
+  const butter: PriceRow[] = [
+    { food_item_id: 'butter', price_eur: 1.75, package_quantity: 250, package_unit: 'g', unit_price_eur: 7, unit_label: '€/kg', observed_at: '2026-11-20', retailer_code: 'aldi_nord', is_organic: false },
+    { food_item_id: 'butter', price_eur: 1.50, package_quantity: 250, package_unit: 'g', unit_price_eur: 6, unit_label: '€/kg', observed_at: '2026-11-10', retailer_code: 'aldi_nord', is_organic: false },
+    { food_item_id: 'butter', price_eur: 1.99, package_quantity: 250, package_unit: 'g', unit_price_eur: null, unit_label: null, observed_at: '2026-11-15', retailer_code: 'lidl', is_organic: false },
+    { food_item_id: 'butter', price_eur: 3.98, package_quantity: 500, package_unit: 'g', unit_price_eur: null, unit_label: null, observed_at: '2026-11-12', retailer_code: 'penny', is_organic: false },
+  ]
+  const line = estimateCost({ name: 'Butter', food_item_id: 'butter', quantity: 250, unit: 'g' }, foods, butter)
+  expect(near(line.cost, (1.75 + 1.99 + 1.99) / 3) && line.markets === 3, '250 g Butter: Ø aus ALDI Nord (neuester 1,75 €), Lidl 1,99 €, Penny 3,98 €/500 g = 1,91 €')
+  expect(line.hint.includes('Ø aus 3 Märkten'), 'Hinweis „Ø aus 3 Märkten“')
+  const single = estimateCost({ name: 'Butter', food_item_id: 'butter', quantity: 250, unit: 'g' }, foods, butter.slice(0, 2))
+  expect(near(single.cost, 1.75) && single.markets === 1 && !single.hint, 'Nur ein Markt → dessen neuester Preis, kein Ø-Hinweis')
+}
+
+console.log('\n8) Auf 1 Stk runterrechnen')
+{
+  expect(canSplitToOne(2, 'Stk') && canSplitToOne(3, null) && canSplitToOne(2, 'Dose'), '2 Stk, 3 (ohne Einheit), 2 Dosen → Häkchen möglich')
+  expect(!canSplitToOne(1, 'Stk') && !canSplitToOne(500, 'g') && !canSplitToOne(2, 'kg') && !canSplitToOne(null, 'Stk'), '1 Stk, 500 g, 2 kg, Menge offen → kein Häkchen')
+  const one = splitToOne(3, 2, 'Stk')
+  expect(one.price === 1.5 && one.quantity === 1 && one.unit === 'Stk', '2 Stk für 3,00 € → 1 Stk für 1,50 €')
+  const third = splitToOne(1, 3, null)
+  expect(third.price === 0.33 && third.unit === 'Stk', '3 für 1,00 € → 1 Stk für 0,33 €')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

@@ -1,5 +1,7 @@
 // Auswertung von OCR-Text/Wortpositionen eines Kassenbons.
 // Aus ReceiptScanner.tsx ausgelagert, damit der Parser ohne Browser testbar ist (scripts/check-receipt-parser.ts).
+// Getestet mit Penny (Mengenzeile UNTER dem Artikel) und Netto Marken-Discount (Mengenzeile VOR dem Artikel).
+import { splitOrganic } from './kitchen.ts'
 
 export type Food = { id: string; name: string; normalized_name: string; category: string; default_unit: string | null }
 // review: warum eine Zeile geprüft werden sollte. note: Hinweis, der in der Prüfliste unter der Zeile steht.
@@ -17,7 +19,25 @@ const round2 = (value: number) => Math.round(value * 100) / 100
 // OCR liest Preise oft als „2, 38“ oder „16, 84“ – das Leerzeichen nach dem Komma entfernen.
 const tidyPrices = (value: string) => value.replace(/(\d[,.])\s+(\d{2})(?!\d)/g, '$1$2')
 const lastPrice = (value: string) => { const all = [...value.matchAll(/(-?\d{1,4}[,.]\d{2})/g)]; return all.length ? all[all.length - 1][1] : null }
+// Steuerklasse direkt am Preis als Ziffer gelesen: „2,49 A“ → „2,490“, „0,99 B“ → „0.998“, „0,50*A“ → „0,504“.
+// Nur am Zeilenende (Preisspalte) und nicht vor Gewichtsangaben („0,512 kg“). A sieht aus wie 0/4, B wie 8/5/6/3/9.
+function fixTaxDigit(row: string) {
+  const m = row.match(/^(.*?)(-?\d{1,4}[,.]\d{2})(\d)(?![\d,.])(\s*\S{0,5})$/)
+  if (!m || /^\s*(kg|g|l|ml)\b/i.test(m[4]) || /[x×]\s*$/i.test(m[1])) return row
+  return m[1] + m[2] + ' ' + ('04'.includes(m[3]) ? 'A' : 'B') + m[4]
+}
+// Störzeichen vom Bonrand am Zeilenanfang: „=” RIbi …“, „3 Saure …“, „oA 2 X 1,09“, „| SUMME …“.
+// Mengenzeilen („2 Stk x 0,39“) bleiben unangetastet; normale Wörter wie „Ei“ auch.
+function stripLeadingNoise(row: string) {
+  const tokens = row.split(' ').filter(Boolean)
+  const noiseToken = (t: string) => /^[^\p{L}\p{N}]+$/u.test(t) || t.length === 1 || (t.length === 2 && (/[^\p{L}]/u.test(t) || !/^(?:[A-ZÄÖÜ][a-zäöüß]|[A-ZÄÖÜ]{2})$/.test(t)))
+  while (tokens.length > 1 && !qtyRowRe.test(tokens.join(' ')) && noiseToken(tokens[0]) && /[\p{L}\p{N}]/u.test(tokens[1])) tokens.shift()
+  return tokens.join(' ')
+}
+const prepareRow = (raw: string) => stripLeadingNoise(fixTaxDigit(tidyPrices(raw.replace(/\s+/g, ' ').trim())))
 const isTotalText = (value: string) => /^(summe|gesamtsumme|gesamtbetrag|endsumme|zu zahlen|total)\b/.test(normalize(value))
+// Pfand-Zeile, auch „EW-Pfand“, „E¥-Pfand“, „Pfand 0,25 EURO“.
+const isDepositRow = (value: string) => /(?:^|[\s-])(pfand|leergut)\b/.test(normalize(value).slice(0, 24))
 const lettersOf = (value: string) => (value.match(/\p{L}/gu) || []).length
 
 type Row = { y: number; words: OCRWord[] }
@@ -57,12 +77,26 @@ const rowTextOf = (rowWords: OCRWord[]) => tidyPrices(rowWords.map(w => w.text).
 // Endsumme des Bons (Zeile „SUMME …“), oder null wenn sie nicht gelesen werden konnte.
 export function findReceiptTotal(text: string, words: OCRWord[] = []): number | null {
   for (const raw of text.split(/\r?\n/)) {
-    const line = tidyPrices(raw.replace(/\s+/g, ' ').trim())
+    const line = prepareRow(raw)
     if (isTotalText(line)) { const price = lastPrice(line); if (price) return toNumber(price) }
   }
   for (const row of groupRows(words)) {
-    const rowText = rowTextOf(rowWordsOf(row))
+    const rowText = prepareRow(rowTextOf(rowWordsOf(row)))
     if (isTotalText(rowText)) { const price = lastPrice(rowText); if (price) return toNumber(price) }
+  }
+  return null
+}
+
+// Rabatt auf den ganzen Bon nach der Zwischensumme („10% auf Alles −1,76“). Preise werden ohne diesen Rabatt gespeichert.
+export function findReceiptDiscount(text: string): { label: string; amount: number } | null {
+  const rows = text.split(/\r?\n/).map(prepareRow)
+  const totalAt = rows.findIndex(r => isTotalText(r) && lastPrice(r) !== null)
+  if (totalAt < 0) return null
+  for (const row of rows.slice(totalAt + 1, totalAt + 4)) {
+    const label = normalize(row)
+    if (!/auf alles|auf den einkauf|auf ihren einkauf|gesamtrabatt|coupon|gutschein/.test(label)) continue
+    const price = lastPrice(row)
+    if (price) return { label: row.replace(/-?\d{1,4}[,.]\d{2}.*$/, '').trim(), amount: Math.abs(toNumber(price)) }
   }
   return null
 }
@@ -137,11 +171,11 @@ function oneDigitVariants(value: string): string[] {
 
 export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Line[] {
   // Tesseract liefert den Text bereits zeilenweise. Wortpositionen nur nutzen, wenn der Text keine Zeilenstruktur hat.
-  const textRows = text.split(/\r?\n/).map(raw => tidyPrices(raw.replace(/\s+/g, ' ').trim()))
+  const textRows = text.split(/\r?\n/).map(prepareRow)
   const priceRows = (rows: string[]) => rows.filter(r => splitPriceRow(r)).length
   let rows = textRows
   if (words.length && priceRows(textRows) < 3) {
-    const wordRows = groupRows(words).map(row => rowTextOf(rowWordsOf(row)))
+    const wordRows = groupRows(words).map(row => prepareRow(rowTextOf(rowWordsOf(row))))
     if (priceRows(wordRows) > priceRows(textRows)) rows = wordRows
   }
   // Alles ab der SUMME-Zeile (Zahlung, Datum, Belegnummer …) enthält keine Artikel.
@@ -153,7 +187,7 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
   // Kopfbereich (Markt, Adresse, USt-ID) überspringen: Artikel beginnen mit der ersten Artikelzeile.
   const isItemStart = (row: string) => {
     const priced = splitPriceRow(row)
-    if (priced) return lettersOf(priced.left) >= 3 && !isNoise(priced.left) && !qtyRowRe.test(row) && !/^(pfand|leergut)/.test(normalize(row))
+    if (priced) return lettersOf(priced.left) >= 3 && !isNoise(priced.left) && !qtyRowRe.test(row) && !isDepositRow(row)
     return Boolean(splitGarbledPrice(row, taxMode))
   }
   const start = body.findIndex(isItemStart)
@@ -163,7 +197,9 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
   const previousLine = () => found[found.length - 1]
   const push = (line: Omit<Line, 'id' | 'foodId'> & { foodId?: string }) => {
     const matched = line.name ? likelyFood(line.name, foods) : undefined
-    found.push({ ...line, id: crypto.randomUUID(), name: matched?.name ?? line.name, foodId: line.foodId ?? matched?.id ?? '' })
+    // „Bio“ merken, bevor der Name durch den Katalognamen ersetzt wird (Bio Zucchini → Zucchini + Bio).
+    const organic = line.organic || (line.name ? splitOrganic(line.name).organic : false)
+    found.push({ ...line, id: crypto.randomUUID(), name: matched?.name ?? line.name, foodId: line.foodId ?? matched?.id ?? '', ...(organic ? { organic: true } : {}) })
   }
   const add = (rawName: string, rawPrice: string, rawQuantity = '', rawUnit = '') => {
     const name = cleanName(rawName.replace(/^\d+\s*[xX×]\s*/, '').replace(/\s+\*$/, ''))
@@ -176,10 +212,12 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
     const norm = normalize(name)
     const likely = likelyFood(name, foods) ?? foods.find(f => {
       const foodName = normalize(f.name), tokens = norm.split(' ').filter(t => t.length > 3)
+      // Kurze Namen („Eier“) nur als ganzes Wort: „Bio BB NL Eier 6ST“ → Eier, aber nicht „Reisnudeln“ → Reis.
+      if (foodName.length === 4) return norm.split(' ').includes(foodName)
       return foodName.length > 4 && (norm.includes(foodName) || foodName.includes(norm) || tokens.filter(t => foodName.split(' ').includes(t)).length >= 2)
     })
     const pack = name.match(/(?:^|\s)(\d+(?:[,.]\d+)?)\s*(kg|g|mg|l|ml|stk|stück)\b/i)
-    push({ name: likely?.name ?? name, foodId: likely?.id ?? '', price: formatPrice(price), quantity: rawQuantity || pack?.[1]?.replace('.', ',') || '', unit: rawUnit || pack?.[2]?.toLowerCase() || '', selected: true })
+    push({ name: likely?.name ?? name, foodId: likely?.id ?? '', price: formatPrice(price), quantity: rawQuantity || pack?.[1]?.replace('.', ',') || '', unit: rawUnit || pack?.[2]?.toLowerCase() || '', selected: true, ...(splitOrganic(name).organic ? { organic: true } : {}) })
   }
   // „2 Stk x 0,39“ unter einem Artikel mit 0,78: Menge nur setzen, wenn die Rechnung aufgeht.
   // Fehlt der Preis des Artikels (unleserlich), ergibt er sich aus Menge × Einzelpreis.
@@ -236,23 +274,56 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
     push({ name: cleanName(name), price: '', quantity: '', unit: '', selected: false, review, note, ocrPrice })
 
   let pendingText = '', pendingQuantity = ''
+  // Mengenzeile VOR dem Artikel (Netto): „2 x 1,09“ gehört zum nächsten Artikel mit 2,18.
+  let pendingBefore: { qty: string; unit: number } | null = null
+  const nextPriceOf = (index: number) => {
+    for (const next of region.slice(index + 1, index + 3)) { if (!next) continue; const p = splitPriceRow(next); return p && lettersOf(p.left) >= 3 && !qtyRowRe.test(next) ? toNumber(p.price) : null }
+    return null
+  }
+  // Nach dem nächsten Artikel: Menge setzen, wenn Menge × Einzelpreis = Zeilenpreis; fehlt der Preis, daraus berechnen.
+  const applyPendingBefore = (countBefore: number) => {
+    const pending = pendingBefore
+    pendingBefore = null
+    const line = found.length > countBefore ? found[found.length - 1] : undefined
+    if (!pending || !line || line.name === 'Pfand') return
+    const qty = toNumber(pending.qty)
+    if (!Number.isFinite(qty) || qty < 1) return
+    if (line.price) {
+      if (Math.abs(qty * pending.unit - toNumber(line.price)) <= 0.011) { line.quantity = pending.qty; line.unit = 'stk' }
+    } else if (line.review === 'price-missing' && Number.isInteger(qty) && qty >= 2 && qty <= 20) {
+      line.price = formatPrice(qty * pending.unit); line.quantity = pending.qty; line.unit = 'stk'; line.selected = true
+      line.review = 'corrected'; line.note = 'Preis unleserlich, aus der Mengenzeile davor berechnet: ' + pending.qty + ' × ' + formatPrice(pending.unit) + ' – bitte prüfen'
+    }
+  }
   // Reine Namenszeile ohne nachfolgende Preiszeile: sichtbar lassen statt still zu verlieren.
   const flushPending = () => {
     if (pendingText && looksLikeName(pendingText)) reviewLine(pendingText, 'price-missing', 'Kein Preis gelesen – bitte mit dem Bon vergleichen')
     pendingText = ''
   }
-  for (const row of region) {
+  for (let index = 0; index < region.length; index++) {
+    const row = region[index]
     if (!row) continue
-    if (/^(pfand|leergut)/.test(normalize(row))) { flushPending(); const deposit = lastPrice(row); if (deposit) addDeposit(deposit); continue }
+    if (isDepositRow(row)) { flushPending(); pendingBefore = null; const deposit = lastPrice(row); if (deposit) addDeposit(deposit); continue }
     const qtyRow = row.match(qtyRowRe)
     const priced = splitPriceRow(row)
-    if (qtyRow && !(taxMode && priced?.tax)) {
+    // Penny/REWE drucken die Menge unter den Artikel, Netto davor – die Rechnung entscheidet.
+    const qtyText = qtyRow ? (qtyRow[1] ?? '').replace('.', ',') : ''
+    const unitPrice = qtyRow ? toNumber(unitFromQtyRow(qtyRow[2])) : NaN
+    const qty = qtyText ? toNumber(qtyText) : NaN
+    const nextPrice = qtyRow ? nextPriceOf(index) : null
+    const fitsNext = nextPrice !== null && Number.isFinite(qty) && Math.abs(qty * unitPrice - nextPrice) <= 0.011
+    const prev = previousLine()
+    const fitsPrevious = Boolean(qtyRow && prev?.price) && Number.isFinite(qty) && Math.abs(qty * unitPrice - toNumber(prev!.price)) <= 0.011
+    // Eine Mengenzeile mit Störzeichen am Ende („2X 0,95 8“) sieht aus wie ein Preis mit Steuerklasse – geht die Rechnung auf, ist es die Mengenzeile.
+    if (qtyRow && (!(taxMode && priced?.tax) || fitsNext || fitsPrevious)) {
       flushPending()
-      const qtyText = (qtyRow[1] ?? '').replace('.', ',')
-      // Penny/REWE drucken die Menge unter den Artikel; andere Märkte davor – die Rechnung entscheidet.
-      if (!applyQuantity(qtyText, unitFromQtyRow(qtyRow[2])) && qtyText && !taxMode) pendingQuantity = qtyText
+      if (fitsNext && !fitsPrevious) { pendingBefore = { qty: qtyText, unit: unitPrice }; continue }
+      if (applyQuantity(qtyText, unitFromQtyRow(qtyRow[2]))) continue
+      if (qtyText && Number.isFinite(unitPrice) && unitPrice > 0) pendingBefore = { qty: qtyText, unit: unitPrice }
+      if (qtyText && !taxMode) pendingQuantity = qtyText
       continue
     }
+    const countBefore = found.length
     if (priced) {
       const { left, price } = priced
       const hasName = lettersOf(left) >= 2
@@ -266,19 +337,23 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
       if (isNoise(left) || /\b(mwst|kartenzahlung|summe|gesamt)\b/i.test(left)) continue
       if (toNumber(price) < 0 || /rabatt|nachlass/i.test(left) || looksLikePercentDiscount(left, price)) { applyDiscount(price, left); continue }
       const inlineQty = left.match(/^(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
-      if (inlineQty) { add(inlineQty[1], price, inlineQty[2], 'stk'); pendingQuantity = ''; continue }
-      if (taxMode && !priced.tax) {
+      if (inlineQty) { add(inlineQty[1], price, inlineQty[2], 'stk'); pendingQuantity = ''; applyPendingBefore(countBefore); continue }
+      // Ohne Steuerklasse ist eine Zeile verdächtig – außer die Mengenzeile davor bestätigt den Preis (Netto: „2 x 1,09“ → 2,18).
+      const confirmedByQty = pendingBefore !== null && Math.abs(toNumber(pendingBefore.qty) * pendingBefore.unit - toNumber(price)) <= 0.011
+      if (taxMode && !priced.tax && !confirmedByQty) {
         reviewLine(left, 'doubtful', 'Gelesen: „' + row + '“ – vermutlich keine eigene Position (ohne Steuerklasse A/B)', formatPrice(toNumber(price)))
         continue
       }
       add(left, price, pendingQuantity, pendingQuantity ? 'stk' : '')
       pendingQuantity = ''
+      applyPendingBefore(countBefore)
       continue
     }
     const garbled = splitGarbledPrice(row, taxMode)
     if (garbled) {
       flushPending()
       reviewLine(garbled.name, 'price-missing', 'Preis unleserlich (gelesen: „' + garbled.garbage + '“) – bitte vom Bon abtippen')
+      applyPendingBefore(countBefore)
       continue
     }
     const namedQuantity = row.match(/^(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
@@ -349,6 +424,28 @@ function markSuspects(lines: Line[], diff: number) {
 
 export type CombinedReceipt = { lines: Line[]; summary: string }
 
+// Namen per Mehrheit: Liest die Mehrzahl der anderen Durchläufe denselben anderen Namen („Gerolsteiner Medium“ statt
+// „Gerolsteiner Wedium“), wird dieser genommen. Preise bleiben unverändert.
+function voteNames(lines: Line[], others: Line[][]) {
+  const votes = new Map<Line, Map<string, { name: string; count: number }>>()
+  for (const other of others) {
+    for (const [i, j] of alignRuns(lines, other)) {
+      const line = lines[i], candidate = other[j]
+      if (line.name === 'Pfand' || !candidate.name || candidate.name === 'Pfand') continue
+      const key = normalize(candidate.name)
+      const map = votes.get(line) ?? new Map<string, { name: string; count: number }>()
+      const entry = map.get(key) ?? { name: candidate.name, count: 0 }
+      entry.count++; map.set(key, entry); votes.set(line, map)
+    }
+  }
+  for (const [line, map] of votes) {
+    const own = normalize(line.name)
+    const best = [...map.entries()].filter(([key]) => key !== own).sort((a, b) => b[1].count - a[1].count)[0]
+    const ownCount = (map.get(own)?.count ?? 0) + 1
+    if (best && best[1].count >= 2 && best[1].count > ownCount && !line.foodId) line.name = best[1].name
+  }
+}
+
 export function combineReceiptRuns(runs: { label: string; lines: Line[] }[], total: number | null): CombinedReceipt {
   const usable = runs.filter(run => run.lines.length)
   if (!usable.length) return { lines: [], summary: 'keine Artikelzeilen erkannt' }
@@ -367,12 +464,17 @@ export function combineReceiptRuns(runs: { label: string; lines: Line[] }[], tot
   // 1) Ein einzelner Durchlauf trifft die Bon-Summe exakt: den nehmen.
   if (total !== null) {
     const exact = usable.filter(run => checkReceiptTotal(run.lines, total).ok).sort((a, b) => pricedCount(b.lines) - pricedCount(a.lines))[0]
-    if (exact) return finish(exact.lines.map(clone), 'Summe stimmt im Lauf ' + exact.label)
+    if (exact) {
+      const lines = exact.lines.map(clone)
+      voteNames(lines, usable.filter(run => run !== exact).map(run => run.lines))
+      return finish(lines, 'Summe stimmt im Lauf ' + exact.label)
+    }
   }
 
   // 2) Bester Durchlauf als Grundlage, die anderen Zeile für Zeile abgleichen.
   const ordered = [...usable].sort((a, b) => pricedCount(b.lines) - pricedCount(a.lines))
   const lines = ordered[0].lines.map(clone)
+  voteNames(lines, ordered.slice(1).map(run => run.lines))
   const alternatives = new Map<Line, Set<string>>()
   for (const other of ordered.slice(1)) {
     const pairs = alignRuns(lines, other.lines)

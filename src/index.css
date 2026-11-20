@@ -835,3 +835,12 @@
 .food-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:3px}
 .food-group-select{font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--line);background:transparent;color:inherit;max-width:170px}
 .food-row-actions .staple-toggle{margin-top:0}
+
+/* 0.3.43 – Thermomix-Rezepte aus Cookidoo */
+.badge.thermomix{background:#e3f1e6;color:#1f7a3d;border:1px solid #c5e3cd}
+.recipe-details h2 .badge.thermomix{margin-left:8px;vertical-align:middle;font-family:'DM Sans',sans-serif;letter-spacing:0}
+.thermomix-note{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#f2f8f3;border:1px solid #d8eadb;border-radius:11px;padding:11px 13px;margin:0 0 16px;font-size:11px;line-height:1.5;color:#466a4e}
+.thermomix-note span{flex:1 1 240px}
+.thermomix-note a{text-decoration:none;white-space:nowrap}
+.theme-nick .badge.thermomix{background:#1d3a2c;color:#8fd8a5;border-color:#2c5240}
+.theme-nick .thermomix-note{background:#18292a;border-color:#2b4440;color:#a9d8bf}

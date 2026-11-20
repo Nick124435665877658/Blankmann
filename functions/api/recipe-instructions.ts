@@ -47,7 +47,7 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
 
   const url = env.VITE_SUPABASE_URL || SUPABASE_URL
   const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY
-  const select = 'household_id,title,description,servings,prep_minutes,cook_minutes,recipe_ingredients(id,name,quantity,unit,is_optional)'
+  const select = 'household_id,title,description,servings,prep_minutes,cook_minutes,source_type,recipe_ingredients(id,name,quantity,unit,is_optional)'
   const loaded = await fetch(url + '/rest/v1/recipes?id=eq.' + recipeId + '&select=' + encodeURIComponent(select), { headers: { apikey: key, Authorization: 'Bearer ' + token } })
   if (loaded.status === 401 || loaded.status === 403) return json({ error: 'Anmeldung abgelaufen – bitte neu anmelden.' }, 401)
   if (!loaded.ok) return json({ error: 'Rezept konnte nicht geladen werden (' + loaded.status + ').' }, 502)
@@ -69,6 +69,8 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
     try {
       const result = parseRecipeAnswer(textOf(await env.AI.run(model.id, model.input(messages))), ingredients, rules)
       if (!addIngredients) result.additions = []
+      // Vorhandene Mengen bleiben unangetastet (bei Thermomix-Rezepten ausdrücklich): nur Zutaten ohne Menge bekommen eine.
+      result.quantities = result.quantities.filter(q => ingredients.find(i => i.id === q.id)?.quantity === null)
       if (result.steps.length >= 2) return json({ ...result, model: model.id })
       lastError = 'leere Antwort'
     } catch (error) {

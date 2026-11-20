@@ -18,7 +18,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
   const servings = Number(meal?.servings || recipe.servings || 2)
   const cost = useMemo(() => estimateRecipeCost(recipe, servings, foods, prices, { preferOrganic }), [recipe, servings, foods, prices, preferOrganic])
   const steps = instructionSteps(recipe.instructions)
-  const [busy, setBusy] = useState<'' | 'ai' | 'save' | 'cook'>('')
+  const [busy, setBusy] = useState<'' | 'ai' | 'add' | 'save' | 'cook'>('')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [cooked, setCooked] = useState<DeductionPlan | null>(null)
@@ -42,13 +42,16 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
   }
   const timeText = [recipe.prep_minutes !== null ? 'Vorbereitung ' + recipe.prep_minutes + ' Min' : '', recipe.cook_minutes !== null ? 'Kochen ' + recipe.cook_minutes + ' Min' : ''].filter(Boolean).join(' · ')
   // KI: Anleitung erzeugen und fehlende Mengen ergänzen. Vorhandene Anleitung nur nach Rückfrage ersetzen.
-  async function generate(replaceSteps: boolean) {
+  // addIngredients: KI darf Zutaten/Gewürze ergänzen (bei neuer Anleitung immer, sonst über „KI: Zutaten & Gewürze ergänzen“).
+  async function generate(replaceSteps: boolean, addIngredients = replaceSteps) {
     if (replaceSteps && steps.length && !window.confirm('Sicher, dass du die bisherige Anleitung von „' + recipe.title + '“ durch eine neue KI-Anleitung ersetzen willst?')) return
-    setBusy('ai')
+    setBusy(replaceSteps || !addIngredients ? 'ai' : 'add')
     try {
-      const result = await completeRecipeWithAi(recipe.id, householdId, accessToken, replaceSteps)
+      const result = await completeRecipeWithAi(recipe.id, householdId, accessToken, replaceSteps, addIngredients)
       await onChanged()
-      onNotice('KI für „' + recipe.title + '“: ' + ([result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : '', result.times ? 'Kochzeit eingetragen' : '', result.histamine ? 'Histaminwert ' + result.histamine + '/10' : ''].filter(Boolean).join(', ') || 'nichts mehr zu ergänzen') + '. Du kannst alles bearbeiten.')
+      const parts = [result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.added.length ? result.added.length + ' Zutat(en) ergänzt: ' + result.added.join(', ') : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : '', result.times ? 'Kochzeit eingetragen' : '', result.histamine ? 'Histaminwert ' + result.histamine + '/10' : ''].filter(Boolean)
+      const none = addIngredients && !replaceSteps && !result.added.length ? 'keine weiteren Zutaten nötig' : 'nichts mehr zu ergänzen'
+      onNotice('KI für „' + recipe.title + '“: ' + (parts.join(', ') || none) + '.' + (result.added.length ? ' Ergänzte Zutaten sind mit „KI“ markiert und lassen sich unter Rezepte → Bearbeiten wieder entfernen.' + (!replaceSteps && steps.length ? ' Mit „Anleitung neu erzeugen“ kommen sie auch in die Anleitung.' : '') : ' Du kannst alles bearbeiten.'))
     } catch (error) { onError(error instanceof Error ? error.message : 'Die KI konnte das Rezept nicht ergänzen.') }
     finally { setBusy('') }
   }
@@ -84,6 +87,9 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
   }
 
   const missingFoods = cost.lines.filter(line => line.basis === 'missing')
+  // Kennzeichen je Zutat (gleiche Reihenfolge wie cost.lines: alle nicht optionalen Zutaten).
+  const shownIngredients = (recipe.recipe_ingredients ?? []).filter(i => !i.is_optional)
+  const isStaple = (foodId: string | null) => Boolean(foodId && foods.find(f => f.id === foodId)?.is_staple)
   return <div className="panel recipe-details">
     <div className="panel-head"><div><span className="eyebrow">{meal ? 'GEPLANTES GERICHT · ' + new Date(meal.meal_date + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : 'REZEPT'}</span><h2>{recipe.title}</h2><small className="muted">{String(servings).replace('.', ',')} Portionen · geschätzter Einkaufswert ≈ {euro(cost.total)}{missingFoods.length ? ' · ' + missingFoods.length + ' Preis(e) fehlen' : ''}{cost.approximate && !missingFoods.length ? ' · teils Packungspreise' : ''}{timeText ? ' · ⏱ ' + timeText : ''}</small></div><button type="button" className="icon-button" onClick={onClose} aria-label="Schließen"><X size={18} /></button></div>
 
@@ -104,7 +110,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
 
     <span className="eyebrow">ZUTATEN & EINKAUFSWERT</span>
     {cost.lines.length ? cost.lines.map((line, index) => <div className="cost-line" key={line.name + index}>
-      <div><b>{line.name}</b><small>{formatAmount(line.quantity, line.unit)}{line.hint && line.basis !== 'missing' ? ' · ' + line.hint : ''}</small>
+      <div><b>{line.name}{shownIngredients[index]?.ai_added && <span className="ai-tag" title="Von der KI ergänzt – unter Rezepte → Bearbeiten entfernbar">KI</span>}{isStaple(line.foodId) && <span className="staple-tag">Grundausstattung</span>}</b><small>{formatAmount(line.quantity, line.unit)}{line.hint && line.basis !== 'missing' ? ' · ' + line.hint : ''}</small>
         {line.basis === 'missing' && <ManualPriceForm householdId={householdId} foodId={line.foodId} foodName={line.name} defaultQuantity={line.quantity} defaultUnit={line.unit} defaultOrganic={preferOrganic} onSaved={onChanged} onError={onError} />}</div>
       <strong>{line.cost === null ? 'Preis fehlt' : '≈ ' + euro(line.cost)}</strong>
     </div>) : <p className="muted">Für dieses Rezept sind noch keine Zutaten hinterlegt.</p>}
@@ -118,6 +124,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
       : <p className="muted">Noch keine Anleitung. Die KI erstellt sie aus den Zutaten und ergänzt fehlende Mengen – kostenlos über Cloudflare. Von dir eingetragene Mengen bleiben unverändert.</p>}
     {!editing && <div className="details-actions">
       {(!steps.length || missingQuantities > 0 || missingTimes || missingHistamine) && <button type="button" className="button button-dark" disabled={busy !== ''} onClick={() => generate(!steps.length)}>{busy === 'ai' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'ai' ? 'KI schreibt …' : 'Mit KI ergänzen: ' + [!steps.length ? 'Anleitung' : '', missingQuantities ? missingQuantities + ' Mengen' : '', missingTimes ? 'Kochzeit' : '', missingHistamine ? 'Histaminwert' : ''].filter(Boolean).join(' + ')}</button>}
+      <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => generate(false, true)}>{busy === 'add' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'add' ? 'KI sucht Zutaten …' : 'KI: Zutaten & Gewürze ergänzen'}</button>
       {steps.length > 0 && <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => generate(true)}><Sparkles size={16} /> Anleitung neu erzeugen</button>}
       <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => { setDraft(steps.map((s, i) => (i + 1) + '. ' + s).join('\n')); setEditing(true) }}><BookOpen size={16} /> {steps.length ? 'Bearbeiten' : 'Selbst schreiben'}</button>
     </div>}

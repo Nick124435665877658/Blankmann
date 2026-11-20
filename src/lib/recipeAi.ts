@@ -1,4 +1,5 @@
-// KI-Rezeptergänzung: Prompt bauen und Antwort auslesen (Anleitung + fehlende Mengen).
+// KI-Rezeptergänzung: Prompt bauen und Antwort auslesen (Anleitung, fehlende Mengen, Zeiten, Histamin
+// und – wenn gewünscht – zusätzliche Zutaten/Gewürze, gekennzeichnet als Grundausstattung).
 // Wird von der Cloudflare-Funktion (functions/api/recipe-instructions.ts) und den Tests genutzt.
 
 export type AiIngredient = { id: string; name: string; quantity: number | null; unit: string | null; is_optional: boolean }
@@ -6,11 +7,35 @@ export type AiRecipe = { title: string; description: string | null; servings: nu
 export type AiQuantity = { id: string; quantity: number; unit: string | null }
 export type AiTimes = { prepMinutes: number | null; cookMinutes: number | null }
 export type AiHistamine = { score: number | null; note: string | null }
+export type AiAddition = { name: string; quantity: number | null; unit: string | null; staple: boolean }
+// Haushaltsregeln aus den Einstellungen (Standard wie in household_settings: alles an).
+export type AiRules = { tomatoFree: boolean; creamFree: boolean; histamineLow: boolean; vegetableRich: boolean; notes: string | null }
+export const defaultRules: AiRules = { tomatoFree: true, creamFree: true, histamineLow: true, vegetableRich: true, notes: null }
+export type AiOptions = { addIngredients?: boolean; rules?: AiRules }
+
+function ruleLines(rules: AiRules) {
+  return [
+    rules.tomatoFree ? 'Keine Tomaten und keine Tomatenprodukte (auch kein Tomatenmark, Ketchup, passierte Tomaten).' : '',
+    rules.creamFree ? 'Keine Sahne (auch keine Kochsahne, kein Schmand, keine Crème fraîche).' : '',
+    rules.histamineLow ? 'Histaminarm: keine histaminreichen Zutaten oder Histaminliberatoren ergänzen (z. B. gereifter Käse, Spinat, Aubergine, Avocado, Essig, Sojasauce, Hefeextrakt, Zitrusfrüchte, Nüsse, Wein, Wurst, Räucherfisch).' : '',
+    rules.vegetableRich ? 'Gemüse darf gern einen großen Teil ausmachen.' : '',
+    rules.notes ? 'Weitere Hinweise des Haushalts: ' + rules.notes.slice(0, 300) : '',
+  ].filter(Boolean)
+}
+// Sicherheitsnetz: Ergänzungen, die gegen die Haushaltsregeln verstoßen, werden verworfen.
+function forbidden(name: string, rules: AiRules) {
+  const n = keyOf(name)
+  return (rules.tomatoFree && /tomat|ketchup/.test(n))
+    || (rules.creamFree && /sahne|schmand|creme fraiche|schlagrahm/.test(n))
+    || (rules.histamineLow && /parmesan|gouda|bergkaese|emmentaler|cheddar|spinat|aubergine|avocado|essig|soja ?sauce|sojasosse|hefeextrakt|zitrone|limette|orange|wein|walnuss|haselnuss|cashew|erdnuss|salami|schinken|thunfisch|sardelle|sauerkraut|hartkaese|camembert|brie/.test(n))
+}
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
 const amount = (i: AiIngredient) => (i.quantity !== null ? String(i.quantity).replace('.', ',') + (i.unit ? ' ' + i.unit : '') + ' ' : '') + i.name
 
-export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[]) {
+export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[], options: AiOptions = {}) {
+  const rules = options.rules ?? defaultRules
+  const add = Boolean(options.addIngredients)
   const missing = ingredients.filter(i => i.quantity === null)
   const list = ingredients.map(i => '- ' + amount(i) + (i.quantity === null ? ' (Menge fehlt)' : '') + (i.is_optional ? ' (optional)' : '')).join('\n')
   const times = [recipe.prep_minutes ? 'Vorbereitung ca. ' + recipe.prep_minutes + ' Min.' : '', recipe.cook_minutes ? 'Kochzeit ca. ' + recipe.cook_minutes + ' Min.' : ''].filter(Boolean).join(', ')
@@ -25,7 +50,11 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     missing.length
       ? 'Ergänze zuerst übliche Mengen für ' + servings + ' Portionen für jede Zutat mit „(Menge fehlt)“. Verwende als Einheit nur g, ml, Stk, EL, TL, Bund oder Prise.'
       : 'Alle Mengen sind vorhanden.',
-    'Schreibe dann eine Schritt-für-Schritt-Kochanleitung mit 4 bis 10 Schritten. Verwende nur die genannten Zutaten; Salz, Pfeffer, Öl und Wasser sind erlaubt. Füge keine Tomaten und keine Sahne hinzu. Nenne Mengen und realistische Garzeiten.',
+    add
+      ? 'Ergänze danach fehlende Zutaten und Gewürze, die für ein gutes, alltagstaugliches Ergebnis nötig sind (höchstens 8), z. B. Salz, Pfeffer, Öl, Kräuter, Gewürze, Zwiebel oder Knoblauch – nur, was wirklich fehlt. Jede Zutat, die du in den Schritten zusätzlich verwendest, muss unter ERGÄNZT stehen (Wasser nicht). Markiere Salz, Pfeffer, Öl, Gewürze, Brühe und ähnliche Vorräte, die man meist zu Hause hat, mit „Grundausstattung ja“, alles andere mit „nein“.'
+      : 'Verwende nur die genannten Zutaten; Salz, Pfeffer, Öl und Wasser sind erlaubt.',
+    ...ruleLines(rules),
+    'Schreibe dann eine Schritt-für-Schritt-Kochanleitung mit 4 bis 10 Schritten. Nenne Mengen und realistische Garzeiten.',
     'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
     'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
     'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei. Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
@@ -33,6 +62,7 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     'Antworte genau in diesem Format, ohne Einleitung und ohne Schlusswort:',
     'MENGEN:',
     missing.length ? missing.map(i => '- ' + i.name + ' | Zahl | Einheit').join('\n') : '- keine',
+    ...(add ? ['ERGÄNZT:', '- Name | Zahl | Einheit | Grundausstattung ja/nein', '(eine Zeile je zusätzlicher Zutat, oder „- keine“)'] : []),
     'ZEIT: Vorbereitung Zahl Min | Kochen Zahl Min',
     'HISTAMIN: Zahl von 1 bis 10 | kurze Begründung',
     'SCHRITTE:',
@@ -77,13 +107,20 @@ function parseHistamine(lines: string[]): AiHistamine {
   return { score, note: (match?.[2] ?? '').trim().slice(0, 240) || null }
 }
 
-export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { steps: string[]; quantities: AiQuantity[]; times: AiTimes; histamine: AiHistamine } {
+const additionsHeader = /^(?:erg(?:ä|ae)nzt|erg(?:ä|ae)nzte zutaten|zus(?:ä|ae)tzliche zutaten)\s*:?\s*$/i
+const isHeader = (line: string) => /^(mengen|zutaten|schritte|anleitung|zubereitung)\s*:?\s*$/i.test(line) || additionsHeader.test(line) || /^(zeit|histamin)\w*\s*:/i.test(line)
+const cap = (value: string) => value ? value.charAt(0).toLocaleUpperCase('de-DE') + value.slice(1) : value
+
+export function parseRecipeAnswer(text: string, ingredients: AiIngredient[], rules: AiRules = defaultRules): { steps: string[]; quantities: AiQuantity[]; times: AiTimes; histamine: AiHistamine; additions: AiAddition[] } {
   const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').trim()
   const lines = clean.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
   const mengenAt = lines.findIndex(line => /^(mengen|zutaten)\s*:?\s*$/i.test(line))
   const schritteAt = lines.findIndex(line => /^(schritte|anleitung|zubereitung)\s*:?\s*$/i.test(line))
-  const quantityLines = mengenAt >= 0 ? lines.slice(mengenAt + 1, schritteAt > mengenAt ? schritteAt : undefined) : []
-  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 ? [] : lines).filter(line => !/^(zeit|histamin)/i.test(line))
+  const additionsAt = lines.findIndex(line => additionsHeader.test(line))
+  const sectionAfter = (at: number) => { if (at < 0) return []; const rest = lines.slice(at + 1); const end = rest.findIndex(isHeader); return end < 0 ? rest : rest.slice(0, end) }
+  const quantityLines = sectionAfter(mengenAt)
+  const additionLines = sectionAfter(additionsAt)
+  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 || additionsAt >= 0 ? [] : lines).filter(line => !/^(zeit|histamin)/i.test(line))
   const missing = ingredients.filter(i => i.quantity === null)
   const quantities: AiQuantity[] = []
   for (const raw of quantityLines) {
@@ -98,5 +135,23 @@ export function parseRecipeAnswer(text: string, ingredients: AiIngredient[]): { 
     const unit = unitAliases[keyOf(unitRaw)] ?? (unitRaw && unitRaw.length <= 12 ? unitRaw : match.unit)
     quantities.push({ id: match.id, quantity: Math.round(quantity * 100) / 100, unit: unit || null })
   }
-  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines), histamine: parseHistamine(lines) }
+  // Zusätzliche Zutaten: nur neue (nicht schon im Rezept), höchstens 8, Haushaltsregeln als Sicherheitsnetz.
+  const additions: AiAddition[] = []
+  const known = ingredients.map(i => keyOf(i.name))
+  for (const raw of additionLines) {
+    const parts = raw.replace(/^[-*•]\s*/, '').split('|').map(part => part.trim())
+    const name = cap(parts[0].replace(/\(.*?\)/g, '').replace(/[.:;]+$/, '').trim()).slice(0, 40)
+    const key = keyOf(name)
+    if (!key || /^(keine?|name|nichts)$/.test(key) || key.length < 2) continue
+    // Schon im Rezept (auch Einzahl/Mehrzahl: Zwiebel/Zwiebeln, Ei/Eier) → nicht doppelt ergänzen.
+    if (known.some(k => k === key || (k.startsWith(key) && /^(n|e|en|s|er|r)$/.test(k.slice(key.length))) || (key.startsWith(k) && /^(n|e|en|s|er|r)$/.test(key.slice(k.length))))) continue
+    if (additions.some(a => keyOf(a.name) === key) || forbidden(name, rules)) continue
+    const quantity = parts[1] ? parseNumber(parts[1]) : null
+    const unitRaw = (parts[2] ?? '').replace(/[.()]/g, '').trim()
+    const unit = unitAliases[keyOf(unitRaw)] ?? (unitRaw && unitRaw.length <= 12 && !/^(ja|nein)$/i.test(unitRaw) ? unitRaw : null)
+    const staple = /\bja\b|grundausstattung/i.test(parts[3] ?? '') && !/\bnein\b/i.test(parts[3] ?? '')
+    additions.push({ name, quantity: quantity === null ? null : Math.round(quantity * 100) / 100, unit, staple })
+    if (additions.length >= 8) break
+  }
+  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines), histamine: parseHistamine(lines), additions }
 }

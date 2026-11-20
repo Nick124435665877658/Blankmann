@@ -3,7 +3,9 @@
 // Wird von der Cloudflare-Funktion (functions/api/recipe-instructions.ts) und den Tests genutzt.
 
 export type AiIngredient = { id: string; name: string; quantity: number | null; unit: string | null; is_optional: boolean }
-export type AiRecipe = { title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null }
+export type AiRecipe = { title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; source_type?: string | null }
+// Thermomix-Rezepte (aus Cookidoo): Mengen der vorhandenen Zutaten sind fest – die KI darf nur ergänzen.
+export const isThermomix = (recipe: { source_type?: string | null }) => recipe.source_type === 'cookidoo'
 export type AiQuantity = { id: string; quantity: number; unit: string | null }
 export type AiTimes = { prepMinutes: number | null; cookMinutes: number | null }
 export type AiHistamine = { score: number | null; note: string | null }
@@ -40,6 +42,7 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
   const list = ingredients.map(i => '- ' + amount(i) + (i.quantity === null ? ' (Menge fehlt)' : '') + (i.is_optional ? ' (optional)' : '')).join('\n')
   const times = [recipe.prep_minutes ? 'Vorbereitung ca. ' + recipe.prep_minutes + ' Min.' : '', recipe.cook_minutes ? 'Kochzeit ca. ' + recipe.cook_minutes + ' Min.' : ''].filter(Boolean).join(', ')
   const servings = String(recipe.servings).replace('.', ',')
+  const thermomix = isThermomix(recipe)
   const user = [
     'Rezept: ' + recipe.title,
     recipe.description ? 'Beschreibung: ' + recipe.description : '',
@@ -47,14 +50,17 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     times,
     'Zutaten:', list || '- (keine Zutaten hinterlegt)',
     '',
+    thermomix ? 'Das ist ein Thermomix-Rezept aus Cookidoo. Die Mengen der aufgeführten Zutaten sind fest: Ändere sie nicht und nenne sie in den Schritten genau so. Du darfst nur fehlende Mengen ergänzen und zusätzliche Zutaten oder Gewürze hinzufügen. Verwende alle aufgeführten Zutaten.' : '',
     missing.length
       ? 'Ergänze zuerst übliche Mengen für ' + servings + ' Portionen für jede Zutat mit „(Menge fehlt)“. Verwende als Einheit nur g, ml, Stk, EL, TL, Bund oder Prise.'
       : 'Alle Mengen sind vorhanden.',
     add
       ? 'Ergänze danach fehlende Zutaten und Gewürze, die für ein gutes, alltagstaugliches Ergebnis nötig sind (höchstens 8), z. B. Salz, Pfeffer, Öl, Kräuter, Gewürze, Zwiebel oder Knoblauch – nur, was wirklich fehlt. Jede Zutat, die du in den Schritten zusätzlich verwendest, muss unter ERGÄNZT stehen (Wasser nicht). Markiere Salz, Pfeffer, Öl, Gewürze, Brühe und ähnliche Vorräte, die man meist zu Hause hat, mit „Grundausstattung ja“, alles andere mit „nein“.'
       : 'Verwende nur die genannten Zutaten; Salz, Pfeffer, Öl und Wasser sind erlaubt.',
-    ...ruleLines(rules),
+    // Bei Thermomix-Rezepten gelten die Haushaltsregeln nur für ergänzte Zutaten – das Original bleibt vollständig.
+    ...(thermomix && ruleLines(rules).length ? ['Für Zutaten, die du ergänzt, gilt:', ...ruleLines(rules)] : ruleLines(rules)),
     'Schreibe dann eine Schritt-für-Schritt-Kochanleitung mit 4 bis 10 Schritten. Nenne Mengen und realistische Garzeiten.',
+    thermomix ? 'Schreibe die Anleitung ohne Thermomix – ganz normal mit Herd, Backofen, Topf, Pfanne, Schüssel, Schneebesen, Handrührgerät oder Pürierstab. Keine Thermomix-Angaben wie Stufe, Linkslauf, Varoma, Mixtopf oder Sanftrührstufe.' : '',
     'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
     'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
     'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei. Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',

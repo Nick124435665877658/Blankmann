@@ -22,6 +22,7 @@ export async function completeRecipeWithAi(recipeId: string, householdId: string
     if (error) throw new Error('Anleitung konnte nicht gespeichert werden: ' + error.message)
     steps = body.steps.length
   }
+  // Mengen nur dort eintragen, wo noch keine steht (.is('quantity', null)) – vorhandene Mengen, z. B. aus Thermomix-Rezepten, ändert die KI nie.
   let quantities = 0
   for (const q of body.quantities ?? []) {
     const { data, error } = await supabase.from('recipe_ingredients').update({ quantity: q.quantity, unit: q.unit }).eq('id', q.id).eq('recipe_id', recipeId).eq('household_id', householdId).is('quantity', null).select('id')

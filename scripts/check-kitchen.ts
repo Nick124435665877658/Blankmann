@@ -136,6 +136,12 @@ console.log('\n5) KI-Antwort auslesen (Anleitung + fehlende Mengen)')
   expect(added.additions[0].staple && added.additions[1].staple && !added.additions[2].staple && added.additions[0].unit === 'TL' && added.additions[1].quantity === 2, 'Salz und Öl als Grundausstattung, Zwiebel nicht; Menge und Einheit gelesen')
   expect(added.quantities.some(q => q.id === 'i1' && q.quantity === 500) && added.steps.length === 2 && added.histamine.score === 6, 'Mengen, Schritte und Histamin weiterhin richtig gelesen, Ergänzungen nicht als Mengen gezählt')
   const plain = parseRecipeAnswer('1. Wasser kochen.\n2. Nudeln 9 Minuten garen.\n3. Abgießen.', ingredients)
+  expect(plain.steps.length === 3, 'Antwort ohne Abschnitte → Schritte gelesen')
+  const tmPrompt = buildRecipeMessages({ title: 'Weiße Bolognese', description: 'Thermomix · Hauptgerichte', servings: 4, prep_minutes: 20, cook_minutes: 25, source_type: 'cookidoo' }, ingredients, { addIngredients: true })[1].content
+  expect(tmPrompt.includes('Thermomix-Rezept aus Cookidoo') && tmPrompt.includes('Ändere sie nicht') && tmPrompt.includes('ohne Thermomix') && tmPrompt.includes('Varoma'), 'Thermomix-Rezept: Prompt verbietet Mengenänderungen und Thermomix-Angaben in der Anleitung')
+  expect(!prompt.includes('Thermomix-Rezept'), 'Eigene Rezepte bekommen den Thermomix-Hinweis nicht')
+  const tmAnswer = parseRecipeAnswer(['MENGEN:', '- Zucchini | 3 | Stk', '- Kartoffeln | 400 | g', 'ERGÄNZT:', '- Salz | 1 | TL | ja', 'SCHRITTE:', '1. Kartoffeln kochen.', '2. Zucchini braten.'].join('\n'), ingredients)
+  expect(!tmAnswer.quantities.some(q => q.id === 'i2') && tmAnswer.quantities.some(q => q.id === 'i1' && q.quantity === 400) && tmAnswer.additions.length === 1, 'Thermomix-Regel: vorhandene Menge (Zucchini 1 Stk) bleibt, fehlende Menge und neue Zutat werden ergänzt')
   expect(plain.steps.length === 3 && plain.quantities.length === 0 && plain.additions.length === 0, 'Antwort ohne Abschnitte → nur Schritte')
 }
 

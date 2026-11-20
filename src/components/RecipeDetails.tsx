@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { BookOpen, Check, ChefHat, LoaderCircle, Sparkles, X } from 'lucide-react'
+import { BookOpen, Check, ChefHat, ExternalLink, LoaderCircle, Sparkles, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { estimateRecipeCost, formatAmount, instructionSteps, planPantryDeduction, recipeNeeds, type DeductionPlan, type FoodRef, type IngredientRef, type PantryRow, type PriceRow } from '../lib/kitchen'
 import ManualPriceForm from './ManualPriceForm'
 import { completeRecipeWithAi } from '../lib/recipeAiClient'
+import { isThermomix } from '../lib/recipeAi'
 
-export type DetailsRecipe = { id: string; title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; histamine_score?: number | null; histamine_note?: string | null; rating?: number | null; photo_path?: string | null; recipe_ingredients?: IngredientRef[] }
+export type DetailsRecipe = { id: string; title: string; description: string | null; source_type?: string | null; source_url?: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; histamine_score?: number | null; histamine_note?: string | null; rating?: number | null; photo_path?: string | null; recipe_ingredients?: IngredientRef[] }
 export type DetailsMeal = { id: string; servings: number; cooked_at: string | null; meal_date: string }
 
 const euro = (n: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
@@ -90,9 +91,11 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
   // Kennzeichen je Zutat (gleiche Reihenfolge wie cost.lines: alle nicht optionalen Zutaten).
   const shownIngredients = (recipe.recipe_ingredients ?? []).filter(i => !i.is_optional)
   const isStaple = (foodId: string | null) => Boolean(foodId && foods.find(f => f.id === foodId)?.is_staple)
+  const thermomix = isThermomix(recipe)
   return <div className="panel recipe-details">
-    <div className="panel-head"><div><span className="eyebrow">{meal ? 'GEPLANTES GERICHT · ' + new Date(meal.meal_date + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : 'REZEPT'}</span><h2>{recipe.title}</h2><small className="muted">{String(servings).replace('.', ',')} Portionen · geschätzter Einkaufswert ≈ {euro(cost.total)}{missingFoods.length ? ' · ' + missingFoods.length + ' Preis(e) fehlen' : ''}{cost.approximate && !missingFoods.length ? ' · teils Packungspreise' : ''}{timeText ? ' · ⏱ ' + timeText : ''}</small></div><button type="button" className="icon-button" onClick={onClose} aria-label="Schließen"><X size={18} /></button></div>
+    <div className="panel-head"><div><span className="eyebrow">{meal ? 'GEPLANTES GERICHT · ' + new Date(meal.meal_date + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : 'REZEPT'}</span><h2>{recipe.title}{thermomix && <span className="badge thermomix" title="Thermomix-Rezept aus Cookidoo">Thermomix</span>}</h2><small className="muted">{String(servings).replace('.', ',')} Portionen · geschätzter Einkaufswert ≈ {euro(cost.total)}{missingFoods.length ? ' · ' + missingFoods.length + ' Preis(e) fehlen' : ''}{cost.approximate && !missingFoods.length ? ' · teils Packungspreise' : ''}{timeText ? ' · ⏱ ' + timeText : ''}</small></div><button type="button" className="icon-button" onClick={onClose} aria-label="Schließen"><X size={18} /></button></div>
 
+    {thermomix && <div className="thermomix-note"><span>Thermomix-Rezept aus Cookidoo{recipe.description?.startsWith('Thermomix · ') ? ' (' + recipe.description.slice(12) + ')' : ''} – Zutaten und Mengen wie im Original. Die KI ändert keine Mengen, sie ergänzt nur, und schreibt die Anleitung für Herd und Ofen.</span>{recipe.source_url && <a className="button button-light button-small" href={recipe.source_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> In Cookidoo öffnen</a>}</div>}
     {photoUrl && <img className="recipe-photo" src={photoUrl} alt={'Foto von ' + recipe.title} />}
     <div className="recipe-scores">
       <div><span className="eyebrow">HISTAMIN</span>{recipe.histamine_score
@@ -121,7 +124,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
       <small className="muted">Ein Schritt pro Zeile.</small>
       <div className="details-actions"><button type="button" className="button button-dark" disabled={busy !== ''} onClick={saveEdit}>Anleitung speichern</button><button type="button" className="button button-light" onClick={() => setEditing(false)}>Abbrechen</button></div>
     </div> : steps.length ? <ol className="recipe-steps">{steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
-      : <p className="muted">Noch keine Anleitung. Die KI erstellt sie aus den Zutaten und ergänzt fehlende Mengen – kostenlos über Cloudflare. Von dir eingetragene Mengen bleiben unverändert.</p>}
+      : <p className="muted">{thermomix ? 'Noch keine Anleitung. Die KI schreibt sie ganz normal für Herd und Ofen (ohne Thermomix) – die Mengen aus Cookidoo bleiben unverändert. Die Original-Zubereitung findest du unter „In Cookidoo öffnen“.' : 'Noch keine Anleitung. Die KI erstellt sie aus den Zutaten und ergänzt fehlende Mengen – kostenlos über Cloudflare. Von dir eingetragene Mengen bleiben unverändert.'}</p>}
     {!editing && <div className="details-actions">
       {(!steps.length || missingQuantities > 0 || missingTimes || missingHistamine) && <button type="button" className="button button-dark" disabled={busy !== ''} onClick={() => generate(!steps.length)}>{busy === 'ai' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'ai' ? 'KI schreibt …' : 'Mit KI ergänzen: ' + [!steps.length ? 'Anleitung' : '', missingQuantities ? missingQuantities + ' Mengen' : '', missingTimes ? 'Kochzeit' : '', missingHistamine ? 'Histaminwert' : ''].filter(Boolean).join(' + ')}</button>}
       <button type="button" className="button button-light" disabled={busy !== ''} onClick={() => generate(false, true)}>{busy === 'add' ? <LoaderCircle size={16} /> : <Sparkles size={16} />} {busy === 'add' ? 'KI sucht Zutaten …' : 'KI: Zutaten & Gewürze ergänzen'}</button>

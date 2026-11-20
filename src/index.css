@@ -824,3 +824,14 @@
 .picker-option{display:flex;align-items:center;gap:8px;padding:6px 2px;cursor:pointer}
 .picker-option small{margin-left:auto;font-size:9px}
 .staple-toggle{display:block;margin-top:2px;padding:0;font-size:10px;text-align:left}
+/* 0.3.42: Gruppen zuklappen, Gruppe ändern */
+.food-category h3{display:flex}
+.food-category-toggle{display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.food-category-toggle small{margin-left:4px}
+.food-category-chevron{display:inline-flex;transition:transform .15s ease;opacity:.6}
+.food-category.closed .food-category-chevron{transform:rotate(-90deg)}
+.food-category.closed{padding-bottom:2px}
+.food-collapse-all{display:flex;justify-content:flex-end;margin:0 0 4px}
+.food-row-actions{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:3px}
+.food-group-select{font-size:10px;padding:2px 4px;border-radius:6px;border:1px solid var(--line);background:transparent;color:inherit;max-width:170px}
+.food-row-actions .staple-toggle{margin-top:0}

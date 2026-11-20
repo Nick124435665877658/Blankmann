@@ -7,7 +7,7 @@ import { canSplitToOne, normalizeUnit, pantryAmountFromReceipt, planPantryAdditi
 import { localISO } from '../lib/dates'
 import { saveMarketPrice } from '../lib/priceStore'
 import { retailers } from '../lib/retailers'
-import { guessCategory } from '../lib/categories'
+import { guessCategory, storageFor } from '../lib/categories'
 
 type Receipt = { id: string; image_path: string; retailer_code: string | null; purchase_date: string | null; status: string; created_at: string }
 
@@ -237,7 +237,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
             const row=pantryRows.find(r=>r.id===plan.update!.id);if(row)row.quantity=plan.update.quantity
           }else if(plan.insert){
             const category=guessCategory(name)
-            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,is_organic:organic,storage_location:category==='Milchprodukte & Eier'||category==='Fleisch & Fisch'?'Kühlschrank':'Vorratsschrank',notes:'Aus Kassenbon vom '+new Date(observedAt+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before,is_organic').single()
+            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,is_organic:organic,storage_location:storageFor(category),notes:'Aus Kassenbon vom '+new Date(observedAt+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before,is_organic').single()
             if(created.error)throw created.error
             pantryRows.push(created.data as PantryRow)
           }

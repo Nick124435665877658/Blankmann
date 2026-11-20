@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, likelyFood, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, likelyFood, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
 import { canSplitToOne, normalizeUnit, pantryAmountFromReceipt, planPantryAddition, splitOrganic, type PantryRow } from '../lib/kitchen'
 import { localISO } from '../lib/dates'
 import { saveMarketPrice } from '../lib/priceStore'
@@ -61,6 +61,8 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   const [receiptPreview,setReceiptPreview]=useState('')
   const [ocrMethod,setOcrMethod]=useState('')
   const [receiptTotal,setReceiptTotal]=useState<number|null>(null)
+  // Rabatt auf den ganzen Bon („10% auf Alles“): nur Hinweis – Preise werden als normale Ladenpreise gespeichert (Nick, 20.11.).
+  const [receiptDiscount,setReceiptDiscount]=useState<{label:string;amount:number}|null>(null)
   const refresh=useCallback(async()=>{
     if(!supabase)return
     const [foodRows,receiptRows]=await Promise.all([
@@ -80,7 +82,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   function removeLine(id:string){setLines(current=>current.filter(line=>line.id!==id))}
   async function analyse(receipt:Receipt) {
     if(!supabase)return
-    setBusy(true);setError('');setNotice('');setProgress('Privaten Bon laden …');setActiveReceipt(receipt);setLines([]);setOcrText('');setReceiptTotal(null)
+    setBusy(true);setError('');setNotice('');setProgress('Privaten Bon laden …');setActiveReceipt(receipt);setLines([]);setOcrText('');setReceiptTotal(null);setReceiptDiscount(null)
     let worker:Awaited<ReturnType<NonNullable<typeof window.Tesseract>['createWorker']>>|null=null
     try{
       const downloaded=await supabase.storage.from('receipt-photos').download(receipt.image_path)
@@ -128,6 +130,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       const textResults=attempts.map(a=>'--- '+a.label+' ---\n'+a.data.text).join('\n\n')
       setOcrText(textResults);setOcrMethod(attempts.length+' OCR-Durchläufe (Tesseract, Lichtausgleich) · '+combined.summary+' · bester Lauf: '+best.label+' · '+priceCount+' Preispositionen · '+reviewCount+' Prüfzeilen')
       setReceiptTotal(billTotal)
+      setReceiptDiscount(attempts.map(a=>findReceiptDiscount(a.data.text)).find(Boolean)??null)
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||localISO(new Date(receipt.created_at)));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
       setLines(parsed.map(line=>markOrganic(line,foods)))
@@ -271,6 +274,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       {check.total!==null
         ?<div className={'alert '+(check.ok?'success':'error')} role={check.ok?undefined:'alert'}>{check.ok&&<Check size={16}/>}{check.ok?'Summe stimmt mit dem Bon überein: ':'Summe weicht vom Bon ab: '}Bon {euro(check.total)} · erkannt {euro(check.itemsTotal)}{!check.ok&&<> · Differenz {euro(check.diff??0)}. Bitte Positionen und Preise mit dem Bon vergleichen.</>}</div>
         :<div className="notice-card"><Sparkles size={18}/><span>Die Bon-Summe konnte nicht gelesen werden. Bitte die Preise selbst mit dem Bon vergleichen.</span></div>}
+      {receiptDiscount&&<div className="notice-card"><Sparkles size={18}/><span>Rabatt auf den ganzen Bon: „{receiptDiscount.label}“ −{euro(receiptDiscount.amount)}{check.total!==null?' (bezahlt '+euro(Math.max(0,check.total-receiptDiscount.amount))+')':''}. Die Preise werden ohne diesen Rabatt gespeichert – als normale Ladenpreise.</span></div>}
       {lines.some(l=>l.note)&&<div className="notice-card"><Sparkles size={18}/><span>{lines.filter(l=>l.note).length} Zeile(n) haben einen Hinweis{lines.some(l=>l.review==='derived')?' – ein unleserlicher Preis wurde aus der Bon-Summe berechnet, die Summe stimmt dadurch automatisch':''}. Bitte diese Zeilen mit dem Bon vergleichen.</span></div>}
       <div className="receipt-review-tools"><button type="button" className="button button-light button-small" onClick={addManualLine} disabled={busy}>+ Artikel manuell ergänzen</button></div>
       {lines.map(line=><div className="receipt-line-edit" key={line.id}>

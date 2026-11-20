@@ -1,7 +1,7 @@
 // Regressionstest für den Bon-Parser. Aufruf: npm run test:receipt
 // Referenzbon: Penny München, 18.11.2026, SUMME 16,84 EUR (Artikel + Rabatt + Pfand).
 import { readFileSync } from 'node:fs'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptTotal, parseReceipt, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, parseReceipt, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
 
 let failed = 0
 const expect = (condition: boolean, message: string) => {
@@ -160,6 +160,45 @@ console.log('\n5) Sonderfälle')
   expect(find(lines, /joghurt/i)?.price === '1,29', '„Joghurt 10%“ ist kein Rabatt (Betrag passt nicht zu 10 %)')
   expect(find(lines, /knorr/i)?.price === '1,49', 'Rabatt ohne Minuszeichen „Knorr 25% 0,50“ erkannt')
   expect(check.ok, 'Summenkontrolle stimmt')
+}
+
+// 6) Netto Marken-Discount München, 20.11.2026 (Foto von Nick): SUMME [10] 18,52, „10% auf Alles“ −1,76, bezahlt 16,76.
+// Besonderheiten: Steuerklasse als Ziffer gelesen („2,490“), Mengenzeile VOR dem Artikel, EW-Pfand, Rabatt nach der Summe.
+{
+  const nettoText = (mode: string) => readFileSync(new URL('./fixtures/browser-netto-' + mode + '.txt', import.meta.url), 'utf8')
+  const modes = ['psm6', 'psm4', '80-psm6', '80-psm4']
+  const runs = modes.map(mode => ({ label: mode, lines: parseReceipt(nettoText(mode), []) }))
+  console.log('\n6a) Netto: Bon-Summe und Rabatt')
+  for (const mode of modes) expect(findReceiptTotal(nettoText(mode)) === 18.52, 'Lauf ' + mode + ': Zwischensumme 18,52 gelesen (auch „1 SUMME [10] 18.52“ mit Störzeichen und Punkt)')
+  const discount = findReceiptDiscount(nettoText('psm4'))
+  expect(discount?.amount === 1.76, 'Rabatt „10% auf Alles“ −1,76 erkannt (nur Hinweis, Preise ohne Rabatt)')
+  for (const run of runs) expect(!find(run.lines, /auf alles|kartenz|unne|summe/i), 'Lauf ' + run.label + ': keine Artikel aus Rabatt-, Summen- oder Zahlungszeilen')
+  console.log('\n6b) Netto: einzelner Lauf (Lichtausgleich 80 %, PSM 4)')
+  {
+    const lines = runs[3].lines
+    const check = show(lines, 18.52)
+    expect(check.ok, 'Summenkontrolle stimmt (18,52)')
+    expect(find(lines, /albi/i)?.price === '2,49', 'Albi 2,49 („2,490“ = 2,49 + Steuerklasse A)')
+    expect(find(lines, /bueno/i)?.price === '2,49' && find(lines, /drachen/i)?.price === '1,39' && find(lines, /eier/i)?.price === '3,19', 'Kinder Bueno 2,49, Drachenzungen 1,39, Bio Eier 3,19 („2,498“, „1,398“, „3,198“)')
+    expect(find(lines, /gerolst/i)?.price === '2,18' && find(lines, /gerolst/i)?.quantity === '2', 'Gerolsteiner 2,18, Menge 2 (Mengenzeile „2 x 1,09“ steht davor)')
+    expect(!find(lines, /albi/i)?.quantity, 'Albi bekommt nicht die Menge des nächsten Artikels')
+    expect(find(lines, /spezi/i)?.quantity === '2', 'Spezi Menge 2 (2 × 0,95), nicht 0,33 aus „0,33L“')
+    expect(lines.filter(l => l.name === 'Pfand' && l.price === '0,50' && !l.selected).length === 2, 'zweimal Pfand 0,50, nicht angehakt')
+    expect(Boolean(find(lines, /eier/i)?.organic), 'Bio Eier als Bio erkannt')
+    expect(!find(lines, /^\d|^[^\p{L}]/u), 'keine Störzeichen am Namensanfang („3 Saure …“, „8 Gerolsteiner“)')
+    expect(!find(lines, /^\d*\s*[xX]\b|\b2\s*x\b/), 'keine Mengenzeilen als Artikel („oA 2 X 1,09“)')
+  }
+  console.log('\n6c) Netto: alle vier Läufe kombiniert (wie in der App)')
+  {
+    const combined = combineReceiptRuns(runs, 18.52)
+    console.log('    ' + combined.summary)
+    const lines = combined.lines
+    const check = show(lines, 18.52)
+    expect(check.ok, 'Summenkontrolle stimmt (18,52)')
+    expect(lines.filter(l => l.selected).length === 8, '8 Artikel angehakt (10 Positionen minus 2 × Pfand)')
+    expect(find(lines, /gerolst/i)?.name.includes('Medium') === true, 'Name per Mehrheit der Läufe: „Gerolsteiner Medium“')
+    expect(find(lines, /pink|guanabana/i)?.price === '2,89', 'pink Guanabana 2,89')
+  }
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

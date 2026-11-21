@@ -79,6 +79,19 @@ export function pricesForFood(foodId: string, prices: PriceRow[], options: Price
 export type CostBasis = 'exact' | 'package' | 'missing'
 export type CostLine = { name: string; foodId: string | null; quantity: number | null; unit: string | null; cost: number | null; basis: CostBasis; hint: string; markets: number; organic: boolean }
 
+// Ungefähre Umrechnung nur für die Preisschätzung (nicht für Vorrat oder Einkaufsliste):
+// Löffel, Prise, Messerspitze und Spritzer → g bzw. ml; g ↔ ml im Verhältnis 1 : 1 (Cookidoo gibt Flüssigkeiten oft in g an).
+// Werte sind Durchschnitte: 1 TL ≈ 3 g / 5 ml, 1 EL ≈ 10 g / 15 ml, 1 Prise ≈ 0,5 g, 1 Messerspitze ≈ 0,3 g, 1 Spritzer ≈ 2 ml.
+const approxGrams: Record<string, number> = { tl: 3, el: 10, prise: 0.5, messerspitze: 0.3, spritzer: 2 }
+const approxMl: Record<string, number> = { tl: 5, el: 15, prise: 0.5, messerspitze: 0.3, spritzer: 2 }
+export function approxAmount(quantity: number, unit: string | null | undefined, target: string): number | null {
+  const need = toBase(quantity, unit)
+  if (need.base === target) return need.quantity
+  if ((need.base === 'g' && target === 'ml') || (need.base === 'ml' && target === 'g')) return need.quantity
+  const per = target === 'g' ? approxGrams[need.base] : target === 'ml' ? approxMl[need.base] : undefined
+  return per ? need.quantity * per : null
+}
+
 // Kosten einer Menge mit genau einem Preis-Eintrag.
 function costWithPrice(ref: { quantity: number | null; unit: string | null }, price: PriceRow): { cost: number; basis: 'exact' | 'package'; hint: string } {
   const packagePrice = Number(price.price_eur)
@@ -86,11 +99,13 @@ function costWithPrice(ref: { quantity: number | null; unit: string | null }, pr
   const need = toBase(ref.quantity, ref.unit)
   if (price.package_quantity && price.package_quantity > 0) {
     const pack = toBase(Number(price.package_quantity), price.package_unit)
-    if (pack.base === need.base && pack.quantity > 0) return { cost: packagePrice * need.quantity / pack.quantity, basis: 'exact', hint: '' }
+    const amount = pack.quantity > 0 ? approxAmount(ref.quantity, ref.unit, pack.base) : null
+    if (amount !== null) return { cost: packagePrice * amount / pack.quantity, basis: 'exact', hint: '' }
   }
   if (price.unit_price_eur && price.unit_label) {
     const perBase = /kg/i.test(price.unit_label) ? { base: 'g', per: 1000 } : /\bl\b|liter/i.test(price.unit_label) ? { base: 'ml', per: 1000 } : null
-    if (perBase && perBase.base === need.base) return { cost: Number(price.unit_price_eur) * need.quantity / perBase.per, basis: 'exact', hint: '' }
+    const amount = perBase ? approxAmount(ref.quantity, ref.unit, perBase.base) : null
+    if (perBase && amount !== null) return { cost: Number(price.unit_price_eur) * amount / perBase.per, basis: 'exact', hint: '' }
   }
   if (need.base === 'stk' && (!price.package_quantity || normalizeUnit(price.package_unit).base === 'stk')) {
     return { cost: packagePrice / Number(price.package_quantity || 1) * need.quantity, basis: 'exact', hint: '' }

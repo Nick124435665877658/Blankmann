@@ -35,8 +35,19 @@ expect(near(estimateCost({ name: 'Petersilie', food_item_id: 'petersilie', quant
 {
   const open = estimateCost({ name: 'Butter', food_item_id: 'butter', quantity: null, unit: 'g' }, foods, prices)
   expect(open.basis === 'package' && near(open.cost, 1.15), 'Menge offen → eine Packung angesetzt und markiert')
-  const odd = estimateCost({ name: 'Butter', food_item_id: 'butter', quantity: 2, unit: 'EL' }, foods, prices)
-  expect(odd.basis === 'package', 'EL nicht in g umrechenbar → Packung angesetzt und markiert')
+  const spoon = estimateCost({ name: 'Butter', food_item_id: 'butter', quantity: 2, unit: 'EL' }, foods, prices)
+  expect(spoon.basis === 'exact' && near(spoon.cost, 0.092), '2 EL Butter ≈ 20 g → 0,09 € (statt ganzer Packung)')
+  const odd = estimateCost({ name: 'Butter', food_item_id: 'butter', quantity: 2, unit: 'Zehe' }, foods, prices)
+  expect(odd.basis === 'package', 'Zehe nicht in g umrechenbar → Packung angesetzt und markiert')
+  const spice: PriceRow[] = [{ food_item_id: 'salz', price_eur: 0.69, package_quantity: 68, package_unit: 'g', unit_price_eur: 10.1471, unit_label: '€/kg', observed_at: '2026-11-21' }]
+  expect(near(estimateCost({ name: 'Salz', food_item_id: 'salz', quantity: 1, unit: 'TL' }, foods, spice).cost, 0.03), '1 TL Gewürz ≈ 3 g aus 68 g für 0,69 € = 0,03 €')
+  expect(near(estimateCost({ name: 'Salz', food_item_id: 'salz', quantity: 1, unit: 'Prise' }, foods, spice).cost, 0.005), '1 Prise ≈ 0,5 g → fast 0 €')
+  expect(near(estimateCost({ name: 'Salz', food_item_id: 'salz', quantity: 2, unit: 'Messerspitze' }, foods, spice).cost, 0.006), '2 Messerspitzen ≈ 0,6 g')
+  const liquid: PriceRow[] = [{ food_item_id: 'milch', price_eur: 2.59, package_quantity: 750, package_unit: 'ml', unit_price_eur: 3.4533, unit_label: '€/l', observed_at: '2026-11-21' }]
+  expect(near(estimateCost({ name: 'Milch', food_item_id: 'milch', quantity: 150, unit: 'g' }, foods, liquid).cost, 0.518), '150 g Wein (Cookidoo in g) aus 0,75 l für 2,59 € = 0,52 € (g ≈ ml)')
+  expect(near(estimateCost({ name: 'Milch', food_item_id: 'milch', quantity: 1, unit: 'EL' }, foods, liquid).cost, 0.052), '1 EL Flüssigkeit ≈ 15 ml')
+  const unitOnly: PriceRow[] = [{ food_item_id: 'milch', price_eur: 1.09, package_quantity: null, package_unit: null, unit_price_eur: 1.09, unit_label: '€/l', observed_at: '2026-06-01' }]
+  expect(near(estimateCost({ name: 'Milch', food_item_id: 'milch', quantity: 200, unit: 'g' }, foods, unitOnly).cost, 0.218), '200 g bei Literpreis 1,09 €/l = 0,22 €')
   const missing = estimateCost({ name: 'Salz', food_item_id: 'salz', quantity: 5, unit: 'g' }, foods, prices)
   expect(missing.basis === 'missing' && missing.cost === null, 'Salz ohne Preis → „Preis fehlt“')
   const byName = estimateCost({ name: 'eier', food_item_id: null, quantity: 2, unit: 'Stk' }, foods, prices)

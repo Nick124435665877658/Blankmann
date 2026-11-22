@@ -6,7 +6,29 @@ import { splitOrganic } from './kitchen.ts'
 export type Food = { id: string; name: string; normalized_name: string; category: string; default_unit: string | null }
 // review: warum eine Zeile geprüft werden sollte. note: Hinweis, der in der Prüfliste unter der Zeile steht.
 export type LineReview = 'price-missing' | 'doubtful' | 'second-run' | 'derived' | 'corrected'
-export type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean; review?: LineReview; note?: string; ocrPrice?: string; organic?: boolean; splitToOne?: boolean }
+export type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean; review?: LineReview; note?: string; ocrPrice?: string; organic?: boolean; splitToOne?: boolean; packPrefilled?: boolean }
+export type KnownPack = { quantity: number; unit: string }
+// Leere Menge mit der zuletzt gekauften Packung desselben Nahrungsmittels vorbelegen (sichtbar und änderbar, Nick 23.11.2026),
+// damit Preis und Vorrat dieselbe Packung bekommen. Beispiel: EDEKA „Eier 3,99“ ohne Stückzahl → „10 Stk“ wie zuletzt.
+// Von Hand eingetragene Mengen werden nie überschrieben; eine vorbelegte Menge wechselt mit, wenn ein anderes Nahrungsmittel gewählt wird.
+export function prefillPackage(line: Line, packs: Map<string, KnownPack>): Line {
+  const base = line.packPrefilled ? { ...line, quantity: '', unit: '', packPrefilled: false } : line
+  if (!base.foodId || base.quantity.trim()) return base
+  const pack = packs.get(base.foodId)
+  if (!pack || !(pack.quantity > 0)) return base
+  return { ...base, quantity: String(pack.quantity).replace('.', ','), unit: pack.unit.trim(), packPrefilled: true }
+}
+// Neueste bekannte Packung je Nahrungsmittel aus den gespeicherten Preisen.
+export function knownPacks(rows: { food_item_id: string; package_quantity: number | string | null; package_unit: string | null; observed_at?: string | null }[]): Map<string, KnownPack> {
+  const packs = new Map<string, KnownPack & { at: string }>()
+  for (const row of rows) {
+    const quantity = Number(row.package_quantity)
+    if (!(quantity > 0) || !row.package_unit?.trim()) continue
+    const at = String(row.observed_at ?? ''), known = packs.get(row.food_item_id)
+    if (!known || at > known.at) packs.set(row.food_item_id, { quantity, unit: row.package_unit.trim(), at })
+  }
+  return new Map([...packs].map(([id, { quantity, unit }]) => [id, { quantity, unit }]))
+}
 export type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
 
 export const normalize = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g,'ae').replace(/ö/g,'oe').replace(/ü/g,'ue').replace(/ß/g,'ss').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9-]+/g,' ').replace(/\s+/g,' ').trim()

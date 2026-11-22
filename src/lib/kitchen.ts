@@ -93,7 +93,8 @@ export function approxAmount(quantity: number, unit: string | null | undefined, 
 }
 
 // Kosten einer Menge mit genau einem Preis-Eintrag.
-function costWithPrice(ref: { quantity: number | null; unit: string | null }, price: PriceRow): { cost: number; basis: 'exact' | 'package'; hint: string } {
+// assumed: Preis ohne Packungsgröße wird als Stückpreis gerechnet (z. B. „Gurke 0,69“ vom Bon) – zählt nur, wenn kein genauerer Preis da ist.
+function costWithPrice(ref: { quantity: number | null; unit: string | null }, price: PriceRow): { cost: number; basis: 'exact' | 'package'; hint: string; assumed?: boolean } {
   const packagePrice = Number(price.price_eur)
   if (ref.quantity === null || !(ref.quantity > 0)) return { cost: packagePrice, basis: 'package', hint: 'Menge offen – eine Packung angesetzt' }
   const need = toBase(ref.quantity, ref.unit)
@@ -108,7 +109,8 @@ function costWithPrice(ref: { quantity: number | null; unit: string | null }, pr
     if (perBase && amount !== null) return { cost: Number(price.unit_price_eur) * amount / perBase.per, basis: 'exact', hint: '' }
   }
   if (need.base === 'stk' && (!price.package_quantity || normalizeUnit(price.package_unit).base === 'stk')) {
-    return { cost: packagePrice / Number(price.package_quantity || 1) * need.quantity, basis: 'exact', hint: '' }
+    const assumed = !(Number(price.package_quantity) > 0)
+    return { cost: packagePrice / Number(price.package_quantity || 1) * need.quantity, basis: 'exact', hint: assumed ? 'Packungsgröße fehlt – als Stückpreis gerechnet' : '', assumed }
   }
   return { cost: packagePrice, basis: 'package', hint: 'Einheit passt nicht zum Preis – eine Packung angesetzt' }
 }
@@ -121,11 +123,15 @@ export function estimateCost(ref: { name: string; food_item_id: string | null; q
   const rows = food ? pricesForFood(food.id, prices, options) : []
   if (!rows.length) return { ...base, cost: null, basis: 'missing', hint: 'Preis fehlt', markets: 0, organic: false }
   const results = rows.map(row => costWithPrice(ref, row))
-  const exact = results.filter(r => r.basis === 'exact')
+  // Stückpreise ohne Packungsgröße (z. B. Eier 3,99 vom Bon ohne Stückzahl) fallen raus, sobald ein genauerer Preis da ist.
+  const exactAll = results.filter(r => r.basis === 'exact')
+  const sure = exactAll.filter(r => !r.assumed)
+  const exact = sure.length ? sure : exactAll
+  const skipped = exactAll.length - exact.length
   const used = exact.length ? exact : results
   const cost = used.reduce((sum, r) => sum + r.cost, 0) / used.length
   const organic = Boolean(rows[0].is_organic)
-  const hint = [exact.length ? '' : used[0].hint, used.length > 1 ? 'Ø aus ' + used.length + ' Märkten' : '', organic ? 'Bio-Preis' : ''].filter(Boolean).join(' · ')
+  const hint = [exact.length ? (used.some(r => r.assumed) ? used.find(r => r.assumed)!.hint : '') : used[0].hint, used.length > 1 ? 'Ø aus ' + used.length + ' Märkten' : '', skipped ? skipped + (skipped === 1 ? ' Preis' : ' Preise') + ' ohne Packungsgröße nicht eingerechnet' : '', organic ? 'Bio-Preis' : ''].filter(Boolean).join(' · ')
   return { ...base, cost, basis: exact.length ? 'exact' : 'package', hint, markets: used.length, organic }
 }
 

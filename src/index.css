@@ -906,3 +906,6 @@ div.add-panel-body{display:contents}
 .theme-nick .group-chip{background:#101a24;border-color:#354556;color:#c2d0dc}
 .theme-nick .group-chip:hover{border-color:#4f6a7c}
 .theme-nick .group-chip.active{background:#2a5a52;border-color:#3d7a6f;color:#eafaf5}
+/* 0.3.48 – Hotfix: Gruppen-Knopfleiste darf den Rezept-Kasten auf dem Handy nicht verbreitern */
+.group-chips{contain:inline-size;max-width:100%}
+.shopping-layout>*{min-width:0}

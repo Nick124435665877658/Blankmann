@@ -1,7 +1,7 @@
 // Regressionstest für den Bon-Parser. Aufruf: npm run test:receipt
 // Referenzbon: Penny München, 18.11.2026, SUMME 16,84 EUR (Artikel + Rabatt + Pfand).
 import { readFileSync } from 'node:fs'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, parseReceipt, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, isNonFoodName, parseReceipt, wordFoodMatch, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
 
 let failed = 0
 const expect = (condition: boolean, message: string) => {
@@ -199,6 +199,49 @@ console.log('\n5) Sonderfälle')
     expect(find(lines, /gerolst/i)?.name.includes('Medium') === true, 'Name per Mehrheit der Läufe: „Gerolsteiner Medium“')
     expect(find(lines, /pink|guanabana/i)?.price === '2,89', 'pink Guanabana 2,89')
   }
+}
+
+// 7) EDEKA München (Passauer Str.), 22.11.2026 (Foto von Nick): SUMME 15,66, „Posten: 10“.
+// Besonderheiten: Kopf mit Adresse/Telefon/www über der Spaltenzeile „EUR“, Papiertragetasche, Menge in derselben Zeile
+// („G&G Mandeln g 1,25 € x 4  5,00 A“), Markenkürzel vorne („Hartk.“, „Paul.“, „Thann.“), „Blaumohn“ statt „Mohn“.
+{
+  const edekaText = (mode: string) => readFileSync(new URL('./fixtures/browser-edeka-' + mode + '.txt', import.meta.url), 'utf8')
+  const modes = ['psm6', 'psm4', '80-psm6', '80-psm4']
+  const foods = ['Mandeln', 'Mandeln gehobelt', 'Mandeln gemahlen', 'Mohn', 'Nelken', 'Eier', 'Paulaner Spezi', 'Milch', 'Kokosmilch'].map((name, i) => ({ id: 'f' + i, name, normalized_name: name.toLowerCase(), category: 'Test', default_unit: null }))
+  const foodOf = (lines: Line[], pattern: RegExp) => foods.find(f => f.id === find(lines, pattern)?.foodId)?.name
+  const runs = modes.map(mode => ({ label: mode, lines: parseReceipt(edekaText(mode), foods) }))
+  console.log('\n7a) EDEKA: einzelne Läufe')
+  for (const mode of ['psm4', '80-psm4']) expect(findReceiptTotal(edekaText(mode)) === 15.66, 'Lauf ' + mode + ': Bon-Summe 15,66 gelesen')
+  for (const run of runs) {
+    expect(!find(run.lines, /sabisz|passauer|edeka|foal|posten|cash|rib1/i), 'Lauf ' + run.label + ': keine Kopf-, Posten- oder Zahlungszeilen als Artikel')
+    expect(!find(run.lines, /\b1,25\b|\bx 4\b/), 'Lauf ' + run.label + ': „1,25 € x 4“ nicht im Namen')
+  }
+  console.log('\n7b) EDEKA: alle vier Läufe kombiniert (wie in der App)')
+  {
+    const combined = combineReceiptRuns(runs, 15.66)
+    console.log('    ' + combined.summary)
+    const lines = combined.lines
+    const check = show(lines, 15.66)
+    expect(check.ok, 'Summenkontrolle stimmt (15,66)')
+    expect(lines.length === 7, '7 Positionen, keine Prüfzeilen aus Kopf oder Fuß')
+    const bag = find(lines, /tragetasche/i)
+    expect(bag?.price === '0,25' && bag.selected === false && !bag.foodId, 'Papiertragetasche 0,25 (über anderen Lauf korrigiert), nicht angehakt, kein Nahrungsmittel')
+    expect(find(lines, /pfand/i)?.price === '0,25' && find(lines, /pfand/i)?.selected === false, 'Pfand 0,25 nicht angehakt')
+    expect(lines.filter(l => l.selected).length === 5, '5 Lebensmittel angehakt (Mandeln, Mohn, Nelken, Spezi, Eier)')
+    const almonds = lines.find(l => /mandeln/i.test(l.name))
+    expect(almonds?.price === '5,00' && almonds.quantity === '4', 'Mandeln 5,00 mit Menge 4 (1,25 € × 4)')
+    expect(foodOf(lines, /mandeln/i) === 'Mandeln', 'Mandeln dem Katalog zugeordnet („g“ allein entscheidet nicht über gehobelt/gemahlen)')
+    expect(foodOf(lines, /mohn/i) === 'Mohn' && find(lines, /mohn/i)?.price === '2,59', '„Herz. Blaumohn“ → Mohn, 2,59')
+    expect(foodOf(lines, /nelken/i) === 'Nelken', '„Hartk. Nelken“ → Nelken')
+    expect(foodOf(lines, /spezi/i) === 'Paulaner Spezi' && find(lines, /spezi/i)?.price === '1,29', '„Paul. Spezi 0,33l DS“ → Paulaner Spezi, 1,29')
+    expect(foodOf(lines, /eier/i) === 'Eier' && find(lines, /eier/i)?.price === '3,99', '„Thann. H&H Eier“ → Eier, 3,99')
+  }
+  console.log('\n7c) Wort-Zuordnung')
+  expect(wordFoodMatch('Kokosmilch light', foods)?.name === 'Kokosmilch', 'Kokosmilch bleibt Kokosmilch (nicht Milch)')
+  expect(wordFoodMatch('Mandeln gehobelt 100g', foods)?.name === 'Mandeln gehobelt', 'längerer Katalogname gewinnt: Mandeln gehobelt')
+  expect(wordFoodMatch('Paul Spezi', foods)?.name === 'Paulaner Spezi', 'Markenkürzel: Paul. Spezi → Paulaner Spezi')
+  expect(!wordFoodMatch('Reisnudeln', [{ id: 'r', name: 'Reis', normalized_name: 'reis', category: 'Test', default_unit: null }]), 'Reisnudeln ≠ Reis (Wortanfang zählt nicht)')
+  expect(isNonFoodName('Papiertragetasche') && isNonFoodName('Tragetüte') && !isNonFoodName('Teebeutel') && !isNonFoodName('Taschenkrebs'), 'Taschen/Tüten erkannt, Teebeutel und Taschenkrebs nicht')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

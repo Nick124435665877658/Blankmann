@@ -13,6 +13,32 @@ export const normalize = (value: string) => value.toLocaleLowerCase('de-DE').rep
 export function editDistance(a:string,b:string){const row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){let prev=row[0];row[0]=i;for(let j=1;j<=b.length;j++){const current=row[j];row[j]=Math.min(row[j]+1,row[j-1]+1,prev+(a[i-1]===b[j-1]?0:1));prev=current}}return row[b.length]}
 export function likelyFood(name:string,foods:Food[]){const n=normalize(name);const exact=foods.find(f=>normalize(f.name)===n||normalize(f.normalized_name)===n);if(exact)return exact;return foods.find(f=>{const target=normalize(f.name);if(!target||Math.abs(target.length-n.length)>2)return false;return editDistance(n,target)<=Math.max(1,Math.floor(Math.min(n.length,target.length)*0.16))})}
 
+// Zuordnung über ganze Wörter (EDEKA-Bon 22.11.2026): Markenkürzel vorne („Hartk. Nelken“, „Paul. Spezi“ → Paulaner Spezi)
+// und zusammengesetzte Wörter („Blaumohn“ → Mohn). Alle Wörter des Katalognamens müssen vorkommen; genaue Treffer zählen mehr,
+// bei Gleichstand gewinnt der längere Katalogname („Mandeln gehobelt“ vor „Mandeln“).
+export function wordFoodMatch(name: string, foods: Food[]): Food | undefined {
+  const tokens = normalize(name).split(' ').filter(t => t.length >= 2 && /\p{L}/u.test(t))
+  if (!tokens.length) return undefined
+  let best: { food: Food; score: number } | undefined
+  for (const food of foods) {
+    const words = normalize(food.name).split(' ').filter(w => /\p{L}/u.test(w))
+    if (!words.length) continue
+    let score = 0, exact = 0
+    for (const word of words) {
+      if (tokens.includes(word)) { score += 3; exact++ }
+      else if (word.length >= 4 && tokens.some(t => t.length > word.length && t.endsWith(word))) score += 2
+      else if (words.length > 1 && tokens.some(t => t.length >= 4 && t.length < word.length && word.startsWith(t))) score += 1
+      else { score = 0; break }
+    }
+    if (!score || (words.length > 1 && !exact)) continue
+    if (!best || score > best.score || (score === best.score && food.name.length > best.food.name.length)) best = { food, score }
+  }
+  return best?.food
+}
+// Kein Lebensmittel, zählt aber zur Bon-Summe: Tragetaschen und Tüten (wie Pfand standardmäßig nicht übernommen).
+export const isNonFoodName = (value: string) => normalize(value).split(' ').some(w => /(?:tasche|tuete|tragebeutel)$/.test(w))
+const nonFoodNote = 'Kein Lebensmittel (Tasche/Tüte) – zählt nur für die Bon-Summe'
+
 const toNumber = (value: string) => Number(value.replace(',', '.'))
 const formatPrice = (value: number) => value.toFixed(2).replace('.', ',')
 const round2 = (value: number) => Math.round(value * 100) / 100
@@ -108,10 +134,10 @@ export function checkReceiptTotal(lines: Line[], total: number | null) {
   return { total, itemsTotal, diff, ok: diff !== null && Math.abs(diff) < 0.005 }
 }
 
-const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|geg|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|kundenbeleg|girocard|contactless|datum|uhrzeit|beleg|trace|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|betrag|zu zahlen|summe eur)\b/i.test(normalize(value))
+const isNoise=(value:string)=>/^(summe|gesamt|zwischensumme|bar|ec|visa|mastercard|gegeben|geg|rueckgeld|wechselgeld|mwst|ust|steuer|netto|brutto|rabatt|ersparnis|kartenzahlung|kundennummer|kundenbeleg|girocard|contactless|datum|uhrzeit|beleg|trace|bon|kasse|bedienung|artikel|anzahl|eur|pfand|cent|betrag|zu zahlen|summe eur|posten|tel|telefon|fax|www|http|https)\b/i.test(normalize(value))
 const cleanName=(raw:string)=>{
   // Dezimalangaben wie „3,5%“ im Namen behalten (§ als Platzhalter für das Komma).
-  let name=raw.replace(/(\d)[,.](\d)/g,'$1§$2').replace(/[|_]+/g,' ').replace(/[“”„"'´]/g,' ').replace(/[^\p{L}\p{N}\s%§-]/gu,' ').replace(/§/g,',').replace(/\s+/g,' ').trim()
+  let name=raw.replace(/(\p{L})(\d)/gu,'$1 $2').replace(/\b(0[,.](?:33|5|75)|1[,.]5)1\b/g,'$1l').replace(/(\d)[,.](\d)/g,'$1§$2').replace(/[|_]+/g,' ').replace(/[“”„"'´]/g,' ').replace(/[^\p{L}\p{N}\s%§-]/gu,' ').replace(/§/g,',').replace(/\s+/g,' ').trim()
   name=name.replace(/\bkokosmi\s+lc\s+dad\s+ight(?:\s+.*)?$/i,'Kokosmilch Light')
   name=name.replace(/\bkokosmilch\s+d[a4]d?\s*l?i[gq]ht\b/i,'Kokosmilch Light')
   // Penny-/OCR-spezifische Korrekturen: nur eindeutige Artikelstämme normalisieren.
@@ -190,8 +216,16 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
     if (priced) return lettersOf(priced.left) >= 3 && !isNoise(priced.left) && !qtyRowRe.test(row) && !isDepositRow(row)
     return Boolean(splitGarbledPrice(row, taxMode))
   }
-  const start = body.findIndex(isItemStart)
-  const region = start >= 0 ? body.slice(start) : body
+  // EDEKA & Co. drucken über den Artikeln eine Spaltenzeile „EUR“: alles davor ist Kopf (Markt, Adresse, Telefon, www).
+  const eurHeader = body.findIndex(r => normalize(r) === 'eur')
+  const pricedItemBefore = (end: number) => body.slice(0, end).some(r => { const p = splitPriceRow(r); return Boolean(p && lettersOf(p.left) >= 3 && !isNoise(p.left)) })
+  const from = eurHeader >= 0 && !pricedItemBefore(eurHeader) ? eurHeader + 1 : 0
+  const startOffset = body.slice(from).findIndex(isItemStart)
+  const start = startOffset >= 0 ? from + startOffset : -1
+  let region = start >= 0 ? body.slice(start) : body
+  // Ohne lesbare SUMME: „Posten: 10“ oder die Zahlungszeile („EC-Cash …“) beenden den Artikelbereich.
+  const endAt = region.findIndex((r, i) => i > 0 && /^(posten|anzahl artikel|ec-cash|ec cash|geg|gegeben|kartenzahlung|girocard)\b/.test(normalize(r)))
+  if (endAt > 0) region = region.slice(0, endAt)
 
   const found: Line[] = []
   const previousLine = () => found[found.length - 1]
@@ -210,7 +244,8 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
     const price = toNumber(rawPrice)
     if (!Number.isFinite(price) || price <= 0 || price > 500) return
     const norm = normalize(name)
-    const likely = likelyFood(name, foods) ?? foods.find(f => {
+    if (isNonFoodName(name)) { push({ name, foodId: '', price: formatPrice(price), quantity: rawQuantity, unit: rawUnit, selected: false, note: nonFoodNote }); return }
+    const likely = likelyFood(name, foods) ?? wordFoodMatch(name, foods) ?? foods.find(f => {
       const foodName = normalize(f.name), tokens = norm.split(' ').filter(t => t.length > 3)
       // Kurze Namen („Eier“) nur als ganzes Wort: „Bio BB NL Eier 6ST“ → Eier, aber nicht „Reisnudeln“ → Reis.
       if (foodName.length === 4) return norm.split(' ').includes(foodName)
@@ -338,6 +373,13 @@ export function parseReceipt(text:string, foods:Food[], words:OCRWord[] = []):Li
       if (toNumber(price) < 0 || /rabatt|nachlass/i.test(left) || looksLikePercentDiscount(left, price)) { applyDiscount(price, left); continue }
       const inlineQty = left.match(/^(.+?)\s+(\d+(?:[,.]\d+)?)\s*(?:stk|stück)?\s*[x×]\s*(\d{1,4}[,.]\d{2})$/i)
       if (inlineQty) { add(inlineQty[1], price, inlineQty[2], 'stk'); pendingQuantity = ''; applyPendingBefore(countBefore); continue }
+      const unitTimes = left.match(/^(.+?)\s+\S*?(\d{1,4}[,.]\d{2,3})\s*(?:€|eur|e)?\s*[x×]\s*(\d{1,2})$/i)
+      if (unitTimes) {
+        const count = Number(unitTimes[3]), total = toNumber(price)
+        // Die Menge zählt, wenn Stückpreis × Menge passt – oder der Stückpreis verlesen ist, die Teilung aber glatt aufgeht.
+        const fits = Math.abs(toNumber(unitTimes[2]) * count - total) <= 0.011 || Math.abs(Math.round(total / count * 100) * count - total * 100) < 0.5
+        if (count >= 2 && fits) { add(unitTimes[1], price, String(count), 'stk'); pendingQuantity = ''; applyPendingBefore(countBefore); continue }
+      }
       // Ohne Steuerklasse ist eine Zeile verdächtig – außer die Mengenzeile davor bestätigt den Preis (Netto: „2 x 1,09“ → 2,18).
       const confirmedByQty = pendingBefore !== null && Math.abs(toNumber(pendingBefore.qty) * pendingBefore.unit - toNumber(price)) <= 0.011
       if (taxMode && !priced.tax && !confirmedByQty) {
@@ -451,6 +493,7 @@ export function combineReceiptRuns(runs: { label: string; lines: Line[] }[], tot
   if (!usable.length) return { lines: [], summary: 'keine Artikelzeilen erkannt' }
   const pricedCount = (lines: Line[]) => lines.filter(priced).length
   const finish = (lines: Line[], summary: string): CombinedReceipt => {
+    for (const line of lines) if (isNonFoodName(line.name) && priced(line)) { line.selected = false; line.foodId = ''; line.note = nonFoodNote + (line.review === 'corrected' ? ' · Preis durch die Bon-Summe bestätigt' : '') }
     const check = checkReceiptTotal(lines, total)
     const derived = lines.some(line => line.review === 'derived')
     if (check.ok && !derived) {

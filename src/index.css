@@ -884,3 +884,25 @@
 .badge.group{background:#eef1e6;color:#4e6045;border:1px solid #dfe5d4}
 .theme-nick .badge.group{background:#22303d;color:#c2d0dc;border-color:#354556}
 .recipe-filters>small{align-self:center}
+/* 0.3.47 – Formulare einklappbar (Rezepte, Vorrat, Nahrungsmittel), Gruppen-Knöpfe */
+.add-panel .add-panel-head{margin-bottom:6px}
+.add-panel.collapsed .add-panel-head{margin-bottom:0}
+.add-panel .add-panel-head h2{margin:0}
+.add-panel-head small.muted{display:block;margin-top:5px;font-size:10px}
+.add-panel.collapsed .panel-chevron{transform:rotate(-90deg)}
+div.add-panel-body{display:contents}
+.add-panel.collapsed .add-panel-body{display:none!important}
+.shopping-layout.add-collapsed{grid-template-columns:1fr}
+.group-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.group-chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:20px;padding:6px 11px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none;transition:background .15s,border-color .15s}
+.group-chip small{font-size:10px;font-weight:500;opacity:.65}
+.group-chip:hover{border-color:#8ba187}
+.group-chip.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+.group-chip.active small{opacity:.85}
+.group-chip:focus-visible{outline:2px solid #8ba187;outline-offset:2px}
+@media(max-width:720px){.group-chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 1px 4px}.group-chips::-webkit-scrollbar{display:none}}
+.device-phone .group-chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 1px 4px}
+.device-phone .group-chips::-webkit-scrollbar{display:none}
+.theme-nick .group-chip{background:#101a24;border-color:#354556;color:#c2d0dc}
+.theme-nick .group-chip:hover{border-color:#4f6a7c}
+.theme-nick .group-chip.active{background:#2a5a52;border-color:#3d7a6f;color:#eafaf5}

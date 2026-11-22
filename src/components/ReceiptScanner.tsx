@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, likelyFood, normalize, parseReceipt, type Food, type Line, type OCRWord } from '../lib/receiptParser'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, knownPacks, likelyFood, normalize, parseReceipt, prefillPackage, type Food, type KnownPack, type Line, type OCRWord } from '../lib/receiptParser'
 import { canSplitToOne, normalizeUnit, pantryAmountFromReceipt, planPantryAddition, splitOrganic, type PantryRow } from '../lib/kitchen'
 import { localISO } from '../lib/dates'
 import { saveMarketPrice } from '../lib/priceStore'
@@ -63,15 +63,19 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   const [receiptTotal,setReceiptTotal]=useState<number|null>(null)
   // Rabatt auf den ganzen Bon („10% auf Alles“): nur Hinweis – Preise werden als normale Ladenpreise gespeichert (Nick, 20.11.).
   const [receiptDiscount,setReceiptDiscount]=useState<{label:string;amount:number}|null>(null)
+  // Zuletzt gekaufte Packung je Nahrungsmittel – füllt leere Mengen in der Prüfliste vor (sichtbar, änderbar).
+  const [packs,setPacks]=useState<Map<string,KnownPack>>(()=>new Map())
   const refresh=useCallback(async()=>{
     if(!supabase)return
-    const [foodRows,receiptRows]=await Promise.all([
+    const [foodRows,receiptRows,packRows]=await Promise.all([
       supabase.from('household_foods').select('id,name,normalized_name,category,default_unit').eq('household_id',householdId).order('name'),
-      supabase.from('receipt_uploads').select('id,image_path,retailer_code,purchase_date,status,created_at').eq('household_id',householdId).order('created_at',{ascending:false})
+      supabase.from('receipt_uploads').select('id,image_path,retailer_code,purchase_date,status,created_at').eq('household_id',householdId).order('created_at',{ascending:false}),
+      supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at').eq('household_id',householdId).not('package_quantity','is',null)
     ])
     if(foodRows.error)throw foodRows.error
     if(receiptRows.error)throw receiptRows.error
     setFoods((foodRows.data??[]) as Food[]);setReceipts((receiptRows.data??[]) as Receipt[])
+    if(!packRows.error)setPacks(knownPacks((packRows.data??[]) as {food_item_id:string;package_quantity:number|null;package_unit:string|null;observed_at:string|null}[]))
   },[householdId])
   useEffect(()=>{refresh().catch(e=>setError(e.message))},[refresh])
   const selectedCount=useMemo(()=>lines.filter(l=>l.selected&&Number(l.price.replace(',','.'))>0).length,[lines])
@@ -133,7 +137,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       setReceiptDiscount(attempts.map(a=>findReceiptDiscount(a.data.text)).find(Boolean)??null)
       setRetailer(receipt.retailer_code||'other');setPurchaseDate(receipt.purchase_date||localISO(new Date(receipt.created_at)));setProgress('')
       if(!parsed.length)throw new Error('Die Texterkennung hat keine Artikelzeilen erkannt. Alle OCR-Rohdurchläufe bleiben zur Kontrolle sichtbar. Bitte ein scharfes, möglichst gerade aufgenommenes Foto verwenden.')
-      setLines(parsed.map(line=>markOrganic(line,foods)))
+      setLines(parsed.map(line=>prefillPackage(markOrganic(line,foods),packs)))
     }catch(e){setError(e instanceof Error?e.message:'Bon-Auswertung fehlgeschlagen.')}
     finally{if(worker)await worker.terminate().catch(()=>{});setBusy(false)}
   }
@@ -280,9 +284,10 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       {lines.map(line=><div className="receipt-line-edit" key={line.id}>
         <input aria-label="Artikelname" value={line.name} onChange={e=>updateLine(line.id,{name:e.target.value})}/>
         <input aria-label="Preis in Euro" placeholder="Preis €" inputMode="decimal" value={line.price} onChange={e=>updateLine(line.id,{price:e.target.value})}/>
-        <select aria-label="Nahrungsmittel zuordnen" value={line.foodId} onChange={e=>updateLine(line.id,{foodId:e.target.value})}><option value="">+ Neu anlegen: {line.name}</option>{foods.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
-        <div className="form-row"><input aria-label="Packungsmenge" placeholder="Menge" value={line.quantity} onChange={e=>updateLine(line.id,{quantity:e.target.value})}/><input aria-label="Einheit" placeholder="g, kg, ml …" value={line.unit} onChange={e=>updateLine(line.id,{unit:e.target.value})}/></div>
+        <select aria-label="Nahrungsmittel zuordnen" value={line.foodId} onChange={e=>{const foodId=e.target.value;setLines(current=>current.map(l=>l.id===line.id?prefillPackage({...l,foodId},packs):l))}}><option value="">+ Neu anlegen: {line.name}</option>{foods.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select>
+        <div className="form-row"><input aria-label="Packungsmenge" placeholder="Menge" value={line.quantity} onChange={e=>updateLine(line.id,{quantity:e.target.value,packPrefilled:false})}/><input aria-label="Einheit" placeholder="g, kg, ml …" value={line.unit} onChange={e=>updateLine(line.id,{unit:e.target.value,packPrefilled:false})}/></div>
         <div className="receipt-include"><label><input type="checkbox" checked={line.selected} onChange={e=>updateLine(line.id,{selected:e.target.checked})}/> Übernehmen</label><label><input type="checkbox" checked={Boolean(line.organic)} onChange={e=>updateLine(line.id,{organic:e.target.checked})}/> Bio</label>{canSplitToOne(Number(line.quantity.replace(',','.'))||null,line.unit||null)&&<label title="Preis wird für 1 Stück gespeichert, der Vorrat bekommt die ganze Menge"><input type="checkbox" checked={Boolean(line.splitToOne)} onChange={e=>updateLine(line.id,{splitToOne:e.target.checked})}/> Auf 1 {line.unit||'Stk'} runterrechnen{line.splitToOne&&Number(line.price.replace(',','.'))>0?' ('+euro(Math.round(Number(line.price.replace(',','.'))/Number(line.quantity.replace(',','.'))*100)/100)+')':''}</label>}<button type="button" className="button button-light button-small" onClick={()=>removeLine(line.id)} aria-label="Artikelzeile entfernen">Entfernen</button></div>
+        {line.packPrefilled&&<small className="muted" style={{gridColumn:'1/-1',fontSize:10}}>↺ Menge wie beim letzten Kauf vorgeschlagen ({line.quantity} {line.unit}) – auf dem Bon steht keine. Bitte prüfen und bei Bedarf ändern.</small>}
         {line.note&&<small className="muted" style={{gridColumn:'1/-1',fontSize:10}}>⚠ {line.note}</small>}
       </div>)}
       <div className="receipt-save-row"><b>{selectedCount} Positionen · {euro(lines.filter(l=>l.selected).reduce((sum,l)=>sum+(Number(l.price.replace(',','.'))||0),0))}</b><button className="button button-dark" disabled={busy||!selectedCount} onClick={savePrices}><CircleDollarSign size={16}/> Preise & Nahrungsmittel speichern</button></div>

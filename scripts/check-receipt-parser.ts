@@ -1,7 +1,7 @@
 // Regressionstest für den Bon-Parser. Aufruf: npm run test:receipt
 // Referenzbon: Penny München, 18.11.2026, SUMME 16,84 EUR (Artikel + Rabatt + Pfand).
 import { readFileSync } from 'node:fs'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, isNonFoodName, parseReceipt, wordFoodMatch, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, isNonFoodName, knownPacks, parseReceipt, prefillPackage, wordFoodMatch, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
 
 let failed = 0
 const expect = (condition: boolean, message: string) => {
@@ -242,6 +242,29 @@ console.log('\n5) Sonderfälle')
   expect(wordFoodMatch('Paul Spezi', foods)?.name === 'Paulaner Spezi', 'Markenkürzel: Paul. Spezi → Paulaner Spezi')
   expect(!wordFoodMatch('Reisnudeln', [{ id: 'r', name: 'Reis', normalized_name: 'reis', category: 'Test', default_unit: null }]), 'Reisnudeln ≠ Reis (Wortanfang zählt nicht)')
   expect(isNonFoodName('Papiertragetasche') && isNonFoodName('Tragetüte') && !isNonFoodName('Teebeutel') && !isNonFoodName('Taschenkrebs'), 'Taschen/Tüten erkannt, Teebeutel und Taschenkrebs nicht')
+}
+
+// 8) Packung vorbelegen (Nick, 23.11.2026): Bon ohne Stückzahl → zuletzt gekaufte Packung, sichtbar und änderbar.
+console.log('\n8) Leere Menge mit der letzten Packung vorbelegen')
+{
+  const packs = knownPacks([
+    { food_item_id: 'eier', package_quantity: '10.000', package_unit: 'Stück', observed_at: '2026-06-30' },
+    { food_item_id: 'eier', package_quantity: 6, package_unit: 'Stk', observed_at: '2026-11-18' },
+    { food_item_id: 'eier', package_quantity: 10, package_unit: 'Stk', observed_at: '2026-11-22' },
+    { food_item_id: 'mandeln', package_quantity: 100, package_unit: 'g ', observed_at: '2026-11-21' },
+    { food_item_id: 'kaputt', package_quantity: null, package_unit: null, observed_at: '2026-11-21' },
+  ])
+  expect(JSON.stringify(packs.get('eier')) === '{"quantity":10,"unit":"Stk"}', 'Eier: neueste Packung (EDEKA 10 Stk vom 22.11.)')
+  expect(packs.get('mandeln')?.unit === 'g' && !packs.has('kaputt'), 'Leerzeichen entfernt, Zeilen ohne Packung ignoriert')
+  const line: Line = { id: '1', name: 'Eier', price: '3,99', foodId: 'eier', quantity: '', unit: '', selected: true }
+  const filled = prefillPackage(line, packs)
+  expect(filled.quantity === '10' && filled.unit === 'Stk' && filled.packPrefilled === true, 'Eier 3,99 ohne Menge → 10 Stk vorgeschlagen')
+  expect(prefillPackage({ ...line, quantity: '6', unit: 'Stk' }, packs).quantity === '6', 'Von Hand eingetragene Menge bleibt')
+  const switched = prefillPackage({ ...filled, foodId: 'mandeln' }, packs)
+  expect(switched.quantity === '100' && switched.unit === 'g', 'Anderes Nahrungsmittel gewählt → vorgeschlagene Menge wechselt mit')
+  const none = prefillPackage({ ...filled, foodId: 'unbekannt' }, packs)
+  expect(none.quantity === '' && !none.packPrefilled, 'Ohne bekannte Packung bleibt die Menge leer')
+  expect(prefillPackage({ ...line, foodId: '' }, packs).quantity === '', 'Ohne Zuordnung (z. B. Pfand, Tasche) nichts vorbelegt')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

@@ -207,6 +207,23 @@ console.log('\n7) Mittelwert über Supermärkte')
   expect(near(single.cost, 1.75) && single.markets === 1 && !single.hint, 'Nur ein Markt → dessen neuester Preis, kein Ø-Hinweis')
 }
 
+console.log('\n7b) Preis ohne Packungsgröße (EDEKA-Eier 3,99 ohne Stückzahl, Nick 23.11.2026)')
+{
+  const eggs = (edekaPack: number | null): PriceRow[] => [
+    { food_item_id: 'eier', price_eur: 2.49, package_quantity: 10, package_unit: 'Stück', unit_price_eur: 0.25, unit_label: '€/Stück', observed_at: '2026-06-30', retailer_code: 'discounter', is_organic: false },
+    { food_item_id: 'eier', price_eur: 3.99, package_quantity: edekaPack, package_unit: edekaPack ? 'Stk' : null, unit_price_eur: null, unit_label: null, observed_at: '2026-11-22', retailer_code: 'edeka', is_organic: false },
+    { food_item_id: 'eier', price_eur: 3.29, package_quantity: 6, package_unit: 'Stk', unit_price_eur: null, unit_label: null, observed_at: '2026-11-18', retailer_code: 'penny', is_organic: true },
+  ]
+  const eggFoods: FoodRef[] = [{ id: 'eier', name: 'Eier', normalized_name: 'eier' }]
+  const without = estimateCost({ name: 'Eier', food_item_id: 'eier', quantity: 2, unit: 'Stk' }, eggFoods, eggs(null))
+  expect(near(without.cost, 0.5) && without.markets === 1, '2 Eier: EDEKA ohne Packungsgröße fällt raus → 0,50 € (vorher 4,24 €)')
+  expect(without.hint.includes('1 Preis ohne Packungsgröße nicht eingerechnet'), 'Hinweis „1 Preis ohne Packungsgröße nicht eingerechnet“')
+  const ten = estimateCost({ name: 'Eier', food_item_id: 'eier', quantity: 2, unit: 'Stk' }, eggFoods, eggs(10))
+  expect(near(ten.cost, (0.5 + 0.798) / 2) && ten.markets === 2, '2 Eier mit EDEKA als 10er: Ø (0,50 + 0,80) = 0,65 €')
+  const only = estimateCost({ name: 'Gurke', food_item_id: 'gurke', quantity: 2, unit: 'Stk' }, [{ id: 'gurke', name: 'Gurke', normalized_name: 'gurke' }], [{ food_item_id: 'gurke', price_eur: 0.69, package_quantity: null, package_unit: null, unit_price_eur: null, unit_label: null, observed_at: '2026-11-20', retailer_code: 'penny', is_organic: false }])
+  expect(near(only.cost, 1.38) && only.basis === 'exact' && only.hint.includes('Packungsgröße fehlt'), 'Einziger Preis ohne Packungsgröße zählt weiter als Stückpreis (2 Gurken 1,38 €), mit Hinweis')
+}
+
 console.log('\n8) Auf 1 Stk runterrechnen')
 {
   expect(canSplitToOne(2, 'Stk') && canSplitToOne(3, null) && canSplitToOne(2, 'Dose'), '2 Stk, 3 (ohne Einheit), 2 Dosen → Häkchen möglich')

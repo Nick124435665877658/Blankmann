@@ -1,5 +1,6 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
-import { buildRecipeMessages, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
+import { applyGlutenYeast, buildRecipeMessages, glutenYeastPenalty, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
+import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
 import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
 
 let failed = 0
@@ -214,6 +215,46 @@ console.log('\n8) Auf 1 Stk runterrechnen')
   expect(one.price === 1.5 && one.quantity === 1 && one.unit === 'Stk', '2 Stk für 3,00 € → 1 Stk für 1,50 €')
   const third = splitToOne(1, 3, null)
   expect(third.price === 0.33 && third.unit === 'Stk', '3 für 1,00 € → 1 Stk für 0,33 €')
+}
+
+console.log('\n9) Histamin: Gluten und Hefe (Nick, 22.11.2026)')
+{
+  const ing = (name: string, quantity: number | null, unit: string | null, is_optional = false) => ({ name, quantity, unit, is_optional })
+  const bread = glutenYeastPenalty([ing('Weizenmehl', 500, 'g'), ing('Hefe (frisch)', 21, 'g'), ing('Milch', 250, 'g'), ing('Salz', 1, 'TL')])
+  expect(bread.gluten === 2 && bread.yeast === 2 && bread.penalty === 4, 'Hefeteig mit 500 g Weizenmehl → Gluten −2, Hefe −2, zusammen −4')
+  const binding = glutenYeastPenalty([ing('Weizenmehl', 2, 'EL'), ing('Hähnchenbrustfilet', 400, 'g')])
+  expect(binding.gluten === 1 && binding.yeast === 0 && binding.penalty === 1, '2 EL Mehl zum Binden → nur −1')
+  const pasta = glutenYeastPenalty([ing('Spaghetti', 250, 'g'), ing('Sojasauce', 1, 'EL')])
+  expect(pasta.gluten === 2 && pasta.penalty === 2, '250 g Spaghetti → −2 (Sojasauce zählt mit)')
+  const free = glutenYeastPenalty([ing('Reismehl', 200, 'g'), ing('Buchweizenmehl', 100, 'g'), ing('Glutenfreie Mehlmischung', 300, 'g'), ing('Speisestärke', 20, 'g'), ing('Haferflocken', 100, 'g'), ing('Brotgewürz', 1, 'TL'), ing('Glasnudeln', 100, 'g')])
+  expect(free.penalty === 0, 'Reis-/Buchweizenmehl, glutenfreie Mischung, Stärke, Hafer, Brotgewürz, Glasnudeln → kein Abzug')
+  expect(glutenYeastPenalty([ing('Butterschmalz', 40, 'g'), ing('Schweineschmalz', 20, 'g')]).penalty === 0 && glutenYeastPenalty([ing('Malzbier', 330, 'ml')]).gluten === 2, 'Butter-/Schweineschmalz ist kein Malz, Malzbier schon')
+  const flakes = glutenYeastPenalty([ing('Hefeflocken', 1, 'EL'), ing('Kartoffeln', 800, 'g')])
+  expect(flakes.yeast === 1 && flakes.penalty === 1, '1 EL Hefeflocken → Hefe nur −1')
+  const optional = glutenYeastPenalty([ing('Paniermehl', 50, 'g', true), ing('Kartoffeln', 800, 'g')])
+  expect(optional.penalty === 0, 'Optionale Zutaten zählen nicht')
+  const rolls = glutenYeastPenalty([ing('Brötchen', 4, 'Stk')])
+  expect(rolls.gluten === 2, '4 Brötchen (Stk) → Hauptzutat')
+  const applied = applyGlutenYeast({ score: 9, note: 'Milchprodukte frisch.' }, [ing('Weizenmehl', 500, 'g'), ing('Trockenhefe', 1, 'Pck')])
+  expect(applied.score === 5 && /Gluten \(Weizenmehl\) und Hefe senken den Wert zusätzlich um 4/.test(applied.note ?? ''), '9 → 5 mit Begründung in der Notiz')
+  expect(applyGlutenYeast({ score: 3, note: null }, [ing('Dinkelmehl', 400, 'g'), ing('Hefe (frisch)', 42, 'g')]).score === 1, 'Wert bleibt mindestens 1')
+  expect(applyGlutenYeast({ score: 8, note: 'x' }, [ing('Kartoffeln', 500, 'g')]).score === 8, 'Ohne Gluten/Hefe unverändert')
+  expect(applyGlutenYeast({ score: null, note: null }, [ing('Weizenmehl', 500, 'g')]).score === null, 'Ohne KI-Wert kein Wert')
+  const prompt = buildRecipeMessages({ title: 'Brot', description: null, servings: 1, prep_minutes: null, cook_minutes: null }, [])[1].content
+  expect(/Gluten .* Hefe lass bei deiner Zahl außen vor/.test(prompt), 'Prompt: KI bewertet nur Histamin, Gluten/Hefe rechnet die App')
+}
+
+console.log('\n10) Rezept-Gruppen')
+{
+  expect(matchRecipeGroup('Hauptgericht') === 'Hauptgericht' && matchRecipeGroup('Suppe') === 'Suppe & Eintopf' && matchRecipeGroup('Desserts') === 'Dessert & Eis', 'Gruppen aus KI-Antworten erkennen (genau und per Stichwort)')
+  expect(matchRecipeGroup('Brot') === 'Brot & Brötchen' && matchRecipeGroup('Plätzchen') === 'Gebäck & Plätzchen' && matchRecipeGroup('Getränke') === 'Getränk', 'Brot, Plätzchen, Getränke')
+  expect(matchRecipeGroup('Irgendwas') === null && matchRecipeGroup('') === null, 'Unbekannt → keine Gruppe')
+  expect(groupForMeal('breakfast') === 'Frühstück & Müsli' && groupForMeal('lunch') === 'Hauptgericht' && groupForMeal('dinner') === 'Hauptgericht', 'Vorwahl im Wochenplan nach Mahlzeit')
+  const answer = 'MENGEN:\n- keine\nZEIT: Vorbereitung 10 Min | Kochen 20 Min\nHISTAMIN: 8 | frisch\nGRUPPE: Suppe & Eintopf\nSCHRITTE:\n1. Gemüse schneiden.\n2. Kochen.'
+  const parsed = parseRecipeAnswer(answer, [])
+  expect(parsed.group === 'Suppe & Eintopf' && parsed.steps.length === 2 && parsed.histamine.score === 8, 'GRUPPE-Zeile wird gelesen und nicht als Schritt gezählt')
+  const prompt = buildRecipeMessages({ title: 'Suppe', description: null, servings: 2, prep_minutes: null, cook_minutes: null }, [])[1].content
+  expect(/GRUPPE:/.test(prompt) && /Hauptgericht, Beilage, Suppe & Eintopf/.test(prompt), 'Prompt fragt nach genau einer Gruppe aus der Liste')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

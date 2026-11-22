@@ -1,6 +1,7 @@
 // KI-Rezeptergänzung: Prompt bauen und Antwort auslesen (Anleitung, fehlende Mengen, Zeiten, Histamin
 // und – wenn gewünscht – zusätzliche Zutaten/Gewürze, gekennzeichnet als Grundausstattung).
 // Wird von der Cloudflare-Funktion (functions/api/recipe-instructions.ts) und den Tests genutzt.
+import { matchRecipeGroup, recipeGroups } from './recipeGroups.ts'
 
 export type AiIngredient = { id: string; name: string; quantity: number | null; unit: string | null; is_optional: boolean }
 export type AiRecipe = { title: string; description: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; source_type?: string | null }
@@ -10,6 +11,47 @@ export type AiQuantity = { id: string; quantity: number; unit: string | null }
 export type AiTimes = { prepMinutes: number | null; cookMinutes: number | null }
 export type AiHistamine = { score: number | null; note: string | null }
 export type AiAddition = { name: string; quantity: number | null; unit: string | null; staple: boolean }
+
+// Gluten und Hefe (Nick, 22.11.2026): senken den Histaminwert zusätzlich – als Hauptzutat je −2, in kleinen Mengen −1,
+// zusammen höchstens −4, der Wert bleibt mindestens 1. Die App rechnet das fest nach der KI-Bewertung ein (gleiche Regel
+// wie bei der einmaligen Neubewertung am 22.11.2026). Hafer zählt nicht mit; Reis, Mais, Buchweizen, Kartoffel & Co. sind glutenfrei.
+type PenaltyIngredient = { name: string; quantity: number | null; unit: string | null; is_optional?: boolean }
+const glutenFree = /glutenfrei|glasnudel|reisnudel|zucchininudel|reispapier|maisgriess|polenta|buchweizen|reismehl|maismehl|kartoffelmehl|mandelmehl|kokosmehl|kichererbsenmehl|johannisbrot|tapioka|staerke|brotgewuerz|hirse|quinoa|amaranth/
+const glutenWords = /weizen|dinkel|roggen|gerste|graupen|gruenkern|emmer|einkorn|kamut|seitan|mehl|griess|semmel|brot|broetchen|toast|ciabatta|baguette|brez|laugen|nudel|spaghetti|penne|rigatoni|makkaroni|macaroni|lasagne|tagliatelle|fusilli|farfalle|spaetzle|maultasch|gnocchi|couscous|bulgur|udon|ramen|\bmie\b|teig|keks|cookie|biskuit|cantuccini|spekulatius|oreo|lotus|zwieback|waffel|oblate|dominostein|tortilla|wrap|\bmalz|bier\b|soja ?sauce|sojasosse/
+const yeastSmall = /hefeflocken|hefeextrakt/
+// Ungefähres Gewicht in g, um Hauptzutat (ab 50 g im Rezept) und kleine Menge zu unterscheiden.
+function approxGrams(i: PenaltyIngredient): number | null {
+  if (i.quantity === null || !(i.quantity > 0)) return null
+  const u = keyOf(i.unit ?? '')
+  if (u === 'g' || u === 'ml') return i.quantity
+  if (u === 'kg' || u === 'l') return i.quantity * 1000
+  if (u === 'el') return i.quantity * 10
+  if (u === 'tl') return i.quantity * 3
+  if (u === 'prise' || u === 'messerspitze' || u === 'tropfen' || u === 'spritzer') return i.quantity * 0.5
+  if (/scheibe/.test(u)) return i.quantity * 30
+  if (/blatt/.test(u)) return i.quantity * 2
+  if (/pck|packung|beutel|dose|glas|rolle/.test(u)) return i.quantity * 250
+  return i.quantity * 60 // Stk, Brötchen, Brezen …
+}
+export function glutenYeastPenalty(ingredients: PenaltyIngredient[]): { penalty: number; gluten: number; yeast: number; glutenNames: string[]; yeastNames: string[] } {
+  const used = ingredients.filter(i => !i.is_optional)
+  const glutenItems = used.filter(i => { const k = keyOf(i.name); return glutenWords.test(k) && !glutenFree.test(k) })
+  const yeastItems = used.filter(i => /hefe/.test(keyOf(i.name)))
+  const glutenGrams = glutenItems.reduce((sum, i) => sum + (approxGrams(i) ?? 0), 0)
+  const gluten = glutenItems.length === 0 ? 0 : glutenGrams >= 50 ? 2 : 1
+  const leavening = yeastItems.filter(i => !yeastSmall.test(keyOf(i.name)))
+  const flakeGrams = yeastItems.filter(i => yeastSmall.test(keyOf(i.name))).reduce((sum, i) => sum + (approxGrams(i) ?? 0), 0)
+  const yeast = leavening.length ? 2 : yeastItems.length === 0 ? 0 : flakeGrams >= 20 ? 2 : 1
+  return { penalty: Math.min(4, gluten + yeast), gluten, yeast, glutenNames: glutenItems.map(i => i.name), yeastNames: yeastItems.map(i => i.name) }
+}
+export function applyGlutenYeast(histamine: AiHistamine, ingredients: PenaltyIngredient[]): AiHistamine {
+  if (histamine.score === null) return histamine
+  const p = glutenYeastPenalty(ingredients)
+  if (!p.penalty) return histamine
+  const parts = [p.gluten ? 'Gluten (' + [...new Set(p.glutenNames)].slice(0, 3).join(', ') + ')' : '', p.yeast ? 'Hefe' : ''].filter(Boolean).join(' und ')
+  const note = [histamine.note, parts + ' ' + (p.gluten && p.yeast ? 'senken' : 'senkt') + ' den Wert zusätzlich um ' + p.penalty + '.'].filter(Boolean).join(' ').slice(0, 300)
+  return { score: Math.max(1, histamine.score - p.penalty), note }
+}
 // Haushaltsregeln aus den Einstellungen (Standard wie in household_settings: alles an).
 export type AiRules = { tomatoFree: boolean; creamFree: boolean; histamineLow: boolean; vegetableRich: boolean; notes: string | null }
 export const defaultRules: AiRules = { tomatoFree: true, creamFree: true, histamineLow: true, vegetableRich: true, notes: null }
@@ -63,7 +105,8 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     thermomix ? 'Schreibe die Anleitung ohne Thermomix – ganz normal mit Herd, Backofen, Topf, Pfanne, Schüssel, Schneebesen, Handrührgerät oder Pürierstab. Keine Thermomix-Angaben wie Stufe, Linkslauf, Varoma, Mixtopf oder Sanftrührstufe.' : '',
     'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
     'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
-    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei. Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
+    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei. Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
+    'Ordne das Rezept genau einer Gruppe zu: ' + recipeGroups.join(', ') + '.',
     '',
     'Antworte genau in diesem Format, ohne Einleitung und ohne Schlusswort:',
     'MENGEN:',
@@ -71,6 +114,7 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     ...(add ? ['ERGÄNZT:', '- Name | Zahl | Einheit | Grundausstattung ja/nein', '(eine Zeile je zusätzlicher Zutat, oder „- keine“)'] : []),
     'ZEIT: Vorbereitung Zahl Min | Kochen Zahl Min',
     'HISTAMIN: Zahl von 1 bis 10 | kurze Begründung',
+    'GRUPPE: eine der genannten Gruppen',
     'SCHRITTE:',
     '1. …',
     '2. …',
@@ -114,10 +158,15 @@ function parseHistamine(lines: string[]): AiHistamine {
 }
 
 const additionsHeader = /^(?:erg(?:ä|ae)nzt|erg(?:ä|ae)nzte zutaten|zus(?:ä|ae)tzliche zutaten)\s*:?\s*$/i
-const isHeader = (line: string) => /^(mengen|zutaten|schritte|anleitung|zubereitung)\s*:?\s*$/i.test(line) || additionsHeader.test(line) || /^(zeit|histamin)\w*\s*:/i.test(line)
+const isHeader = (line: string) => /^(mengen|zutaten|schritte|anleitung|zubereitung)\s*:?\s*$/i.test(line) || additionsHeader.test(line) || /^(zeit|histamin|gruppe)\w*\s*:/i.test(line)
 const cap = (value: string) => value ? value.charAt(0).toLocaleUpperCase('de-DE') + value.slice(1) : value
 
-export function parseRecipeAnswer(text: string, ingredients: AiIngredient[], rules: AiRules = defaultRules): { steps: string[]; quantities: AiQuantity[]; times: AiTimes; histamine: AiHistamine; additions: AiAddition[] } {
+function parseGroup(lines: string[]): string | null {
+  const line = lines.find(l => /^gruppe\w*\s*:/i.test(l)) ?? ''
+  return matchRecipeGroup(line.replace(/^gruppe\w*\s*:\s*/i, '').split('|')[0])
+}
+
+export function parseRecipeAnswer(text: string, ingredients: AiIngredient[], rules: AiRules = defaultRules): { steps: string[]; quantities: AiQuantity[]; times: AiTimes; histamine: AiHistamine; additions: AiAddition[]; group: string | null } {
   const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').trim()
   const lines = clean.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
   const mengenAt = lines.findIndex(line => /^(mengen|zutaten)\s*:?\s*$/i.test(line))
@@ -126,7 +175,7 @@ export function parseRecipeAnswer(text: string, ingredients: AiIngredient[], rul
   const sectionAfter = (at: number) => { if (at < 0) return []; const rest = lines.slice(at + 1); const end = rest.findIndex(isHeader); return end < 0 ? rest : rest.slice(0, end) }
   const quantityLines = sectionAfter(mengenAt)
   const additionLines = sectionAfter(additionsAt)
-  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 || additionsAt >= 0 ? [] : lines).filter(line => !/^(zeit|histamin)/i.test(line))
+  const stepLines = (schritteAt >= 0 ? lines.slice(schritteAt + 1) : mengenAt >= 0 || additionsAt >= 0 ? [] : lines).filter(line => !/^(zeit|histamin|gruppe)/i.test(line))
   const missing = ingredients.filter(i => i.quantity === null)
   const quantities: AiQuantity[] = []
   for (const raw of quantityLines) {
@@ -159,5 +208,5 @@ export function parseRecipeAnswer(text: string, ingredients: AiIngredient[], rul
     additions.push({ name, quantity: quantity === null ? null : Math.round(quantity * 100) / 100, unit, staple })
     if (additions.length >= 8) break
   }
-  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines), histamine: parseHistamine(lines), additions }
+  return { steps: stepsOf(stepLines), quantities, times: parseTimes(lines), histamine: parseHistamine(lines), additions, group: parseGroup(lines) }
 }

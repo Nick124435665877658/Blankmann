@@ -1,11 +1,12 @@
 // Cloudflare Pages Function: POST /api/recipe-instructions  { recipeId, addIngredients? }
 // Ergänzt mit Cloudflare Workers AI (Gratis-Kontingent) die Kochanleitung, fehlende Zutatenmengen, Zeiten, Histaminwert
 // und – mit addIngredients – zusätzliche Zutaten/Gewürze (Haushaltsregeln aus den Einstellungen gelten).
-// Antwort: { steps, quantities, times, histamine, additions, model } – gespeichert wird in der App.
+// Antwort: { steps, quantities, times, histamine, additions, group, model } – gespeichert wird in der App.
+// Histamin: Gluten und Hefe rechnet die App fest ein (applyGlutenYeast), die KI bewertet nur das Histamin.
 // Die Workers-AI-Bindung „AI“ kommt aus wrangler.toml (Produktion und Vorschau) – kein Klick im Dashboard nötig.
 // Sicherheit: Das Rezept wird mit dem Login des Nutzers aus Supabase geladen (Zeilenschutz/RLS) –
 // nur Haushaltsmitglieder können ihre eigenen Rezepte ergänzen lassen, beliebige Texte gehen nicht an die KI.
-import { buildRecipeMessages, defaultRules, parseRecipeAnswer, type AiIngredient, type AiRecipe, type AiRules } from '../../src/lib/recipeAi'
+import { applyGlutenYeast, buildRecipeMessages, defaultRules, parseRecipeAnswer, type AiIngredient, type AiRecipe, type AiRules } from '../../src/lib/recipeAi'
 
 type AiBinding = { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }
 type Env = { AI?: AiBinding; VITE_SUPABASE_URL?: string; VITE_SUPABASE_PUBLISHABLE_KEY?: string }
@@ -71,6 +72,9 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
       if (!addIngredients) result.additions = []
       // Vorhandene Mengen bleiben unangetastet (bei Thermomix-Rezepten ausdrücklich): nur Zutaten ohne Menge bekommen eine.
       result.quantities = result.quantities.filter(q => ingredients.find(i => i.id === q.id)?.quantity === null)
+      // Gluten und Hefe (Nick, 22.11.2026) – mit den von der KI ergänzten Mengen und Zutaten.
+      const withQuantities = ingredients.map(i => { const q = result.quantities.find(x => x.id === i.id); return q ? { ...i, quantity: q.quantity, unit: q.unit } : i })
+      result.histamine = applyGlutenYeast(result.histamine, [...withQuantities, ...result.additions.map(a => ({ name: a.name, quantity: a.quantity, unit: a.unit }))])
       if (result.steps.length >= 2) return json({ ...result, model: model.id })
       lastError = 'leere Antwort'
     } catch (error) {

@@ -3,7 +3,7 @@ import { baseKey } from './kitchen'
 import { guessCategory } from './categories'
 
 type Addition = { name: string; quantity: number | null; unit: string | null; staple: boolean }
-export type AiResult = { steps: number; quantities: number; times: number; histamine: number | null; added: string[] }
+export type AiResult = { steps: number; quantities: number; times: number; histamine: number | null; added: string[]; group: string | null }
 
 // Ruft die KI-Funktion auf und speichert das Ergebnis:
 // Anleitung (ersetzt die bisherige nur, wenn replaceSteps) und Mengen nur für Zutaten, die noch keine Menge haben.
@@ -14,7 +14,7 @@ export type AiResult = { steps: number; quantities: number; times: number; hista
 export async function completeRecipeWithAi(recipeId: string, householdId: string, accessToken: string, replaceSteps: boolean, addIngredients = replaceSteps): Promise<AiResult> {
   if (!supabase) throw new Error('Keine Datenbankverbindung.')
   const response = await fetch('/api/recipe-instructions', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ recipeId, addIngredients }) })
-  const body = await response.json().catch(() => null) as { steps?: string[]; quantities?: { id: string; quantity: number; unit: string | null }[]; times?: { prepMinutes: number | null; cookMinutes: number | null }; histamine?: { score: number | null; note: string | null }; additions?: Addition[]; error?: string } | null
+  const body = await response.json().catch(() => null) as { steps?: string[]; quantities?: { id: string; quantity: number; unit: string | null }[]; times?: { prepMinutes: number | null; cookMinutes: number | null }; histamine?: { score: number | null; note: string | null }; additions?: Addition[]; group?: string | null; error?: string } | null
   if (!response.ok || !body?.steps?.length) throw new Error(body?.error || 'Die KI-Funktion ist nicht erreichbar (' + response.status + ').')
   let steps = 0
   if (replaceSteps) {
@@ -49,7 +49,14 @@ export async function completeRecipeWithAi(recipeId: string, householdId: string
     if ((data ?? []).length) histamine = body.histamine.score
   }
   const added = addIngredients && body.additions?.length ? await saveAdditions(recipeId, householdId, body.additions) : []
-  return { steps, quantities, times, histamine, added }
+  // Rezept-Gruppe nur eintragen, wo noch keine steht – von Hand gewählte Gruppen bleiben.
+  let group: string | null = null
+  if (body.group) {
+    const { data, error } = await supabase.from('recipes').update({ category: body.group }).eq('id', recipeId).eq('household_id', householdId).is('category', null).select('id')
+    if (error) throw new Error('Gruppe konnte nicht gespeichert werden: ' + error.message)
+    if ((data ?? []).length) group = body.group
+  }
+  return { steps, quantities, times, histamine, added, group }
 }
 
 async function saveAdditions(recipeId: string, householdId: string, additions: Addition[]): Promise<string[]> {

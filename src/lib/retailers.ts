@@ -1,7 +1,7 @@
 // Supermärkte: Code (wie in household_food_prices.retailer_code / price_retailers.code) → Anzeigename.
 // Reihenfolge = Reihenfolge in Auswahllisten und Karten.
 export const retailers: Record<string, string> = {
-  aldi_nord: 'ALDI Nord', aldi_sued: 'ALDI Süd', lidl: 'Lidl', rewe: 'REWE', kaufland: 'Kaufland', edeka: 'EDEKA', penny: 'Penny', netto: 'Netto', other: 'Anderer Markt',
+  aldi_nord: 'ALDI Nord', aldi_sued: 'ALDI Süd', lidl: 'Lidl', rewe: 'REWE', kaufland: 'Kaufland', edeka: 'EDEKA', penny: 'Penny', netto: 'Netto', globus: 'Globus', knuspr: 'Knuspr', other: 'Anderer Markt',
 }
 // Für Bon und „Preis eintragen“ auswählbar.
 export const selectableRetailers = Object.entries(retailers)

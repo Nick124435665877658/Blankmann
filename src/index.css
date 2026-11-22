@@ -880,3 +880,7 @@
 .theme-nick .recipe-pick-mark,.theme-nick .recipe-pick.selected .recipe-pick-mark{color:#9bd9c9}
 .theme-nick .panel-toggle-icons{color:#9bd9c9}
 .theme-nick .week-budget h2 .over{color:#ff8a7a}
+/* 0.3.46 – Rezept-Gruppen */
+.badge.group{background:#eef1e6;color:#4e6045;border:1px solid #dfe5d4}
+.theme-nick .badge.group{background:#22303d;color:#c2d0dc;border-color:#354556}
+.recipe-filters>small{align-self:center}

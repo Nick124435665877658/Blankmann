@@ -13,6 +13,7 @@ export type SummaryRecipe = {
   histamine_score?: number | null
   histamine_note?: string | null
   rating?: number | null
+  category?: string | null
   recipe_ingredients?: unknown[]
 }
 
@@ -26,16 +27,19 @@ const histamineClass = (score: number) => 'badge histamine h' + (score >= 7 ? 'g
 
 export default function RecipeSummary({ recipe, photoUrl, costText }: { recipe: SummaryRecipe; photoUrl?: string; costText: string }) {
   const minutes = recipeMinutes(recipe)
+  // Bei Thermomix-Rezepten mit Gruppe ist die Cookidoo-Liste doppelt – dann nur Gruppe als Abzeichen.
+  const info = [isThermomix(recipe) && recipe.category ? '' : recipeListName(recipe), recipe.servings + ' Portionen', (recipe.recipe_ingredients || []).length + ' Zutaten', minutes ? '⏱ ' + minutes + ' Min' : '', costText].filter(Boolean).join(' · ')
   return <>
     {photoUrl ? <img className="recipe-thumb" src={photoUrl} alt={'Foto von ' + recipe.title}/> : <div className="pantry-icon"><CookingPot size={18}/></div>}
     <div className="pantry-name">
       <b>{recipe.title}</b>
       <span className="recipe-badges">
+        {recipe.category && <span className="badge group" title="Gruppe">{recipe.category}</span>}
         {isThermomix(recipe) && <span className="badge thermomix" title="Thermomix-Rezept aus Cookidoo">Thermomix</span>}
         {recipe.histamine_score ? <span className={histamineClass(recipe.histamine_score)} title={recipe.histamine_note || 'KI-Schätzung'}>Histamin {recipe.histamine_score}/10</span> : null}
         {recipe.rating != null ? <span className="badge rating">★ {String(Number(recipe.rating)).replace('.', ',')}/10</span> : null}
       </span>
-      <small>{recipeListName(recipe)} · {recipe.servings} Portionen · {(recipe.recipe_ingredients || []).length} Zutaten{minutes ? ' · ⏱ ' + minutes + ' Min' : ''} · {costText}</small>
+      <small>{info}</small>
     </div>
   </>
 }

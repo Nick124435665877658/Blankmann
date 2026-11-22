@@ -844,3 +844,39 @@
 .thermomix-note a{text-decoration:none;white-space:nowrap}
 .theme-nick .badge.thermomix{background:#1d3a2c;color:#8fd8a5;border-color:#2c5240}
 .theme-nick .thermomix-note{background:#18292a;border-color:#2b4440;color:#a9d8bf}
+/* 0.3.45 – Wochenplan aufgeräumt: einklappbare Kästen, Rezept-Auswahl mit Suche und Sortierung */
+.panel-toggle{cursor:pointer;user-select:none;border-radius:10px;gap:12px}
+.panel-toggle:focus-visible{outline:2px solid #8ba187;outline-offset:4px}
+.panel-toggle-icons{display:inline-flex;align-items:center;gap:8px;color:#799076;flex:none}
+.panel-chevron{display:inline-flex;transition:transform .15s ease;opacity:.6}
+.week-budget.collapsed .panel-chevron,.week-items.collapsed .panel-chevron{transform:rotate(-90deg)}
+.week-budget.collapsed .panel-head,.week-items.collapsed .panel-head{margin-bottom:0}
+.week-budget h2 .over{color:#c0392b}
+.meal-recipe-choice{display:grid;gap:7px;flex:1.4;min-width:0}
+.meal-recipe-label{color:#727d71;font-size:10px;font-weight:600}
+.meal-recipe-choice>.button{justify-content:flex-start;padding:11px 12px}
+.meal-recipe-selected{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 12px;border:1px solid #e5e8df;border-radius:8px;background:#fffefa}
+.meal-recipe-selected b{font-size:11px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recipe-picker{margin-top:16px;border-top:1px solid #eeefe9;padding-top:14px}
+.recipe-picker .recipe-search{flex:1 1 200px}
+.recipe-picker .recipe-filters input{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:12px}
+.recipe-picker .recipe-filters>small{align-self:center}
+.recipe-picker-list{max-height:460px;overflow:auto;border:1px solid var(--line);border-radius:11px;padding:0 10px}
+.recipe-pick{cursor:pointer;border-radius:8px;padding-left:6px;padding-right:6px}
+.recipe-pick:hover{background:#f5f6f1}
+.recipe-pick.selected{background:#eaf0e8}
+.recipe-pick:focus-visible{outline:2px solid #8ba187;outline-offset:-2px}
+.recipe-pick-mark{font-size:10px;font-weight:700;color:#6c856c;white-space:nowrap}
+.recipe-pick.selected .recipe-pick-mark{color:#34533d}
+@media(max-width:720px){.meal-recipe-choice{min-width:100%}.recipe-picker-list{max-height:60vh}}
+.device-phone .meal-recipe-choice{min-width:100%}
+.device-phone .recipe-picker-list{max-height:60vh}
+.theme-nick .meal-recipe-selected{background:#101a24;border-color:#354556}
+.theme-nick .meal-recipe-label{color:#9aa8b8}
+.theme-nick .recipe-picker{border-color:#283645}
+.theme-nick .recipe-picker-list{border-color:#2b3948}
+.theme-nick .recipe-pick:hover{background:#1a2733}
+.theme-nick .recipe-pick.selected{background:#203b39}
+.theme-nick .recipe-pick-mark,.theme-nick .recipe-pick.selected .recipe-pick-mark{color:#9bd9c9}
+.theme-nick .panel-toggle-icons{color:#9bd9c9}
+.theme-nick .week-budget h2 .over{color:#ff8a7a}

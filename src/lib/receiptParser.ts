@@ -1,9 +1,9 @@
 // Auswertung von OCR-Text/Wortpositionen eines Kassenbons.
 // Aus ReceiptScanner.tsx ausgelagert, damit der Parser ohne Browser testbar ist (scripts/check-receipt-parser.ts).
 // Getestet mit Penny (Mengenzeile UNTER dem Artikel) und Netto Marken-Discount (Mengenzeile VOR dem Artikel).
-import { splitOrganic } from './kitchen.ts'
+import { sameKind, splitOrganic } from './kitchen.ts'
 
-export type Food = { id: string; name: string; normalized_name: string; category: string; default_unit: string | null }
+export type Food = { id: string; name: string; normalized_name: string; category: string; default_unit: string | null; typical_package_quantity?: number | string | null; typical_package_unit?: string | null }
 // review: warum eine Zeile geprüft werden sollte. note: Hinweis, der in der Prüfliste unter der Zeile steht.
 export type LineReview = 'price-missing' | 'doubtful' | 'second-run' | 'derived' | 'corrected'
 export type Line = { id: string; name: string; price: string; foodId: string; quantity: string; unit: string; selected: boolean; review?: LineReview; note?: string; ocrPrice?: string; organic?: boolean; splitToOne?: boolean; packPrefilled?: boolean }
@@ -28,6 +28,31 @@ export function knownPacks(rows: { food_item_id: string; package_quantity: numbe
     if (!known || at > known.at) packs.set(row.food_item_id, { quantity, unit: row.package_unit.trim(), at })
   }
   return new Map([...packs].map(([id, { quantity, unit }]) => [id, { quantity, unit }]))
+}
+// Welche Packung beim Bon vorgeschlagen wird (0.3.55, Nick 24.11.2026):
+// 1. die zuletzt selbst gekaufte Packung (Kassenbon oder von Hand eingetragener Preis),
+// 2. sonst die übliche Packung des Nahrungsmittels (z. B. Butter 250 g),
+// 3. sonst die neueste Packung aus Online-Preisen.
+// Passt die Einheit der gekauften Packung nicht zur üblichen (Butter „1 Stück“ statt Gramm), gilt die übliche.
+export type PackRow = { food_item_id: string; package_quantity: number | string | null; package_unit: string | null; observed_at?: string | null; source_name?: string | null }
+export const isOwnPrice = (source: string | null | undefined) => /^(kassenbon|manuell)/i.test((source ?? '').trim())
+export function typicalPack(food: { typical_package_quantity?: number | string | null; typical_package_unit?: string | null } | undefined): KnownPack | null {
+  const quantity = Number(food?.typical_package_quantity)
+  const unit = (food?.typical_package_unit ?? '').trim()
+  return quantity > 0 && unit ? { quantity, unit } : null
+}
+export function choosePacks(rows: PackRow[], foods: { id: string; typical_package_quantity?: number | string | null; typical_package_unit?: string | null }[] = []): Map<string, KnownPack> {
+  const own = knownPacks(rows.filter(r => isOwnPrice(r.source_name)))
+  const other = knownPacks(rows.filter(r => !isOwnPrice(r.source_name)))
+  const typical = new Map<string, KnownPack>()
+  for (const food of foods) { const pack = typicalPack(food); if (pack) typical.set(food.id, pack) }
+  const result = new Map<string, KnownPack>()
+  for (const id of new Set([...own.keys(), ...typical.keys(), ...other.keys()])) {
+    const bought = own.get(id), usual = typical.get(id)
+    const pack = bought && (!usual || sameKind(bought.unit, usual.unit)) ? bought : usual ?? bought ?? other.get(id)
+    if (pack) result.set(id, pack)
+  }
+  return result
 }
 export type OCRWord = { text: string; confidence?: number; bbox: { x0: number; y0: number; x1: number; y1: number } }
 

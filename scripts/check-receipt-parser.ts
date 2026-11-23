@@ -1,12 +1,12 @@
 // Regressionstest für den Bon-Parser. Aufruf: npm run test:receipt
 // Referenzbon: Penny München, 18.11.2026, SUMME 16,84 EUR (Artikel + Rabatt + Pfand).
 import { readFileSync } from 'node:fs'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, isNonFoodName, knownPacks, parseReceipt, prefillPackage, wordFoodMatch, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
+import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, choosePacks, isNonFoodName, knownPacks, parseReceipt, prefillPackage, wordFoodMatch, type Line, type OCRWord } from '../src/lib/receiptParser.ts'
 
 let failed = 0
-const expect = (condition: boolean, message: string) => {
+const expect = (condition: boolean, message: string, detail?: unknown) => {
   if (condition) console.log('  ok     ' + message)
-  else { failed++; console.log('  FEHLER ' + message) }
+  else { failed++; console.log('  FEHLER ' + message + (detail !== undefined ? '  → ' + JSON.stringify(detail) : '')) }
 }
 const find = (lines: Line[], pattern: RegExp) => lines.find(line => pattern.test(line.name))
 const show = (lines: Line[], total: number | null) => {
@@ -265,6 +265,40 @@ console.log('\n8) Leere Menge mit der letzten Packung vorbelegen')
   const none = prefillPackage({ ...filled, foodId: 'unbekannt' }, packs)
   expect(none.quantity === '' && !none.packPrefilled, 'Ohne bekannte Packung bleibt die Menge leer')
   expect(prefillPackage({ ...line, foodId: '' }, packs).quantity === '', 'Ohne Zuordnung (z. B. Pfand, Tasche) nichts vorbelegt')
+}
+
+// 9) Übliche Packung (Nick, 24.11.2026): zuletzt gekauft → übliche Packung → Online-Preis; Einheit passt nicht → übliche.
+console.log('\n9) Welche Packung vorgeschlagen wird')
+{
+  const rows = [
+    { food_item_id: 'butter', package_quantity: 1, package_unit: 'Stück', observed_at: '2026-11-23', source_name: 'Kassenbon Lidl' },
+    { food_item_id: 'butter', package_quantity: 250, package_unit: 'g', observed_at: '2026-06-30', source_name: 'Spartopf Preisradar – Juni 2026' },
+    { food_item_id: 'eier', package_quantity: 6, package_unit: 'Stk', observed_at: '2026-11-22', source_name: 'Kassenbon EDEKA' },
+    { food_item_id: 'tomaten', package_quantity: 250, package_unit: 'g', observed_at: '2026-11-21', source_name: 'Knuspr Online-Shop – 21.11.2026' },
+    { food_item_id: 'pflaumen', package_quantity: 60, package_unit: 'g', observed_at: '2026-11-21', source_name: 'Knuspr Online-Shop – 21.11.2026' },
+    { food_item_id: 'mehl', package_quantity: 500, package_unit: 'g', observed_at: '2026-11-20', source_name: 'Manuell' },
+    { food_item_id: 'curry', package_quantity: 1, package_unit: 'Portion', observed_at: '2026-06-30', source_name: 'Spartopf Preisradar – Juni 2026' },
+  ]
+  const foods = [
+    { id: 'butter', typical_package_quantity: '250', typical_package_unit: 'g' },
+    { id: 'eier', typical_package_quantity: 10, typical_package_unit: 'Stk' },
+    { id: 'tomaten', typical_package_quantity: 500, typical_package_unit: 'g' },
+    { id: 'pflaumen', typical_package_quantity: 1, typical_package_unit: 'kg' },
+    { id: 'mehl', typical_package_quantity: 1, typical_package_unit: 'kg' },
+    { id: 'zimt', typical_package_quantity: 50, typical_package_unit: 'g' },
+    { id: 'leer', typical_package_quantity: null, typical_package_unit: null },
+  ]
+  const packs = choosePacks(rows, foods)
+  const show = (id: string) => { const p = packs.get(id); return p ? p.quantity + ' ' + p.unit : '–' }
+  expect(show('butter') === '250 g', 'Butter: Bon „1 Stück“ passt nicht zur üblichen Packung → 250 g', show('butter'))
+  expect(show('eier') === '6 Stk', 'Eier: zuletzt gekauft (6 Stk) geht vor üblich (10 Stk)', show('eier'))
+  expect(show('tomaten') === '500 g', 'Tomaten: übliche Packung geht vor Online-Preis (250 g)', show('tomaten'))
+  expect(show('pflaumen') === '1 kg', 'Pflaumen: 1 kg statt Online „60 g“', show('pflaumen'))
+  expect(show('mehl') === '500 g', 'Mehl: von Hand eingetragener Preis zählt wie gekauft (500 g, passt zu kg)', show('mehl'))
+  expect(show('curry') === '1 Portion', 'Curry ohne übliche Packung: Online-Angabe bleibt als letzte Wahl', show('curry'))
+  expect(show('zimt') === '50 g' && !packs.has('leer'), 'Nur übliche Packung → die; ganz ohne Angabe → nichts')
+  const filled = prefillPackage({ id: '1', name: 'Butter', price: '1,19', foodId: 'butter', quantity: '', unit: '', selected: true }, packs)
+  expect(filled.quantity === '250' && filled.unit === 'g', 'Bon „Butter 1,19“ ohne Menge → 250 g vorgeschlagen')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

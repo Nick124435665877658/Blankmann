@@ -1,6 +1,9 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
 import { applyGlutenYeast, buildRecipeMessages, glutenYeastPenalty, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
+import { compareMatches, matchRecipeToPantry } from '../src/lib/pantryMatch.ts'
+import { buildPantryIdeasMessages, parsePantryIdeas } from '../src/lib/pantryIdeas.ts'
+import { defaultRules } from '../src/lib/recipeAi.ts'
 import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, niceAmount, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
 
 let failed = 0
@@ -281,6 +284,48 @@ console.log('\n10) Rezept-Gruppen')
   expect(parsed.group === 'Suppe & Eintopf' && parsed.steps.length === 2 && parsed.histamine.score === 8, 'GRUPPE-Zeile wird gelesen und nicht als Schritt gezählt')
   const prompt = buildRecipeMessages({ title: 'Suppe', description: null, servings: 2, prep_minutes: null, cook_minutes: null }, [])[1].content
   expect(/GRUPPE:/.test(prompt) && /Hauptgericht, Beilage, Suppe & Eintopf/.test(prompt), 'Prompt fragt nach genau einer Gruppe aus der Liste')
+}
+
+console.log('\n11) Was kochen? – Rezepte gegen den Vorrat')
+{
+  const foods = [{ id: 'salz', name: 'Salz', is_staple: true }, { id: 'kart', name: 'Kartoffeln' }, { id: 'eier', name: 'Eier' }, { id: 'spinat', name: 'Rahmspinat' }, { id: 'milch', name: 'Milch' }, { id: 'butter', name: 'Butter' }, { id: 'feta', name: 'Feta' }]
+  const pantry = [
+    { food_item_id: 'kart', name: 'Kartoffeln', quantity: 2500, unit: 'g', best_before: null },
+    { food_item_id: 'eier', name: 'Eier', quantity: 10, unit: 'Stk', best_before: '2026-12-02' },
+    { food_item_id: 'spinat', name: 'Rahmspinat', quantity: 150, unit: 'g', best_before: '2026-11-24' },
+    { food_item_id: 'milch', name: 'Milch', quantity: 1, unit: 'l', best_before: '2026-11-25' },
+    { food_item_id: 'butter', name: 'Butter', quantity: null, unit: null, best_before: null },
+  ]
+  const recipe = [
+    { food_item_id: 'kart', name: 'Kartoffeln', quantity: 400, unit: 'g' },
+    { food_item_id: 'eier', name: 'Eier', quantity: 2, unit: 'Stk' },
+    { food_item_id: 'spinat', name: 'Rahmspinat', quantity: 200, unit: 'g' },
+    { food_item_id: 'salz', name: 'Salz', quantity: 1, unit: 'Prise' },
+    { food_item_id: 'milch', name: 'Milch', quantity: 150, unit: 'g' },
+    { food_item_id: 'butter', name: 'Butter', quantity: 2, unit: 'EL' },
+    { food_item_id: 'feta', name: 'Feta', quantity: 100, unit: 'g', is_optional: true },
+  ]
+  const m = matchRecipeToPantry(recipe, pantry, foods, '2026-11-26')
+  expect(m.total === 6 && m.have === 5, 'Kartoffelpüree: 5 von 6 da (Feta optional zählt nicht, Salz = Grundausstattung)')
+  expect(m.missing.length === 1 && m.missing[0].name === 'Rahmspinat' && m.missing[0].short && m.missing[0].quantity === 50, 'Rahmspinat: 150 g da, 200 g nötig → fehlt 50 g')
+  expect(m.expiringUsed.includes('Milch') && !m.expiringUsed.includes('Rahmspinat'), 'Bald ablaufend genutzt: Milch (150 g ≈ 150 ml reicht); Rahmspinat reicht nicht → zählt nicht')
+  const full = matchRecipeToPantry(recipe.filter(r => r.name !== 'Rahmspinat'), pantry, foods, '2026-11-26')
+  expect(full.complete && full.share === 1, 'Ohne Rahmspinat: alles da')
+  const byName = matchRecipeToPantry([{ food_item_id: null, name: 'Eier', quantity: 3, unit: 'Stk' }], pantry, foods, '2026-11-26')
+  expect(byName.complete, 'Zutat ohne Katalog-Zuordnung wird über den Namen gefunden')
+  const sorted = [{ match: m, rating: 9, title: 'B' }, { match: full, rating: 5, title: 'A' }].sort(compareMatches)
+  expect(sorted[0].title === 'A', 'Sortierung: komplett machbar vor besser bewertet')
+}
+
+console.log('\n12) Was kochen? – KI-Ideen auswerten')
+{
+  const answer = ['Hier sind Ideen:', '**GERICHT:** Kartoffel-Mozzarella-Auflauf', 'GRUPPE: Hauptgericht', 'BESCHREIBUNG: Cremiger Auflauf.', 'PORTIONEN: 2', 'ZEIT: Vorbereitung 15 Min | Kochen 35 Min', 'HISTAMIN: 7 | Mozzarella ist frisch', 'ZUTATEN:', '- Kartoffeln | 600 | g', '- Mozzarella | 125 | g', '- Mehl | 2 | EL', 'SCHRITTE:', '1. Kartoffeln schneiden.', '2. Schichten und bei 200 °C backen.', '---', 'GERICHT: Tomatensuppe', 'GRUPPE: Suppe & Eintopf', 'ZUTATEN:', '- Tomaten | 500 | g', '- Zwiebeln | 1 | Stk', 'SCHRITTE:', '1. Kochen.', '2. Pürieren.', '---', 'GERICHT: Kartoffelrösti', 'GRUPPE: Beilage', 'HISTAMIN: 9', 'ZUTATEN:', '- Kartoffeln | 400 | g', '- Öl | 2 | EL', 'SCHRITTE:', '1. Reiben.', '2. Braten.'].join('\n')
+  const ideas = parsePantryIdeas(answer, { ...defaultRules, tomatoFree: true })
+  expect(ideas.length === 2 && ideas[0].title === 'Kartoffel-Mozzarella-Auflauf' && ideas[1].title === 'Kartoffelrösti', '2 Ideen erkannt, Tomatensuppe wegen „tomatenfrei“ verworfen')
+  expect(ideas[0].group === 'Hauptgericht' && ideas[0].prepMinutes === 15 && ideas[0].cookMinutes === 35 && ideas[0].ingredients.length === 3 && ideas[0].steps.length === 2, 'Gruppe, Zeiten, Zutaten und Schritte gelesen')
+  expect(ideas[0].histamine.score === 6, 'Gluten (2 EL Mehl) senkt Histamin 7 → 6')
+  const msgs = buildPantryIdeasMessages([{ name: 'Mozzarella', quantity: 125, unit: 'g', best_before: '2026-11-25' }, { name: 'Kartoffeln', quantity: 2500, unit: 'g', best_before: null }], ['Salz'], defaultRules, '2026-11-26', 4)
+  expect(msgs[1].content.includes('- ! Mozzarella (125 g)') && msgs[1].content.includes('höchstens 2 Zutaten') && msgs[1].content.includes('Keine Tomaten'), 'Prompt: bald Ablaufendes markiert, höchstens 2 fehlende, Haushaltsregeln')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

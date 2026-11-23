@@ -1049,3 +1049,49 @@ div.add-panel-body{display:contents}
 .theme-nick .device-choice.selected{background:#286257;color:#eafaf5;box-shadow:none}
 .theme-nick .food-price,.theme-nick .price-catalog-value b{color:#9fd8c4}
 .theme-nick .toggle-row{border-bottom-color:#283645}
+/* 0.3.50 – „Was kochen?“: Vorschläge aus dem Vorrat (eigene Rezepte + KI-Ideen) */
+.cook-panel{margin-bottom:18px}
+.cook-hint{margin:-6px 0 14px;font-size:12px;line-height:1.5}
+.cook-toggle{display:inline-flex!important;align-items:center;gap:8px;margin:0 0 12px;font-size:12px;font-weight:600;cursor:pointer}
+.cook-toggle input{width:16px;height:16px;accent-color:var(--green)}
+.cook-row{padding:12px 0}
+.cook-match{display:grid;gap:6px;margin:8px 0 0 56px}
+.cook-bar{height:6px;border-radius:999px;background:var(--line);overflow:hidden}
+.cook-bar i{display:block;height:100%;border-radius:inherit;background:#d9a441}
+.cook-bar.complete i{background:var(--green)}
+.cook-match-text{font-size:12px;line-height:1.45;color:var(--muted)}
+.cook-match-text b{color:var(--ink)}
+.cook-match .expiry-tag{justify-self:start;margin-left:0}
+.cook-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:10px 0 0 56px}
+.cook-actions .button{display:inline-flex;align-items:center;gap:6px;margin:0}
+.cook-more{display:block;margin:12px auto 0}
+.cook-ai .button-dark{display:inline-flex;align-items:center;gap:8px}
+.idea-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-top:16px}
+.idea-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--paper);display:flex;flex-direction:column;gap:8px;min-width:0}
+.idea-head{display:grid;gap:6px}
+.idea-head b{font-size:15px;line-height:1.3}
+.idea-card p{margin:0;font-size:12px;line-height:1.5;color:var(--muted)}
+.idea-ingredients{list-style:none;margin:2px 0 0;padding:0;display:grid;gap:3px;font-size:12px}
+.idea-ingredients li{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.idea-ingredients li>span:first-child{min-width:56px;color:var(--muted);font-variant-numeric:tabular-nums}
+.idea-ingredients li.missing{color:#b2352a}
+.missing-tag{padding:1px 6px;border-radius:999px;background:#fbe1dc;color:#9a2b1f;font-size:9px;font-weight:700}
+.idea-steps summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--green)}
+.idea-steps ol{margin:8px 0 0;padding-left:18px;display:grid;gap:5px;font-size:12px;line-height:1.5}
+.idea-card .cook-actions{margin:auto 0 0;padding-top:4px}
+.saved-tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--green)}
+@media(max-width:720px){.cook-match,.cook-actions{margin-left:0}.idea-list{grid-template-columns:minmax(0,1fr)}}
+.device-phone .cook-match,.device-phone .cook-actions{margin-left:0}
+.device-phone .idea-list{grid-template-columns:minmax(0,1fr)}
+.theme-nick .cook-bar{background:#283645}
+.theme-nick .cook-bar.complete i{background:#3d9a86}
+.theme-nick .cook-match-text b{color:#e5edf3}
+.theme-nick .idea-card{background:#101a24;border-color:#2b3a4a}
+.theme-nick .idea-ingredients li.missing{color:#f2a49a}
+.theme-nick .missing-tag{background:#4a2420;color:#f6b4aa}
+.theme-nick .idea-steps summary,.theme-nick .saved-tag{color:#9fd8c4}
+.app-shell.theme-sophia .cook-bar{background:#F6D5DE!important}
+.app-shell.theme-sophia .cook-bar i{background:#B5566B!important}
+.app-shell.theme-sophia .cook-bar.complete i{background:#7F9A75!important}
+.app-shell.theme-sophia .idea-card{background:#FFF6F8!important;border-color:#EDC3CE!important}
+.app-shell.theme-sophia .missing-tag{background:#F6D5DE!important}

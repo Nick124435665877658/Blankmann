@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import {
-  Apple, BookOpen, CalendarDays, Check, ChevronDown, CircleDollarSign, ReceiptText, Edit3, Trash2,
+  Apple, BookOpen, CalendarDays, ChefHat, Check, ChevronDown, LoaderCircle, CircleDollarSign, ReceiptText, Edit3, Trash2,
   CookingPot, Leaf, ListChecks, LogOut, Plus, Search, Settings2, ShoppingBasket,
   Sparkles, Sprout, Store, Warehouse, X, Smartphone, Tablet,
 } from 'lucide-react'
@@ -12,6 +12,9 @@ import ManualPriceForm from './components/ManualPriceForm'
 import IngredientPicker from './components/IngredientPicker'
 import RecipeSummary, { recipeMinutes } from './components/RecipeSummary'
 import { groupForMeal, recipeGroups } from './lib/recipeGroups'
+import { compareMatches, matchRecipeToPantry, type MissingLine } from './lib/pantryMatch'
+import { fetchPantryIdeas, saveIdeaAsRecipe } from './lib/pantryIdeasClient'
+import type { PantryIdea } from './lib/pantryIdeas'
 import { baseKey, canSplitToOne, estimateCost, estimateRecipeCost, formatAmount, fromBase, instructionSteps, niceAmount, sameKind, splitOrganic, splitToOne, toBase, type CostLine } from './lib/kitchen'
 import { retailerCards, retailerName } from './lib/retailers'
 import { compareAisles, foodCategories } from './lib/categories'
@@ -19,7 +22,7 @@ import { completeRecipeWithAi } from './lib/recipeAiClient'
 import { shrinkImage } from './lib/image'
 import { localISO } from './lib/dates'
 
-type Tab = 'overview' | 'planner' | 'shopping' | 'pantry' | 'foods' | 'recipes' | 'prices' | 'receipts' | 'settings'
+type Tab = 'overview' | 'planner' | 'shopping' | 'pantry' | 'cook' | 'foods' | 'recipes' | 'prices' | 'receipts' | 'settings'
 type Household = { id: string; name: string }
 type Settings = {
   weekly_budget: number
@@ -46,6 +49,7 @@ const nav: { id: Tab; label: string; icon: typeof CalendarDays }[] = [
   { id: 'shopping', label: 'Einkaufsliste', icon: ShoppingBasket },
   { id: 'receipts', label: 'Bon scannen', icon: ReceiptText },
   { id: 'pantry', label: 'Vorrat', icon: Warehouse },
+  { id: 'cook', label: 'Was kochen?', icon: ChefHat },
   { id: 'foods', label: 'Nahrungsmittel', icon: Apple },
   { id: 'recipes', label: 'Rezepte', icon: BookOpen },
   { id: 'prices', label: 'Preise', icon: Store },
@@ -119,6 +123,14 @@ export default function App() {
   const [foodSearch, setFoodSearch] = useState('')
   // 0.3.49: Gruppe/Grundausstattung erst nach ✎; Vorrat nach Lagerort gruppiert (zuklappbar, pro Gerät gemerkt)
   const [editingFoodId, setEditingFoodId] = useState<string | null>(null)
+  // „Was kochen?“ (0.3.50): Vorschläge aus dem Vorrat – eigene Rezepte und KI-Ideen (nur auf Knopfdruck)
+  const [cookGroup, setCookGroup] = useState('')
+  const [cookOnlyComplete, setCookOnlyComplete] = useState(false)
+  const [cookShow, setCookShow] = useState(12)
+  const [ideas, setIdeas] = useState<PantryIdea[] | null>(null)
+  const [ideasBusy, setIdeasBusy] = useState(false)
+  const [ideasError, setIdeasError] = useState('')
+  const [savedIdeas, setSavedIdeas] = useState<Record<string, string>>({})
   const [pantryCollapsed, setPantryCollapsed] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem('blankmann-pantry-collapsed') || '[]') as string[] } catch { return [] } })
   const togglePantryGroup = (name: string) => setPantryCollapsed(current => { const next = current.includes(name) ? current.filter(n => n !== name) : [...current, name]; try { localStorage.setItem('blankmann-pantry-collapsed', JSON.stringify(next)) } catch { /* nur Komfort */ } return next })
   // Zugeklappte Gruppen im Katalog – pro Gerät gemerkt.
@@ -264,6 +276,40 @@ export default function App() {
   if (!authReady) return <div className="loading-screen"><div className="brand-mark">B.</div><p>BLANKMANN wird vorbereitet …</p></div>
   if (!session) return <AuthScreen />
   if (!household) return <HouseholdSetup user={session.user} onCreated={async () => refreshHousehold(session.user)} />
+
+  // „Was kochen?“: Rezept in den Wochenplan (Formular mit Rezept vorgewählt, heute bzw. Wochenanfang, Abendessen)
+  function planRecipe(recipe: Recipe) {
+    const today = todayISO()
+    const date = today >= weekStart && today <= localISO(days[6]) ? today : weekStart
+    setMealRecipeId(recipe.id); setRecipePickerOpen(false); setTab('planner')
+    openMealForm(date, recipe.category === 'Frühstück & Müsli' ? 'breakfast' : 'dinner')
+  }
+  // „Was kochen?“: fehlende Zutaten als eigene Artikel auf die offene Einkaufsliste
+  async function addMissingToShopping(recipe: Recipe, missing: MissingLine[]) {
+    if (!supabase || !household) return
+    if (!listId) { setError('Es gibt gerade keine offene Einkaufsliste.'); return }
+    setBusy(true); setError('')
+    const rows = missing.map(line => { const food = foods.find(f => f.id === line.foodId); return { household_id: household.id, shopping_list_id: listId, name: food?.name ?? line.name, normalized_name: (food?.name ?? line.name).toLocaleLowerCase('de-DE').trim(), quantity: line.quantity, unit: line.unit, aisle: food?.category ?? 'Sonstiges', checked: false } })
+    const result = await supabase.from('shopping_list_items').insert(rows)
+    setBusy(false)
+    if (result.error) { setError(result.error.message); return }
+    setNotice(rows.length + (rows.length === 1 ? ' Zutat' : ' Zutaten') + ' für „' + recipe.title + '“ auf die Einkaufsliste gesetzt.')
+    await refreshData()
+  }
+  async function loadIdeas() {
+    if (!household || !session) return
+    setIdeasBusy(true); setIdeasError('')
+    try { setIdeas(await fetchPantryIdeas(household.id, session.access_token)) }
+    catch (e) { setIdeasError(e instanceof Error ? e.message : String(e)) }
+    finally { setIdeasBusy(false) }
+  }
+  async function saveIdea(idea: PantryIdea) {
+    if (!household || !session) return
+    setBusy(true); setError('')
+    try { const id = await saveIdeaAsRecipe(idea, household.id, session.user.id); setSavedIdeas(current => ({ ...current, [idea.title]: id })); setNotice('„' + idea.title + '“ ist jetzt in eurer Rezeptliste.'); await refreshData() }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)) }
+    finally { setBusy(false) }
+  }
 
   async function addShoppingItem(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -772,7 +818,7 @@ export default function App() {
       <div className="sidebar-bottom"><div className="budget-mini"><div className="budget-mini-top"><span>Wochenbudget</span><strong>{euro(budget)}</strong></div><div className="progress"><i style={{ width: Math.min(100, plannedTotal / Math.max(1, budget) * 100) + '%' }} /></div><small>≈ {euro(plannedTotal)} verplant · {budget-plannedTotal>=0?'≈ '+euro(budget-plannedTotal)+' frei':'≈ '+euro(plannedTotal-budget)+' drüber'}</small></div><button className="profile-button" onClick={signOut}><div className="avatar">{(session.user.email?.[0] ?? 'B').toUpperCase()}</div><span><b>Mein Konto</b><small>Abmelden</small></span><LogOut size={16} /></button></div>
     </aside>
     <main className="main-content">
-      <header className="topbar"><div className="topbar-left"><div className="build-meta"><b>BUILD 23.11.26-BI</b><span>VERSION 0.3.49</span></div><div className="breadcrumb">Dein Zuhause <span>/</span> {nav.find(n => n.id === tab)?.label}</div></div><div className="mobile-brand"><div className="brand-mark">B.</div><div className="mobile-brand-copy"><strong>BLANKMANN</strong><small>BUILD 23.11.26-BI</small><small>VERSION 0.3.49</small></div></div><div className="topbar-right"><span className="sync-status"><i /> Gemeinsam synchronisiert</span><button className="icon-button" aria-label="Einstellungen" onClick={() => setTab('settings')}><Settings2 size={19} /></button></div></header>
+      <header className="topbar"><div className="topbar-left"><div className="build-meta"><b>BUILD 23.11.26-BJ</b><span>VERSION 0.3.50</span></div><div className="breadcrumb">Dein Zuhause <span>/</span> {nav.find(n => n.id === tab)?.label}</div></div><div className="mobile-brand"><div className="brand-mark">B.</div><div className="mobile-brand-copy"><strong>BLANKMANN</strong><small>BUILD 23.11.26-BJ</small><small>VERSION 0.3.50</small></div></div><div className="topbar-right"><span className="sync-status"><i /> Gemeinsam synchronisiert</span><button className="icon-button" aria-label="Einstellungen" onClick={() => setTab('settings')}><Settings2 size={19} /></button></div></header>
       <div className="page-wrap">
         {error && <div className="alert error"><span>{error}</span><button onClick={() => setError('')}><X size={16}/></button></div>}
         {notice && <div className="alert success"><Check size={16}/>{notice}</div>}
@@ -834,6 +880,21 @@ export default function App() {
             </>}
             {shoppingView==='recipes' && (meals.length||shopping.length ? <>{meals.map(meal=>{const recipe=recipes.find(r=>r.id===meal.recipe_id);const allLines=recipeDemand.filter(line=>line.mealId===meal.id);const lines=allLines.filter(line=>!hiddenKeys.has(shoppingKey(line.name,line.unit)));if(allLines.length&&!lines.length)return null;return <div className="recipe-shopping-card" key={meal.id}><div className="recipe-shopping-head"><div><b>{meal.custom_title||recipe?.title||'Freies Gericht'}</b><small>{new Date(meal.meal_date+'T12:00:00').toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit'})} · {mealLabel(meal.meal_type)} · {meal.servings} Portionen</small></div><span>{recipe?'Rezept':meal.food_item_id?'Einzeln':'Ohne Rezept'}{costLabel(meal.id)?' · '+costLabel(meal.id):''}</span></div>{lines.length?lines.map((line,i)=><div className="recipe-ingredient-line" key={meal.id+'-'+i}><span>{line.name}</span><b>{line.quantity===null?'Menge offen':niceAmount(line.quantity,line.unit)}</b></div>):<p className="muted">{recipe?'Für dieses Rezept sind noch keine Zutaten hinterlegt.':meal.food_item_id?'Menge offen.':'Freies Gericht – keine Zutatenliste vorhanden.'}</p>}</div>})}{shopping.length>0&&<div className="recipe-shopping-card"><div className="recipe-shopping-head"><div><b>Manuell hinzugefügt</b><small>Artikel, die ihr unabhängig von Rezepten ergänzt habt</small></div><span>{shopping.length} Artikel</span></div>{shopping.map(item=><div className="recipe-ingredient-line" key={item.id}><button className={item.checked?'check-circle checked':'check-circle'} onClick={()=>toggleShopping(item)} aria-label="Manuellen Artikel abhaken">{item.checked&&<Check size={13}/>}</button><span>{item.name}</span><b>{item.quantity==null?'Menge offen':niceAmount(item.quantity,item.unit,{shop:true})}{(()=>{const text=shoppingCostText(estimateCost({name:item.name,food_item_id:null,quantity:item.quantity===null?null:Number(item.quantity),unit:item.unit},foods,foodPrices,priceOptions));return text?' · '+text:''})()}</b></div>)}</div>}{showHiddenButton&&<div className="details-actions">{showHiddenButton}</div>}</> : <div className="empty-state"><BookOpen size={30}/><b>Noch keine Rezepte im Wochenplan.</b><span>Wähle im Wochenplan ein gespeichertes Rezept aus.</span></div>)}
           </div></section>}
+        {tab === 'cook' && (()=>{const soon=localISO(new Date(Date.now()+3*86400000));const all=recipes.map(r=>({recipe:r,title:r.title,rating:r.rating??null,match:matchRecipeToPantry(r.recipe_ingredients??[],pantry,foods,soon)})).filter(x=>x.match.total>0);const shown=all.filter(x=>(!cookGroup||(cookGroup==='-'?!x.recipe.category:x.recipe.category===cookGroup))&&(!cookOnlyComplete||x.match.complete)).sort(compareMatches);const completeCount=all.filter(x=>x.match.complete).length;const missingCost=(missing:MissingLine[])=>{let sum=0,known=0;for(const line of missing){const c=estimateCost({name:line.name,food_item_id:line.foodId,quantity:line.quantity,unit:line.unit},foods,foodPrices,priceOptions);if(c.cost!==null){sum+=c.cost;known++}}return known?sum:null};const foodFor=(name:string)=>foods.find(f=>baseKey(f.name)===baseKey(name));const ideaRows=(ideas??[]).map(idea=>({idea,match:matchRecipeToPantry(idea.ingredients.map(i=>({food_item_id:foodFor(i.name)?.id??null,name:i.name,quantity:i.quantity,unit:i.unit})),pantry,foods,soon)})).filter(x=>x.match.missing.length<=3).sort((a,b)=>a.match.missing.length-b.match.missing.length||b.match.expiringUsed.length-a.match.expiringUsed.length).slice(0,3);return <section><div className="page-heading"><div><div className="eyebrow">AUS DEM VORRAT</div><h1>Was kochen?</h1><p>Rezepte, für die ihr schon das meiste da habt – zuerst aus eurer Sammlung, dann neue Ideen von der KI.</p></div><div className="heading-icon"><ChefHat size={25}/></div></div>
+          <div className="panel cook-panel"><div className="panel-head"><div><span className="eyebrow">AUS EUREN REZEPTEN</span><h2>{completeCount} {completeCount===1?'Rezept geht':'Rezepte gehen'} komplett mit dem Vorrat</h2></div><Warehouse size={20}/></div>
+            <p className="muted cook-hint">Grundausstattung (Salz, Öl, Gewürze …) zählt als vorhanden. Wo die Einheit passt, wird geprüft, ob die Menge reicht. Bald Ablaufendes rutscht nach vorn.</p>
+            {groupChips(cookGroup,setCookGroup)}
+            <label className="cook-toggle"><input type="checkbox" checked={cookOnlyComplete} onChange={e=>setCookOnlyComplete(e.target.checked)}/> Nur was komplett da ist</label>
+            {!pantry.length?<div className="empty-state"><Warehouse size={25}/><b>Der Vorrat ist noch leer</b><span>Trag unter „Vorrat“ ein, was ihr da habt – dann gibt es hier Vorschläge.</span></div>:!shown.length?<div className="empty-state"><ChefHat size={25}/><b>Nichts gefunden</b><span>{cookOnlyComplete?'Für kein Rezept in dieser Gruppe ist alles da – schalte „Nur was komplett da ist“ aus.':'In dieser Gruppe gibt es keine Rezepte.'}</span></div>:<>{shown.slice(0,cookShow).map(({recipe,match})=>{const cost=missingCost(match.missing);const pct=Math.round(match.share*100);return <div className="recipe-card-editable cook-row" key={recipe.id}><div className="recipe-row"><RecipeSummary recipe={recipe} photoUrl={recipe.photo_path?photoUrls[recipe.photo_path]:undefined} costText={recipeCostText(recipe)}/></div><div className="cook-match"><div className={'cook-bar'+(match.complete?' complete':'')} aria-hidden="true"><i style={{width:pct+'%'}}/></div><span className="cook-match-text"><b>{match.have} von {match.total} Zutaten da</b>{match.missing.length?' · fehlt: '+match.missing.map(m=>m.short&&m.quantity!==null?m.name+' ('+niceAmount(m.quantity,m.unit)+')':m.name).join(', '):' · alles da'}{cost!==null&&match.missing.length?' · ≈ '+euro(cost):''}</span>{match.expiringUsed.length>0&&<span className="expiry-tag">verbraucht bald Ablaufendes: {match.expiringUsed.join(', ')}</span>}</div><div className="cook-actions"><button type="button" className="button button-light button-small" onClick={()=>planRecipe(recipe)}><CalendarDays size={15}/> In den Wochenplan</button>{match.missing.length>0&&<button type="button" className="button button-light button-small" disabled={busy} onClick={()=>addMissingToShopping(recipe,match.missing)}><ShoppingBasket size={15}/> Fehlendes auf die Einkaufsliste</button>}<button type="button" className="text-link" onClick={()=>openDetails(recipe.id,null)}>Anleitung</button></div></div>})}{shown.length>cookShow&&<button type="button" className="text-link cook-more" onClick={()=>setCookShow(cookShow+12)}>Weitere {Math.min(12,shown.length-cookShow)} von {shown.length-cookShow} zeigen</button>}</>}
+          </div>
+          <div className="panel cook-panel cook-ai"><div className="panel-head"><div><span className="eyebrow">KI-IDEEN</span><h2>Neue Ideen aus eurem Vorrat</h2></div><Sparkles size={20}/></div>
+            <p className="muted cook-hint">Die KI schlägt Gerichte vor, die hauptsächlich aus eurem Vorrat bestehen – bald Ablaufendes zuerst, eure Haushaltsregeln gelten, höchstens 3 Zutaten fehlen. Kostenlos über Cloudflare, nur auf Knopfdruck.</p>
+            <button type="button" className="button button-dark" disabled={ideasBusy||!pantry.length} onClick={loadIdeas}>{ideasBusy?<LoaderCircle size={16}/>:<Sparkles size={16}/>} {ideasBusy?'Die KI denkt nach …':ideas?'Neue KI-Ideen erzeugen':'KI-Ideen erzeugen'}</button>
+            {ideasError&&<div className="alert error"><span>{ideasError}</span></div>}
+            {ideas&&!ideaRows.length&&!ideasBusy&&<div className="empty-state"><Sparkles size={25}/><b>Keine passende Idee dabei</b><span>Bei allen Vorschlägen hätten zu viele Zutaten gefehlt – einfach nochmal erzeugen.</span></div>}
+            {ideaRows.length>0&&<div className="idea-list">{ideaRows.map(({idea,match})=>{const missingNames=new Set(match.missing.map(m=>baseKey(m.name)));const minutes=(idea.prepMinutes??0)+(idea.cookMinutes??0);const saved=savedIdeas[idea.title];return <article className="idea-card" key={idea.title}><div className="idea-head"><b>{idea.title}</b><span className="recipe-badges">{idea.group&&<span className="badge group">{idea.group}</span>}{idea.histamine.score!==null&&<span className={'badge histamine h'+(idea.histamine.score>=7?'good':idea.histamine.score>=4?'mid':'bad')} title={idea.histamine.note??undefined}>Histamin {idea.histamine.score}/10</span>}</span></div>{idea.description&&<p>{idea.description}</p>}<small className="muted">{idea.servings} Portionen{minutes?' · ⏱ '+minutes+' Min':''} · {match.missing.length?match.missing.length+' fehlt':'alles da'}{match.expiringUsed.length?' · verbraucht '+match.expiringUsed.join(', '):''}</small><ul className="idea-ingredients">{idea.ingredients.map(i=>{const miss=missingNames.has(baseKey(i.name));return <li key={i.name} className={miss?'missing':''}><span>{i.quantity!==null?niceAmount(i.quantity,i.unit):''}</span> {i.name}{miss&&<span className="missing-tag">fehlt</span>}</li>})}</ul><details className="idea-steps"><summary>Anleitung ({idea.steps.length} Schritte)</summary><ol>{idea.steps.map((step,n)=><li key={n}>{step}</li>)}</ol></details><div className="cook-actions">{saved?<span className="saved-tag"><Check size={14}/> In der Rezeptliste</span>:<button type="button" className="button button-light button-small" disabled={busy} onClick={()=>saveIdea(idea)}><Plus size={15}/> Als Rezept speichern</button>}</div></article>})}</div>}
+          </div>
+        </section>})()}
         {tab === 'pantry' && <section><div className="page-heading"><div><div className="eyebrow">WENIGER VERSCHWENDEN</div><h1>Dein Vorrat</h1><p>Was da ist, muss nicht noch einmal gekauft werden.</p></div><div className="heading-icon"><Warehouse size={25}/></div></div><div className={'shopping-layout'+(planCollapsed.pantryAdd?' add-collapsed':'')}><div className={'panel add-panel'+(planCollapsed.pantryAdd?' collapsed':'')}>{addPanelHead('pantryAdd','VORRAT ERGÄNZEN','Was habt ihr da?','Antippen, um etwas zum Vorrat hinzuzufügen.',<Warehouse size={19}/>)}<form className="stack-form add-panel-body" onSubmit={addPantryItem}><label>Zutat<input name="name" placeholder="z. B. Kartoffeln" required/></label><div className="form-row"><label>Menge<input name="quantity" type="number" min="0" step="0.1" placeholder="1"/></label><label>Einheit<input name="unit" placeholder="kg"/></label></div><label className="inline-check"><input type="checkbox" name="is_organic"/> Bio <small className="muted">(zählt für Rezepte wie die normale Variante)</small></label><label>Mindesthaltbar bis<input name="best_before" type="date"/></label><label>Lagerort<select name="storage_location"><option>Vorratsschrank</option><option>Kühlschrank</option><option>Gefrierfach</option><option>Keller</option></select></label><button className="button button-dark button-full"><Plus size={16}/> Zum Vorrat</button></form></div><div className="panel shopping-list-panel"><div className="panel-head"><div><span className="eyebrow">EURE ZUTATEN</span><h2>{pantry.length} Vorratsartikel</h2></div><Search size={19}/></div>{pantry.length?(()=>{const today=todayISO();const soon=localISO(new Date(Date.now()+3*86400000));const order=['Kühlschrank','Gefrierfach','Vorratsschrank'];const groups=new Map<string,PantryItem[]>();for(const item of pantry){const place=item.storage_location||'Vorratsschrank';groups.set(place,[...(groups.get(place)??[]),item])}const names=[...groups.keys()].sort((a,b)=>(order.indexOf(a)+1||9)-(order.indexOf(b)+1||9)||a.localeCompare(b,'de'));return names.map(place=>{const items=groups.get(place)!;const closed=pantryCollapsed.includes(place);const expiring=items.filter(i=>i.best_before&&i.best_before<=soon).length;return <div className={'pantry-group'+(closed?' closed':'')} key={place}><button type="button" className="food-category-toggle pantry-group-toggle" aria-expanded={!closed} onClick={()=>togglePantryGroup(place)}><ChevronDown size={15} className="food-category-chevron"/><b>{place}</b><small>{items.length}</small>{expiring>0&&<span className="expiry-tag">{expiring} bald ablaufend</span>}</button>{!closed&&items.map(item=>{const expired=Boolean(item.best_before&&item.best_before<today);const expSoon=Boolean(item.best_before&&item.best_before<=soon);return <div className={'pantry-row'+(expSoon?' expiring':'')} key={item.id}><div className="pantry-icon"><Apple size={18}/></div><div className="pantry-name"><b>{item.name}{item.is_organic&&<span className="bio-tag">Bio</span>}{expSoon&&<span className="expiry-tag">{expired?'abgelaufen':'läuft bald ab'}</span>}</b><small>{item.best_before?'MHD '+new Date(item.best_before+'T12:00:00').toLocaleDateString('de-DE'):'ohne MHD'}</small></div><span>{niceAmount(item.quantity,item.unit)}</span><div className="meal-actions"><button type="button" onClick={()=>deletePantryItem(item)} aria-label={item.name+' aus dem Vorrat löschen'}><Trash2 size={13}/></button></div></div>})}</div>})})():<div className="empty-state"><Warehouse size={30}/><b>Noch ist der Vorrat leer.</b><span>Trage eure Zutaten ein, damit wir sie beim Planen berücksichtigen können.</span></div>}</div></div></section>}
         {tab === 'foods' && <section>
           <div className="page-heading"><div><div className="eyebrow">EURE ZUTATENBASIS</div><h1>Nahrungsmittel</h1><p>{foods.length} Einträge im gemeinsamen Katalog.</p></div><div className="heading-icon"><Apple size={25}/></div></div>

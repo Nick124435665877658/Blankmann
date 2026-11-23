@@ -57,7 +57,7 @@ export type AiRules = { tomatoFree: boolean; creamFree: boolean; histamineLow: b
 export const defaultRules: AiRules = { tomatoFree: true, creamFree: true, histamineLow: true, vegetableRich: true, notes: null }
 export type AiOptions = { addIngredients?: boolean; rules?: AiRules }
 
-function ruleLines(rules: AiRules) {
+export function ruleLines(rules: AiRules) {
   return [
     rules.tomatoFree ? 'Keine Tomaten und keine Tomatenprodukte (auch kein Tomatenmark, Ketchup, passierte Tomaten).' : '',
     rules.creamFree ? 'Keine Sahne (auch keine Kochsahne, kein Schmand, keine Crème fraîche).' : '',
@@ -67,7 +67,7 @@ function ruleLines(rules: AiRules) {
   ].filter(Boolean)
 }
 // Sicherheitsnetz: Ergänzungen, die gegen die Haushaltsregeln verstoßen, werden verworfen.
-function forbidden(name: string, rules: AiRules) {
+export function forbidden(name: string, rules: AiRules) {
   const n = keyOf(name)
   return (rules.tomatoFree && /tomat|ketchup/.test(n))
     || (rules.creamFree && /sahne|schmand|creme fraiche|schlagrahm/.test(n))
@@ -125,8 +125,8 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
   ]
 }
 
-const unitAliases: Record<string, string> = { gramm: 'g', gr: 'g', g: 'g', kilogramm: 'kg', kg: 'kg', milliliter: 'ml', ml: 'ml', liter: 'l', l: 'l', stueck: 'Stk', stuck: 'Stk', stk: 'Stk', st: 'Stk', essloeffel: 'EL', el: 'EL', teeloeffel: 'TL', tl: 'TL', bund: 'Bund', prise: 'Prise', prisen: 'Prise', zehe: 'Zehe', zehen: 'Zehe' }
-function parseNumber(value: string): number | null {
+export const unitAliases: Record<string, string> = { gramm: 'g', gr: 'g', g: 'g', kilogramm: 'kg', kg: 'kg', milliliter: 'ml', ml: 'ml', liter: 'l', l: 'l', stueck: 'Stk', stuck: 'Stk', stk: 'Stk', st: 'Stk', essloeffel: 'EL', el: 'EL', teeloeffel: 'TL', tl: 'TL', bund: 'Bund', prise: 'Prise', prisen: 'Prise', zehe: 'Zehe', zehen: 'Zehe' }
+export function parseNumber(value: string): number | null {
   const v = value.trim().replace('½', '.5').replace('¼', '.25').replace('¾', '.75').replace(',', '.')
   const fraction = v.match(/^(\d+)\s*\/\s*(\d+)$/)
   if (fraction) return Number(fraction[1]) / Number(fraction[2])
@@ -136,20 +136,20 @@ function parseNumber(value: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
-function stepsOf(lines: string[]): string[] {
+export function stepsOf(lines: string[]): string[] {
   const numbered = lines.map(line => line.match(/^(?:schritt\s*)?\d{1,2}\s*[.):-]\s*(.+)$/i)?.[1]?.trim()).filter((s): s is string => Boolean(s))
   const steps = numbered.length >= 2 ? numbered : lines.filter(line => !/^#|^(zutaten|anleitung|zubereitung|mengen|schritte)\s*:?$/i.test(line)).map(line => line.replace(/^[-*•]\s*/, ''))
   return steps.filter(step => step && step !== '…').slice(0, 15).map(step => step.slice(0, 600))
 }
 
 // Antwort der KI → Schritte + Mengen für die Zutaten, denen bisher eine Menge fehlt.
-function parseTimes(lines: string[]): AiTimes {
+export function parseTimes(lines: string[]): AiTimes {
   const line = lines.find(l => /^zeit\b/i.test(l)) ?? lines.find(l => /vorbereitung/i.test(l) && /(kochen|garen|kochzeit|backen)/i.test(l)) ?? ''
   const minutes = (re: RegExp) => { const m = line.match(re); const n = m ? Number(m[1]) : NaN; return Number.isInteger(n) && n >= 0 && n <= 600 ? n : null }
   return { prepMinutes: minutes(/vorbereit\w*\D{0,12}?(\d{1,3})/i), cookMinutes: minutes(/(?:kochen|kochzeit|garen|garzeit|backen|backzeit)\D{0,12}?(\d{1,3})/i) }
 }
 
-function parseHistamine(lines: string[]): AiHistamine {
+export function parseHistamine(lines: string[]): AiHistamine {
   const line = lines.find(l => /^histamin/i.test(l)) ?? ''
   const match = line.match(/^histamin\w*\s*:?\s*(\d{1,2})\s*(?:\/\s*10)?\s*(?:[|–—:-]\s*(.*))?$/i)
   const score = match ? Number(match[1]) : NaN

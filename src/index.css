@@ -109,40 +109,40 @@
 .theme-nick .theme-choice.selected{background:#286257}
 .theme-nick .device-choice.selected{background:#24413d;color:#b4eadb;border-color:#38665c}
 .theme-nick .footer{border-color:#283645}
-.theme-sophia{--ink:#c00020;--muted:#d12b42;--green:#c00020;--green-dark:#a8001c;--sage:#f9dce8;--paper:#fff8fb;--line:#f0bfd2;color:#c00020;background:#fff0f5}
-.theme-sophia .sidebar{background:#eaf5ee;border-color:#d5e8dc}
-.theme-sophia .main-content{background:#fff0f5}
-.theme-sophia .topbar{background:#ffe7f0ed;border-color:#efbfd1}
+.theme-sophia{--ink:#B3122E;--muted:#B5566B;--green:#7F9A75;--green-dark:#5F7A57;--sage:#F6D5DE;--paper:#FFF6F8;--line:#EDC3CE;color:#B3122E;background:#FBE6EC}
+.theme-sophia .sidebar{background:#EFF4EA;border-color:#E1E9D8}
+.theme-sophia .main-content{background:#FBE6EC}
+.theme-sophia .topbar{background:#ffe7f0ed;border-color:#EDC3CE}
 .theme-sophia .brand-mark{background:#bd4778;color:#fff5f9}
-.theme-sophia .brand span,.theme-sophia .breadcrumb,.theme-sophia .sync-status,.theme-sophia .footer{color:#d12b42}
-.theme-sophia .household-chip,.theme-sophia .budget-mini{background:#fbd5e4;color:#c00020}
-.theme-sophia .nav-item{color:#d12b42}
-.theme-sophia .nav-item:hover{background:#dff0e5;color:#c00020}.theme-sophia .nav-item.active{background:#d3eadb;color:#c00020}
+.theme-sophia .brand span,.theme-sophia .breadcrumb,.theme-sophia .sync-status,.theme-sophia .footer{color:#B5566B}
+.theme-sophia .household-chip,.theme-sophia .budget-mini{background:#fbd5e4;color:#B3122E}
+.theme-sophia .nav-item{color:#B5566B}
+.theme-sophia .nav-item:hover{background:#dff0e5;color:#B3122E}.theme-sophia .nav-item.active{background:#E1E9D8;color:#B3122E}
 .theme-sophia .nav-item.active{font-weight:700}
-.theme-sophia .profile-button,.theme-sophia .profile-button b{color:#c00020}
-.theme-sophia .avatar,.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo,.theme-sophia .tip-icon{background:#f8d3e2;color:#c00020}
-.theme-sophia .stat-card,.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{background:#fff8fb;border-color:#f0bfd2;color:#c00020}
-.theme-sophia .page-heading h1,.theme-sophia .auth-card h1,.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .feature-card h2,.theme-sophia .settings-panel h2,.theme-sophia .stat-card>strong{color:#a8001c}
-.theme-sophia .page-heading p,.theme-sophia .stat-card>small,.theme-sophia .stat-top,.theme-sophia .pantry-name small,.theme-sophia .pantry-row>span,.theme-sophia .retailer-card span,.theme-sophia .retailer-card small{color:#b66a89}
-.theme-sophia .eyebrow{color:#d12b42}
-.theme-sophia .day-pill,.theme-sophia .planner-day,.theme-sophia .planned-meal{background:#fff7fa;border-color:#f2cbd9;color:#c00020}
-.theme-sophia .day-pill.today,.theme-sophia .planned-meal{background:#f9dce8;border-color:#efbfd1;color:#c00020}
-.theme-sophia .mini-item,.theme-sophia .shopping-item,.theme-sophia .pantry-row,.theme-sophia .meal-slot,.theme-sophia .planner-day-head,.theme-sophia .setting-block{border-color:#f1cada;color:#c00020}
-.theme-sophia .button-dark{background:#c00020;color:#fff7fa}
-.theme-sophia .button-dark:hover{background:#a8001c}
-.theme-sophia .button-light,.theme-sophia .round-icon,.theme-sophia .icon-button{background:#fbe0ea;border-color:#efbfd1;color:#c00020}
-.theme-sophia .tip-banner,.theme-sophia .feature-card{background:#fbdce8;border-color:#f0bfd2}
-.theme-sophia .tip-banner b,.theme-sophia .feature-card p,.theme-sophia .tip-banner span{color:#c00020}
-.theme-sophia .form-panel input,.theme-sophia .form-panel select,.theme-sophia .stack-form input,.theme-sophia .stack-form select,.theme-sophia .settings-panel textarea,.theme-sophia .budget-input input{background:#fffafd;border-color:#efbfd1;color:#c00020}
-.theme-sophia .stack-form label,.theme-sophia .form-panel label,.theme-sophia .settings-panel label,.theme-sophia .toggle-row b{color:#c00020}
-.theme-sophia .toggle-row small,.theme-sophia .muted{color:#b66a89}
+.theme-sophia .profile-button,.theme-sophia .profile-button b{color:#B3122E}
+.theme-sophia .avatar,.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo,.theme-sophia .tip-icon{background:#f8d3e2;color:#B3122E}
+.theme-sophia .stat-card,.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{background:#FFF6F8;border-color:#EDC3CE;color:#B3122E}
+.theme-sophia .page-heading h1,.theme-sophia .auth-card h1,.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .feature-card h2,.theme-sophia .settings-panel h2,.theme-sophia .stat-card>strong{color:#8F0D25}
+.theme-sophia .page-heading p,.theme-sophia .stat-card>small,.theme-sophia .stat-top,.theme-sophia .pantry-name small,.theme-sophia .pantry-row>span,.theme-sophia .retailer-card span,.theme-sophia .retailer-card small{color:#B07484}
+.theme-sophia .eyebrow{color:#B5566B}
+.theme-sophia .day-pill,.theme-sophia .planner-day,.theme-sophia .planned-meal{background:#FFF6F8;border-color:#EDC3CE;color:#B3122E}
+.theme-sophia .day-pill.today,.theme-sophia .planned-meal{background:#F6D5DE;border-color:#EDC3CE;color:#B3122E}
+.theme-sophia .mini-item,.theme-sophia .shopping-item,.theme-sophia .pantry-row,.theme-sophia .meal-slot,.theme-sophia .planner-day-head,.theme-sophia .setting-block{border-color:#EDC3CE;color:#B3122E}
+.theme-sophia .button-dark{background:#7F9A75;color:#FFF6F8}
+.theme-sophia .button-dark:hover{background:#5F7A57}
+.theme-sophia .button-light,.theme-sophia .round-icon,.theme-sophia .icon-button{background:#fbe0ea;border-color:#EDC3CE;color:#B3122E}
+.theme-sophia .tip-banner,.theme-sophia .feature-card{background:#F6D5DE;border-color:#EDC3CE}
+.theme-sophia .tip-banner b,.theme-sophia .feature-card p,.theme-sophia .tip-banner span{color:#B3122E}
+.theme-sophia .form-panel input,.theme-sophia .form-panel select,.theme-sophia .stack-form input,.theme-sophia .stack-form select,.theme-sophia .settings-panel textarea,.theme-sophia .budget-input input{background:#FFF6F8;border-color:#EDC3CE;color:#B3122E}
+.theme-sophia .stack-form label,.theme-sophia .form-panel label,.theme-sophia .settings-panel label,.theme-sophia .toggle-row b{color:#B3122E}
+.theme-sophia .toggle-row small,.theme-sophia .muted{color:#B07484}
 .theme-sophia .progress{background:#f4d5e1}
-.theme-sophia .progress i{background:#d12b42}
-.theme-sophia .alert.success{background:#f8dce8;color:#c00020}
-.theme-sophia .alert.error{background:#f9d5d5;color:#a8001c}
-.theme-sophia .theme-choice.selected{background:#c00020;color:white}
-.theme-sophia .device-choice.selected{background:#f8cddd;color:#c00020;border-color:#e8a9c2}
-.theme-sophia .footer{border-color:#efbfd1}
+.theme-sophia .progress i{background:#7F9A75}
+.theme-sophia .alert.success{background:#f8dce8;color:#B3122E}
+.theme-sophia .alert.error{background:#f9d5d5;color:#8F0D25}
+.theme-sophia .theme-choice.selected{background:#7F9A75;color:white}
+.theme-sophia .device-choice.selected{background:#f8cddd;color:#B3122E;border-color:#e8a9c2}
+.theme-sophia .footer{border-color:#EDC3CE}
 @media(max-width:720px){
  .topbar-left{gap:0}
  .build-meta{gap:2px}
@@ -162,43 +162,43 @@
  border-right:1px solid #d8eadf;
  box-shadow:5px 0 24px #8eaa9612;
 }
-.theme-sophia .brand strong{color:#c00020;font-family:'Caveat',cursive;font-size:27px;letter-spacing:0;font-weight:700}
+.theme-sophia .brand strong{color:#B3122E;font-family:'Caveat',cursive;font-size:27px;letter-spacing:0;font-weight:700}
 .theme-sophia .brand span{color:#a6bca9;letter-spacing:2px}
-.theme-sophia .brand-mark{background:linear-gradient(145deg,#d9eddf,#c4e3d0);color:#c00020;border:1px solid #c8e2d1}
-.theme-sophia .household-chip{background:#e0efe4;color:#c00020;border:1px solid #d2e8d9}
-.theme-sophia .nav-item{color:#d12b42;border-radius:13px;padding:13px 14px;transition:background .2s,transform .2s}
-.theme-sophia .nav-item:hover{background:#e1f0e5;color:#a8001c;transform:translateX(2px)}
-.theme-sophia .nav-item.active{background:#d4eadb;color:#a8001c;box-shadow:inset 3px 0 #9cc9a8}
-.theme-sophia .nav-item.active small{background:#c1dfca;color:#7b9e83}
+.theme-sophia .brand-mark{background:linear-gradient(145deg,#d9eddf,#c4e3d0);color:#B3122E;border:1px solid #c8e2d1}
+.theme-sophia .household-chip{background:#E1E9D8;color:#B3122E;border:1px solid #d2e8d9}
+.theme-sophia .nav-item{color:#B5566B;border-radius:13px;padding:13px 14px;transition:background .2s,transform .2s}
+.theme-sophia .nav-item:hover{background:#e1f0e5;color:#8F0D25;transform:translateX(2px)}
+.theme-sophia .nav-item.active{background:#E1E9D8;color:#8F0D25;box-shadow:inset 3px 0 #A3B79A}
+.theme-sophia .nav-item.active small{background:#A3B79A;color:#5F7A57}
 .theme-sophia .budget-mini{background:#e3f0e6;border:1px solid #d4e8da}
 .theme-sophia .budget-mini-top,.theme-sophia .budget-mini>small{color:#8b9f90}
-.theme-sophia .budget-mini-top strong{color:#c00020}
-.theme-sophia .progress{background:#f5d9e5}
+.theme-sophia .budget-mini-top strong{color:#B3122E}
+.theme-sophia .progress{background:#F6D5DE}
 .theme-sophia .progress i{background:#a9cdb0}
-.theme-sophia .main-content{background:radial-gradient(ellipse at 80% 0%,#ffe4ee 0%,transparent 38%),linear-gradient(135deg,#fff1f6 0%,#ffedf4 52%,#fff5f8 100%)}
-.theme-sophia .topbar{background:#fff0f6d9;border-color:#f1cada;box-shadow:0 3px 18px #c0002008}
+.theme-sophia .main-content{background:radial-gradient(ellipse at 80% 0%,#FDEEF2 0%,transparent 38%),linear-gradient(135deg,#FDEEF2 0%,#ffedf4 52%,#fff5f8 100%)}
+.theme-sophia .topbar{background:#fff0f6d9;border-color:#EDC3CE;box-shadow:0 3px 18px #7F9A7508}
 .theme-sophia .page-wrap{padding-top:36px}
-.theme-sophia .page-heading h1{font-family:'Caveat',cursive;font-size:clamp(34px,4vw,48px);font-weight:600;letter-spacing:0;color:#a8001c}
-.theme-sophia .page-heading p{color:#d12b42}
-.theme-sophia .eyebrow{color:#d12b42;letter-spacing:1.7px}
-.theme-sophia .heading-icon{background:#e0efe4;color:#c00020;border:1px solid #d1e6d8;border-radius:18px}
+.theme-sophia .page-heading h1{font-family:'Caveat',cursive;font-size:clamp(34px,4vw,48px);font-weight:600;letter-spacing:0;color:#8F0D25}
+.theme-sophia .page-heading p{color:#B5566B}
+.theme-sophia .eyebrow{color:#B5566B;letter-spacing:1.7px}
+.theme-sophia .heading-icon{background:#E1E9D8;color:#B3122E;border:1px solid #d1e6d8;border-radius:18px}
 .theme-sophia .stat-card,.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{
- background:linear-gradient(145deg,#fffafd 0%,#fff7fa 100%);
- border:1px solid #f2cbd9;border-radius:19px;
- box-shadow:0 8px 24px #c0002010,0 2px 5px #c0002008;
+ background:linear-gradient(145deg,#FFF6F8 0%,#FFF6F8 100%);
+ border:1px solid #EDC3CE;border-radius:19px;
+ box-shadow:0 8px 24px #7F9A7510,0 2px 5px #7F9A7508;
 }
-.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .settings-panel h2{color:#a8001c}
-.theme-sophia .day-pill{background:#fffafd;border-color:#f3d4df;border-radius:12px}
-.theme-sophia .day-pill.today{background:#e2f0e5;border-color:#cfe5d5;color:#a8001c}
-.theme-sophia .button-dark{background:linear-gradient(135deg,#c00020,#a8001c);border-radius:11px;box-shadow:0 4px 10px #a92e6220}
-.theme-sophia .button-light{background:#e6f2e9;color:#a8001c;border:1px solid #d7e9dc}
-.theme-sophia .tip-banner,.theme-sophia .feature-card{background:linear-gradient(110deg,#e4f1e7,#f9e3ec);border:1px solid #e4e9dc;border-radius:17px}
-.theme-sophia .tip-icon{background:#d1e8d7;color:#c00020}
-.theme-sophia .footer{color:#b66a89}
-.theme-sophia .auth-layout,.theme-sophia.loading-screen{background:radial-gradient(ellipse at 20% 10%,#e4f1e7 0,transparent 35%),radial-gradient(ellipse at 85% 0%,#fbdce8 0,transparent 42%),#fff1f6}
+.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .settings-panel h2{color:#8F0D25}
+.theme-sophia .day-pill{background:#FFF6F8;border-color:#f3d4df;border-radius:12px}
+.theme-sophia .day-pill.today{background:#e2f0e5;border-color:#cfe5d5;color:#8F0D25}
+.theme-sophia .button-dark{background:linear-gradient(135deg,#7F9A75,#5F7A57);border-radius:11px;box-shadow:0 4px 10px #a92e6220}
+.theme-sophia .button-light{background:#e6f2e9;color:#8F0D25;border:1px solid #d7e9dc}
+.theme-sophia .tip-banner,.theme-sophia .feature-card{background:linear-gradient(110deg,#E1E9D8,#FDEEF2);border:1px solid #e4e9dc;border-radius:17px}
+.theme-sophia .tip-icon{background:#d1e8d7;color:#B3122E}
+.theme-sophia .footer{color:#B07484}
+.theme-sophia .auth-layout,.theme-sophia.loading-screen{background:radial-gradient(ellipse at 20% 10%,#E1E9D8 0,transparent 35%),radial-gradient(ellipse at 85% 0%,#F6D5DE 0,transparent 42%),#FDEEF2}
 @media(max-width:720px){
  .theme-sophia .sidebar{background:linear-gradient(90deg,#edf6ef,#e5f2e9);box-shadow:0 -5px 20px #8eaa9615}
- .theme-sophia .nav-item.active{box-shadow:inset 0 3px #9cc9a8}
+ .theme-sophia .nav-item.active{box-shadow:inset 0 3px #A3B79A}
  .theme-sophia .page-wrap{padding-top:25px}
  .theme-sophia .page-heading h1{font-size:36px}
 }
@@ -206,25 +206,25 @@
 
 /* Sophia – etwas mehr Mintgrün, Rosa bleibt die Akzentfarbe */
 .theme-sophia .sidebar{
- background:linear-gradient(155deg,#e4f2e8 0%,#dcefe2 58%,#d5eadb 100%);
+ background:linear-gradient(155deg,#e4f2e8 0%,#E1E9D8 58%,#d5eadb 100%);
  border-right-color:#c9e2d1;
 }
 .theme-sophia .main-content{
- background:radial-gradient(ellipse at 12% 8%,#e1f1e5 0%,transparent 34%),radial-gradient(ellipse at 88% 0%,#ffe4ee 0%,transparent 38%),linear-gradient(135deg,#f4faf5 0%,#fff0f5 60%,#f4faf5 100%);
+ background:radial-gradient(ellipse at 12% 8%,#e1f1e5 0%,transparent 34%),radial-gradient(ellipse at 88% 0%,#FDEEF2 0%,transparent 38%),linear-gradient(135deg,#EFF4EA 0%,#FBE6EC 60%,#EFF4EA 100%);
 }
 .theme-sophia .topbar{background:#eff8f1e8;border-color:#d8eadc}
-.theme-sophia .stat-card{background:linear-gradient(145deg,#fffafd 0%,#f1f8f2 100%)}
-.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{background:linear-gradient(145deg,#fffafd 0%,#f7fbf7 100%)}
-.theme-sophia .heading-icon,.theme-sophia .avatar,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo{background:#dcefe2;color:#c00020;border-color:#cde5d4}
-.theme-sophia .day-pill.today,.theme-sophia .planned-meal{background:#dcefe2;border-color:#c5e0cd;color:#a8001c}
-.theme-sophia .button-light{background:#dcefe2;border-color:#c8e2d0;color:#a8001c}
-.theme-sophia .tip-banner,.theme-sophia .feature-card{background:linear-gradient(110deg,#dcefe2 0%,#e8f4e9 58%,#f9e3ec 100%);border-color:#d1e6d5}
-.theme-sophia .tip-icon{background:#cce5d2;color:#c00020}
-.theme-sophia .budget-mini{background:#dcefe2;border-color:#c8e2d0}
-.theme-sophia .progress{background:#f5d9e5}
+.theme-sophia .stat-card{background:linear-gradient(145deg,#FFF6F8 0%,#f1f8f2 100%)}
+.theme-sophia .panel,.theme-sophia .retailer-card,.theme-sophia .notice-card{background:linear-gradient(145deg,#FFF6F8 0%,#f7fbf7 100%)}
+.theme-sophia .heading-icon,.theme-sophia .avatar,.theme-sophia .pantry-icon,.theme-sophia .retailer-logo{background:#E1E9D8;color:#B3122E;border-color:#cde5d4}
+.theme-sophia .day-pill.today,.theme-sophia .planned-meal{background:#E1E9D8;border-color:#c5e0cd;color:#8F0D25}
+.theme-sophia .button-light{background:#E1E9D8;border-color:#E1E9D8;color:#8F0D25}
+.theme-sophia .tip-banner,.theme-sophia .feature-card{background:linear-gradient(110deg,#E1E9D8 0%,#e8f4e9 58%,#FDEEF2 100%);border-color:#d1e6d5}
+.theme-sophia .tip-icon{background:#cce5d2;color:#B3122E}
+.theme-sophia .budget-mini{background:#E1E9D8;border-color:#E1E9D8}
+.theme-sophia .progress{background:#F6D5DE}
 .theme-sophia .progress i{background:#8fbd9c}
 @media(max-width:720px){
- .theme-sophia .sidebar{background:linear-gradient(90deg,#e5f2e8,#dcefe2)}
+ .theme-sophia .sidebar{background:linear-gradient(90deg,#e5f2e8,#E1E9D8)}
 }
 
 .food-category{margin:18px 0}.food-category h3{display:flex;gap:9px;margin:0 0 8px;font-size:14px;color:var(--ink)}.food-category h3 small{color:var(--muted)}.food-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--line)}.food-source{font-size:10px;color:var(--muted);margin-left:auto;text-align:right}.food-row .pantry-name{min-width:0}.stack-form select[multiple]{min-height:190px;padding:8px}.stack-form label small{display:block;color:var(--muted);font-size:11px;line-height:1.45;margin-top:5px}
@@ -232,10 +232,10 @@
 
 /* Sophia: klare, kräftige Rot-Schrift statt Himbeer */
 .theme-sophia{
- --ink:#c00020;
- --muted:#d12b42;
- --green:#c00020;
- --green-dark:#a8001c;
+ --ink:#B3122E;
+ --muted:#B5566B;
+ --green:#7F9A75;
+ --green-dark:#5F7A57;
 }
 .theme-sophia .brand strong,
 .theme-sophia .brand-mark,
@@ -258,13 +258,13 @@
 .theme-sophia .footer,
 .theme-sophia .food-category h3,
 .theme-sophia .food-source{
- color:#c00020;
+ color:#B3122E;
 }
-.theme-sophia .nav-item.active{color:#b0001d}
+.theme-sophia .nav-item.active{color:#8F0D25}
 .theme-sophia .page-heading p,
 .theme-sophia .budget-mini-top,
 .theme-sophia .budget-mini>small,
-.theme-sophia .food-source{color:#d12b42}
+.theme-sophia .food-source{color:#B5566B}
 
 
 /* Einkauf: Gesamtbedarf und Rezeptansicht */
@@ -293,8 +293,8 @@
 .ingredient-check input{width:16px;height:16px;flex:none}
 .ingredient-edit-row>input{width:100%;min-width:0;padding:7px 6px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);font:inherit;font-size:11px}
 @media(max-width:520px){.ingredient-edit-row{grid-template-columns:minmax(0,1fr) 66px 70px;gap:5px}.shopping-total-row>strong{width:100%;text-align:left;padding-left:2px}}
-.theme-sophia .shopping-view-switch button.selected{background:#c00020;color:white}
-.theme-sophia .shopping-total-row>strong{color:#c00020}
+.theme-sophia .shopping-view-switch button.selected{background:#7F9A75;color:white}
+.theme-sophia .shopping-total-row>strong{color:#B3122E}
 
 
 /* Bearbeiten und Entfernen von Rezepten und geplanten Gerichten */
@@ -312,7 +312,7 @@
 .recipe-card-editable>.recipe-row{gap:10px}
 .recipe-card-editable .meal-actions{margin-left:auto}
 .recipe-edit-form .ingredient-picker{max-height:360px}
-.theme-sophia .meal-actions button{color:#c00020}
+.theme-sophia .meal-actions button{color:#B3122E}
 @media(max-width:520px){.recipe-card-editable>.recipe-row{flex-wrap:wrap}.recipe-card-editable .meal-actions{margin-left:auto}.meal-edit-form .meal-edit-actions button,.recipe-edit-form .meal-edit-actions button{flex:1}}
 
 .food-price{display:grid;justify-items:end;gap:3px;color:var(--green-dark);font-size:12px;font-weight:700;white-space:nowrap}.food-price small{font-size:9px;font-weight:500;color:var(--muted)}
@@ -380,9 +380,9 @@
 @media(max-width:720px){
   .theme-sophia .main-content,
   .theme-sophia .topbar,
-  .theme-sophia .page-wrap{background:#fff0f4}
-  .theme-sophia .main-content{background:linear-gradient(180deg,#fff0f4 0%,#ffe9ef 100%)}
-  .theme-sophia .topbar{background:#fff0f4ed;border-color:#f4cbd4}
+  .theme-sophia .page-wrap{background:#FDEEF2}
+  .theme-sophia .main-content{background:linear-gradient(180deg,#FDEEF2 0%,#ffe9ef 100%)}
+  .theme-sophia .topbar{background:#FDEEF2ed;border-color:#f4cbd4}
   .theme-sophia,
   .theme-sophia .breadcrumb,
   .theme-sophia .page-heading h1,
@@ -404,8 +404,8 @@
   .theme-sophia .settings-panel label,
   .theme-sophia .toggle-row b,
   .theme-sophia .muted,
-  .theme-sophia .footer{color:#c00020}
-  .theme-sophia .nav-item.active{background:#d8f0e2;color:#b0001d;box-shadow:inset 0 3px #a8d8bb}
+  .theme-sophia .footer{color:#B3122E}
+  .theme-sophia .nav-item.active{background:#E1E9D8;color:#8F0D25;box-shadow:inset 0 3px #a8d8bb}
   .theme-sophia .nav-item svg,
   .theme-sophia .heading-icon svg,
   .theme-sophia .stat-top svg,
@@ -416,27 +416,27 @@
   .theme-sophia .round-icon svg,
   .theme-sophia .icon-button svg,
   .theme-sophia .panel svg,
-  .theme-sophia .page-heading svg{color:#79b997!important;stroke:#79b997}
+  .theme-sophia .page-heading svg{color:#7F9A75!important;stroke:#7F9A75}
   .theme-sophia .heading-icon,
   .theme-sophia .pantry-icon,
   .theme-sophia .retailer-logo,
   .theme-sophia .tip-icon,
   .theme-sophia .feature-icon,
-  .theme-sophia .avatar{background:#d9f0e2!important;color:#79b997!important;border-color:#bfe3ce}
+  .theme-sophia .avatar{background:#E1E9D8!important;color:#7F9A75!important;border-color:#E1E9D8}
   .theme-sophia .stat-card,
   .theme-sophia .panel,
   .theme-sophia .retailer-card,
   .theme-sophia .notice-card{background:#fff9fa;border-color:#f2cbd4}
-  .theme-sophia .button-dark{background:#c00020;color:#fff}
+  .theme-sophia .button-dark{background:#7F9A75;color:#fff}
   .theme-sophia .button-light,
   .theme-sophia .round-icon,
-  .theme-sophia .icon-button{background:#d9f0e2;border-color:#bfe3ce;color:#c00020}
+  .theme-sophia .icon-button{background:#E1E9D8;border-color:#E1E9D8;color:#B3122E}
   .theme-sophia .sidebar{background:#e4f4e9;border-color:#cfe8d8}
-  .theme-sophia .topbar-right .theme-choice.selected{background:#c00020;color:#fff}
-  .theme-sophia .device-choice.selected{background:#d9f0e2;color:#c00020;border-color:#bfe3ce}
+  .theme-sophia .topbar-right .theme-choice.selected{background:#7F9A75;color:#fff}
+  .theme-sophia .device-choice.selected{background:#E1E9D8;color:#B3122E;border-color:#E1E9D8}
   .theme-sophia input,
   .theme-sophia select,
-  .theme-sophia textarea{color:#c00020}
+  .theme-sophia textarea{color:#B3122E}
 }
 
 /* Mobile build/version metadata: keep both labels readable on narrow screens. */
@@ -445,19 +445,19 @@
 
 
 /* Sophia palette – full responsive override (desktop and phone). */
-.theme-sophia{background:#fce8ef!important;color:#c00020!important;--ink:#b0001d;--muted:#a84d5d;--paper:#fffafb;--line:#f0c8d2;--sage:#e4f3e9;--green:#26734e;--green-dark:#174b34}
-.theme-sophia body,.theme-sophia .app-shell,.theme-sophia .main-content,.theme-sophia .page-wrap{background:#fce8ef!important}
-.theme-sophia .topbar{background:#fce8efed!important;border-color:#edc0cc!important}
+.theme-sophia{background:#FBE6EC!important;color:#B3122E!important;--ink:#8F0D25;--muted:#a84d5d;--paper:#FFF6F8;--line:#EDC3CE;--sage:#EFF4EA;--green:#5F7A57;--green-dark:#5F7A57}
+.theme-sophia body,.theme-sophia .app-shell,.theme-sophia .main-content,.theme-sophia .page-wrap{background:#FBE6EC!important}
+.theme-sophia .topbar{background:#FBE6ECed!important;border-color:#edc0cc!important}
 .theme-sophia .sidebar{background:#e8f5ec!important;border-color:#cde6d5!important}
-.theme-sophia .panel,.theme-sophia .stat-card,.theme-sophia .retailer-card,.theme-sophia .notice-card,.theme-sophia .auth-card{background:#fffafb!important;border-color:#efc8d2!important}
-.theme-sophia .page-heading h1,.theme-sophia .page-heading p,.theme-sophia .eyebrow,.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .settings-panel h2,.theme-sophia .nav-item,.theme-sophia .stack-form label,.theme-sophia .form-panel label,.theme-sophia .settings-panel label,.theme-sophia .pantry-name b,.theme-sophia .pantry-name small,.theme-sophia .receipt-review,.theme-sophia .receipt-save-row>b,.theme-sophia .footer,.theme-sophia .muted{color:#c00020!important}
+.theme-sophia .panel,.theme-sophia .stat-card,.theme-sophia .retailer-card,.theme-sophia .notice-card,.theme-sophia .auth-card{background:#FFF6F8!important;border-color:#efc8d2!important}
+.theme-sophia .page-heading h1,.theme-sophia .page-heading p,.theme-sophia .eyebrow,.theme-sophia .panel-head h2,.theme-sophia .form-panel h2,.theme-sophia .add-panel h2,.theme-sophia .settings-panel h2,.theme-sophia .nav-item,.theme-sophia .stack-form label,.theme-sophia .form-panel label,.theme-sophia .settings-panel label,.theme-sophia .pantry-name b,.theme-sophia .pantry-name small,.theme-sophia .receipt-review,.theme-sophia .receipt-save-row>b,.theme-sophia .footer,.theme-sophia .muted{color:#B3122E!important}
 .theme-sophia .panel p,.theme-sophia .panel small,.theme-sophia .stat-top,.theme-sophia .stat-card>small,.theme-sophia .breadcrumb{color:#b34b60!important}
-.theme-sophia input,.theme-sophia select,.theme-sophia textarea,.theme-sophia .receipt-line-edit>input,.theme-sophia .receipt-line-edit>select,.theme-sophia .receipt-line-edit .form-row input{background:#fff!important;color:#b0001d!important;border-color:#efc4cf!important}
-.theme-sophia .button-dark{background:#c00020!important;color:#fff!important}
-.theme-sophia .button-light,.theme-sophia .round-icon,.theme-sophia .icon-button{background:#dff1e5!important;border-color:#c3e3ce!important;color:#b0001d!important}
-.theme-sophia .nav-item.active{background:#d8f0e2!important;color:#b0001d!important}
-.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .tip-icon,.theme-sophia .feature-icon,.theme-sophia .avatar{background:#d9f0e2!important;color:#4f9c75!important}
-.theme-sophia .nav-item svg,.theme-sophia .heading-icon svg,.theme-sophia .panel svg,.theme-sophia .page-heading svg{color:#65a982!important;stroke:#65a982}
+.theme-sophia input,.theme-sophia select,.theme-sophia textarea,.theme-sophia .receipt-line-edit>input,.theme-sophia .receipt-line-edit>select,.theme-sophia .receipt-line-edit .form-row input{background:#fff!important;color:#8F0D25!important;border-color:#efc4cf!important}
+.theme-sophia .button-dark{background:#7F9A75!important;color:#fff!important}
+.theme-sophia .button-light,.theme-sophia .round-icon,.theme-sophia .icon-button{background:#dff1e5!important;border-color:#c3e3ce!important;color:#8F0D25!important}
+.theme-sophia .nav-item.active{background:#E1E9D8!important;color:#8F0D25!important}
+.theme-sophia .heading-icon,.theme-sophia .pantry-icon,.theme-sophia .tip-icon,.theme-sophia .feature-icon,.theme-sophia .avatar{background:#E1E9D8!important;color:#4f9c75!important}
+.theme-sophia .nav-item svg,.theme-sophia .heading-icon svg,.theme-sophia .panel svg,.theme-sophia .page-heading svg{color:#5F7A57!important;stroke:#5F7A57}
 
 
 /* Sophia – verbindliche Rosa/Rot-Palette: überschreibt alle älteren Mockup-Regeln */
@@ -468,27 +468,27 @@
 .theme-sophia .page-wrap,
 .theme-sophia .auth-layout,
 .theme-sophia.loading-screen {
-  background: #FCE8EF !important;
-  color: #C00020 !important;
-  --ink: #C00020;
-  --muted: #C45A70;
-  --green: #C00020;
-  --green-dark: #A8001C;
-  --sage: #F8DCE6;
-  --paper: #FFFAFB;
-  --line: #F0C8D2;
+  background: #FBE6EC !important;
+  color: #B3122E !important;
+  --ink: #B3122E;
+  --muted: #B5566B;
+  --green: #7F9A75;
+  --green-dark: #5F7A57;
+  --sage: #F6D5DE;
+  --paper: #FFF6F8;
+  --line: #EDC3CE;
 }
 .theme-sophia .sidebar,
 .theme-sophia .topbar,
 .theme-sophia .device-switch,
 .theme-sophia .device-choice.selected {
-  background: #FCE8EF !important;
-  border-color: #EFBBC9 !important;
+  background: #FBE6EC !important;
+  border-color: #EDC3CE !important;
 }
 .theme-sophia .sidebar,
 .theme-sophia .main-content,
 .theme-sophia .topbar,
-.theme-sophia .page-wrap { color: #C00020 !important; }
+.theme-sophia .page-wrap { color: #B3122E !important; }
 .theme-sophia .brand-mark,
 .theme-sophia .household-chip,
 .theme-sophia .budget-mini,
@@ -511,9 +511,9 @@
 .theme-sophia .empty-illustration,
 .theme-sophia .device-choice,
 .theme-sophia .theme-choice {
-  background: #F8DCE6 !important;
-  border-color: #EFBBC9 !important;
-  color: #C00020 !important;
+  background: #F6D5DE !important;
+  border-color: #EDC3CE !important;
+  color: #B3122E !important;
 }
 .theme-sophia .stat-card,
 .theme-sophia .panel,
@@ -525,20 +525,20 @@
 .theme-sophia .list-panel,
 .theme-sophia .shopping-list-panel,
 .theme-sophia .add-panel {
-  background: #FFFAFB !important;
-  border-color: #F0C8D2 !important;
-  color: #C00020 !important;
+  background: #FFF6F8 !important;
+  border-color: #EDC3CE !important;
+  color: #B3122E !important;
 }
 .theme-sophia .tip-banner,
 .theme-sophia .feature-card,
 .theme-sophia .planned-meal {
   background: #F9E1E9 !important;
-  border-color: #F0C8D2 !important;
+  border-color: #EDC3CE !important;
 }
 .theme-sophia .button-dark,
 .theme-sophia .button-dark:hover {
-  background: #C00020 !important;
-  border-color: #C00020 !important;
+  background: #7F9A75 !important;
+  border-color: #7F9A75 !important;
   color: #FFFFFF !important;
 }
 .theme-sophia input,
@@ -548,12 +548,12 @@
 .theme-sophia .receipt-line-edit input,
 .theme-sophia .receipt-line-edit select {
   background: #FFFFFF !important;
-  border-color: #EFBBC9 !important;
-  color: #C00020 !important;
-  caret-color: #C00020;
+  border-color: #EDC3CE !important;
+  color: #B3122E !important;
+  caret-color: #B3122E;
 }
 .theme-sophia input::placeholder,
-.theme-sophia textarea::placeholder { color: #C45A70 !important; opacity: .85; }
+.theme-sophia textarea::placeholder { color: #B5566B !important; opacity: .85; }
 .theme-sophia .page-heading h1,
 .theme-sophia .page-heading p,
 .theme-sophia .eyebrow,
@@ -604,7 +604,7 @@
 .theme-sophia .empty-state,
 .theme-sophia .empty-state b,
 .theme-sophia .empty-state span {
-  color: #C00020 !important;
+  color: #B3122E !important;
 }
 .theme-sophia svg,
 .theme-sophia .nav-item svg,
@@ -615,13 +615,13 @@
 .theme-sophia .round-icon svg,
 .theme-sophia .tip-icon svg,
 .theme-sophia .feature-icon svg {
-  color: #C00020 !important;
-  stroke: #C00020 !important;
+  color: #B3122E !important;
+  stroke: #B3122E !important;
 }
 .theme-sophia .button-dark svg { color: #FFFFFF !important; stroke: #FFFFFF !important; }
-.theme-sophia .nav-item.active { box-shadow: inset 3px 0 #C00020 !important; }
+.theme-sophia .nav-item.active { box-shadow: inset 3px 0 #7F9A75 !important; }
 .theme-sophia .progress { background: #F2CAD6 !important; }
-.theme-sophia .progress i { background: #C00020 !important; }
+.theme-sophia .progress i { background: #7F9A75 !important; }
 .theme-sophia .topbar,
 .theme-sophia .sidebar,
 .theme-sophia .tip-banner,
@@ -630,13 +630,13 @@
 .theme-sophia .panel { box-shadow: none !important; }
 
 /* Letzte Farbabsicherung für alle Sophia-Unterelemente und Zustände */
-.theme-sophia * { color: #C00020 !important; }
+.theme-sophia * { color: #B3122E !important; }
 .theme-sophia .button-dark,
 .theme-sophia .button-dark *,
 .theme-sophia .button-dark:hover,
 .theme-sophia .button-dark:hover * { color: #FFFFFF !important; }
 .theme-sophia svg,
-.theme-sophia svg * { stroke: #C00020 !important; }
+.theme-sophia svg * { stroke: #B3122E !important; }
 .theme-sophia .button-dark svg,
 .theme-sophia .button-dark svg * { stroke: #FFFFFF !important; }
 .theme-sophia .check-circle,
@@ -648,32 +648,32 @@
 .theme-sophia .device-choice.selected,
 .theme-sophia .list-counter,
 .theme-sophia .empty-illustration {
-  background: #F8DCE6 !important;
-  border-color: #EFBBC9 !important;
-  color: #C00020 !important;
+  background: #F6D5DE !important;
+  border-color: #EDC3CE !important;
+  color: #B3122E !important;
 }
 .theme-sophia .toggle-switch:after { background: #FFFFFF !important; }
-.theme-sophia .shopping-item.checked .check-circle { background: #C00020 !important; color: #FFFFFF !important; }
+.theme-sophia .shopping-item.checked .check-circle { background: #7F9A75 !important; color: #FFFFFF !important; }
 
 
 /* Sophia – dezente Mint-Akzente auf der bestehenden Rosa/Rot-Basis */
 .theme-sophia {
-  --sophia-mint: #BDE8D2;
-  --sophia-mint-strong: #78B997;
-  --sophia-mint-border: #A8DCC0;
+  --sophia-mint: #E1E9D8;
+  --sophia-mint-strong: #7F9A75;
+  --sophia-mint-border: #A3B79A;
 }
 .theme-sophia .nav-item.active,
 .theme-sophia .nav-item.active:hover {
-  background: #BDE8D2 !important;
-  border-color: #A8DCC0 !important;
-  color: #C00020 !important;
-  box-shadow: inset 3px 0 #78B997 !important;
+  background: #E1E9D8 !important;
+  border-color: #A3B79A !important;
+  color: #B3122E !important;
+  box-shadow: inset 3px 0 #7F9A75 !important;
 }
 .theme-sophia .nav-item.active *,
 .theme-sophia .nav-item.active svg,
 .theme-sophia .nav-item.active svg * {
-  color: #C00020 !important;
-  stroke: #C00020 !important;
+  color: #B3122E !important;
+  stroke: #B3122E !important;
 }
 .theme-sophia .heading-icon,
 .theme-sophia .pantry-icon,
@@ -684,7 +684,7 @@
 .theme-sophia .list-counter,
 .theme-sophia .empty-illustration {
   background: #E1F4E9 !important;
-  border-color: #BDE8D2 !important;
+  border-color: #E1E9D8 !important;
 }
 .theme-sophia .heading-icon svg,
 .theme-sophia .pantry-icon svg,
@@ -692,22 +692,22 @@
 .theme-sophia .tip-icon svg,
 .theme-sophia .feature-icon svg,
 .theme-sophia .empty-illustration svg {
-  color: #78B997 !important;
-  stroke: #78B997 !important;
+  color: #7F9A75 !important;
+  stroke: #7F9A75 !important;
 }
 .theme-sophia .progress { background: #E5F3EA !important; }
-.theme-sophia .progress i { background: #78B997 !important; }
+.theme-sophia .progress i { background: #7F9A75 !important; }
 .theme-sophia .toggle-row input:checked + .toggle-switch,
 .theme-sophia .device-choice.selected,
 .theme-sophia .theme-choice.selected {
-  background: #BDE8D2 !important;
-  border-color: #78B997 !important;
-  color: #C00020 !important;
+  background: #E1E9D8 !important;
+  border-color: #7F9A75 !important;
+  color: #B3122E !important;
 }
 .theme-sophia .check-circle:hover,
 .theme-sophia .shopping-item.checked .check-circle {
-  background: #78B997 !important;
-  border-color: #78B997 !important;
+  background: #7F9A75 !important;
+  border-color: #7F9A75 !important;
   color: #FFFFFF !important;
 }
 .theme-sophia .check-circle:hover svg,
@@ -717,7 +717,7 @@
 }
 .theme-sophia .tip-banner {
   background: #EAF6EF !important;
-  border-color: #BDE8D2 !important;
+  border-color: #E1E9D8 !important;
 }
 
 /* 0.3.29: Einkaufswert, Wochenbudget, Kochanleitung, einzelne Nahrungsmittel */
@@ -909,3 +909,143 @@ div.add-panel-body{display:contents}
 /* 0.3.48 – Hotfix: Gruppen-Knopfleiste darf den Rezept-Kasten auf dem Handy nicht verbreitern */
 .group-chips{contain:inline-size;max-width:100%}
 .shopping-layout>*{min-width:0}
+/* 0.3.49 – Sophias Design neu (Nick, 23.11.2026, Variante A): rosa Hintergrund, rote Schrift, salbeigrüne Akzenten.
+   Farben der bisherigen Sophia-Regeln umgefärbt (Flächen/Ränder von Akzenten → Salbei, Schrift bleibt rot); feste Akzente hier: */
+.app-shell.theme-sophia .group-chip{background:#FFF6F8!important;border-color:#EDC3CE!important}
+.app-shell.theme-sophia .group-chip.active,.app-shell.theme-sophia .group-chip.active *{background:#5F7A57!important;border-color:#5F7A57!important;color:#fff!important}
+.app-shell.theme-sophia .group-chip.active small{background:transparent!important;opacity:.85}
+.app-shell.theme-sophia .badge.group,.app-shell.theme-sophia .badge.thermomix{background:#E1E9D8!important;color:#5F7A57!important;border-color:transparent!important}
+.app-shell.theme-sophia .nav-item.active{background:#E1E9D8!important;box-shadow:inset 3px 0 #7F9A75!important}
+.app-shell.theme-sophia .heading-icon{background:#E1E9D8!important;border-color:#A3B79A!important}
+.app-shell.theme-sophia .heading-icon svg,.app-shell.theme-sophia .heading-icon svg *{stroke:#5F7A57!important}
+.app-shell.theme-sophia .day-pill.active,.app-shell.theme-sophia .day-pill.today{background:#5F7A57!important;border-color:#5F7A57!important}
+.app-shell.theme-sophia .day-pill.active *,.app-shell.theme-sophia .day-pill.today *{color:#fff!important}
+.app-shell.theme-sophia .meal-dot{background:#7F9A75!important}
+.app-shell.theme-sophia .progress i{background:#7F9A75!important}
+/* 0.3.49 – Wochenplan aufgeräumt: leere Mahlzeit-Plätze ausgeblendet, „+“ je Tag, „⋯“ je Gericht, Formular einklappbar */
+.meal-add .add-panel-head{margin-bottom:14px}
+.meal-add.collapsed .add-panel-head{margin-bottom:0}
+.meal-add .add-panel-head h2{margin:0}
+.meal-add.collapsed .panel-chevron{transform:rotate(-90deg)}
+.meal-add.collapsed .add-panel-body{display:none!important}
+#meal-form{scroll-margin-top:80px}
+.planner-day-head{flex-direction:row;align-items:center;justify-content:space-between;gap:6px}
+.planner-day-head>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.planner-day.today{border-color:var(--green)}
+.day-add{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--green);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.day-add[aria-expanded="true"]{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+.day-add-menu{display:grid;gap:2px;margin:4px 0 6px;padding:6px 8px;border:1px dashed var(--line);border-radius:9px}
+.day-add-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:3px 0}
+.day-add-row small{flex:1 1 90px;font-size:10px;color:var(--muted)}
+.day-add-row .text-link{font-size:11px;padding:2px 0}
+.day-empty{margin:6px 0 2px;font-size:10px;color:var(--muted)}
+.planner-day.empty{min-height:0}
+.meal-slot{min-height:0}
+.meal-slot:last-child{border-bottom:0}
+.planned-meal-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;align-items:start}
+.planned-meal-main{min-width:0}
+.planned-meal-main[role="button"]{cursor:pointer}
+.meal-more{width:28px;height:28px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--muted);font-size:15px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.meal-more[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
+.meal-menu{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;padding-top:4px}
+.meal-menu button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:6px 9px;font-size:11px;cursor:pointer}
+.meal-menu button.danger{color:#b2352a}
+.planned-meal-wrap>.meal-edit-form{grid-column:1/-1}
+@media(max-width:1024px){
+  .planner-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+  .planner-day{min-height:0;padding:12px 14px}
+  .planner-day-head{padding-bottom:8px;margin-bottom:2px}
+  .planner-day-head>div{flex-direction:row;align-items:baseline;gap:8px}
+  .planned-meal{font-size:13px;line-height:1.35}
+  .meal-cost{font-size:11px}
+  .meal-slot>small{font-size:10px}
+  .day-empty{font-size:12px}
+}
+.device-phone .planner-grid,.device-tablet .planner-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px}
+.device-phone .planner-day,.device-tablet .planner-day{min-height:0;padding:12px 14px}
+.device-phone .planner-day-head>div,.device-tablet .planner-day-head>div{flex-direction:row;align-items:baseline;gap:8px}
+.device-phone .planned-meal,.device-tablet .planned-meal{font-size:13px;line-height:1.35}
+.device-phone .meal-cost,.device-tablet .meal-cost{font-size:11px}
+.theme-nick .day-add,.theme-nick .meal-more,.theme-nick .meal-menu button{background:#101a24;border-color:#354556;color:#c2d0dc}
+.theme-nick .day-add[aria-expanded="true"]{background:#2a5a52;border-color:#3d7a6f;color:#eafaf5}
+.theme-nick .planner-day.today{border-color:#3d7a6f}
+.theme-nick .meal-menu button.danger{color:#f2a49a}
+.app-shell.theme-sophia .day-add,.app-shell.theme-sophia .meal-more,.app-shell.theme-sophia .meal-menu button{background:#FFF6F8!important;border-color:#EDC3CE!important}
+.app-shell.theme-sophia .day-add[aria-expanded="true"]{background:#5F7A57!important;border-color:#5F7A57!important}
+.app-shell.theme-sophia .day-add[aria-expanded="true"] svg,.app-shell.theme-sophia .day-add[aria-expanded="true"] svg *{stroke:#fff!important}
+.app-shell.theme-sophia .planner-day.today{border-color:#7F9A75!important}
+/* 0.3.49 – Tablet: schmale Seitenleiste (Symbole + kurze Beschriftung) */
+@media(min-width:721px) and (max-width:1050px){
+  .app-shell:not(.device-phone) .sidebar{width:92px;padding:18px 6px 12px;align-items:center}
+  .app-shell:not(.device-phone) .main-content{margin-left:92px}
+}
+.device-tablet .sidebar{width:92px!important;padding:18px 6px 12px!important;align-items:center}
+.device-tablet .main-content{margin-left:92px!important}
+@media(min-width:721px) and (max-width:1050px){
+  .app-shell:not(.device-phone) .brand{padding:0 0 18px}
+  .app-shell:not(.device-phone) .brand>div:not(.brand-mark),.app-shell:not(.device-phone) .household-chip,.app-shell:not(.device-phone) .budget-mini,.app-shell:not(.device-phone) .profile-button>span,.app-shell:not(.device-phone) .profile-button>svg{display:none}
+  .app-shell:not(.device-phone) .sidebar nav{width:100%}
+  .app-shell:not(.device-phone) .nav-item{width:100%;flex-direction:column;justify-content:center;gap:4px;padding:9px 2px;font-size:10px;line-height:1.15;text-align:center;position:relative}
+  .app-shell:not(.device-phone) .nav-item small{position:absolute;top:3px;right:8px;font-size:9px;padding:1px 5px}
+  .app-shell:not(.device-phone) .profile-button{justify-content:center;padding:6px 0}
+}
+.device-tablet .brand{padding:0 0 18px}
+.device-tablet .brand>div:not(.brand-mark),.device-tablet .household-chip,.device-tablet .budget-mini,.device-tablet .profile-button>span,.device-tablet .profile-button>svg{display:none}
+.device-tablet .sidebar nav{width:100%}
+.device-tablet .nav-item{width:100%;flex-direction:column;justify-content:center;gap:4px;padding:9px 2px;font-size:10px;line-height:1.15;text-align:center;position:relative}
+.device-tablet .nav-item small{position:absolute;top:3px;right:8px;font-size:9px;padding:1px 5px}
+.device-tablet .profile-button{justify-content:center;padding:6px 0}
+/* 0.3.49 – Seiten aufgeräumt */
+#meal-form.meal-add{margin-bottom:16px}
+.app-shell.theme-sophia .planned-meal{background:transparent!important}
+/* Rezepte: doppelte (helle) Trennlinie weg; Handy: Abzeichen nebeneinander, Minuten nur in der Infozeile, Knöpfe unter dem Text */
+.recipe-card-editable>.recipe-row{border-bottom:0;padding:2px 0}
+@media(max-width:720px){
+  .recipe-card-editable>.recipe-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px 12px;align-items:start;flex-wrap:nowrap}
+  .recipe-card-editable>.recipe-row>span{display:none}
+  .recipe-card-editable>.recipe-row>.meal-actions{grid-column:2;justify-content:flex-start;margin:2px 0 0}
+}
+.device-phone .recipe-card-editable>.recipe-row{display:grid;grid-template-columns:44px minmax(0,1fr);gap:6px 12px;align-items:start;flex-wrap:nowrap}
+.device-phone .recipe-card-editable>.recipe-row>span{display:none}
+.device-phone .recipe-card-editable>.recipe-row>.meal-actions{grid-column:2;justify-content:flex-start;margin:2px 0 0}
+/* Suchfeld in Listen */
+.list-search{display:flex!important;align-items:center;gap:8px;margin:0 0 12px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--muted)}
+.list-search input{flex:1;min-width:0;border:0!important;background:transparent!important;padding:11px 0!important;font-size:14px;color:var(--ink);outline:none;box-shadow:none!important}
+.list-search:focus-within{border-color:var(--green)}
+.theme-nick .list-search{background:#101a24;border-color:#354556;color:#8a9aa8}
+.theme-nick .list-search input{color:#e5edf3}
+/* Nahrungsmittel: Gruppe/Grundausstattung nach ✎ */
+.food-edit{flex:none;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.food-edit[aria-expanded="true"]{border-color:var(--green);color:var(--green)}
+.theme-nick .food-edit{background:#101a24;border-color:#354556;color:#c2d0dc}
+/* Vorrat nach Lagerort */
+.pantry-group{padding:4px 0 6px}
+.pantry-group+.pantry-group{border-top:1px solid var(--line);margin-top:6px;padding-top:10px}
+.pantry-group-toggle{width:100%;padding:6px 0!important}
+.pantry-group-toggle b{font-size:14px}
+.pantry-group-toggle small{color:var(--muted);font-weight:600}
+.pantry-group.closed .food-category-chevron{transform:rotate(-90deg)}
+.expiry-tag{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#fbe6cf;color:#8a4b0f;font-size:9px;font-weight:700;vertical-align:middle}
+.pantry-group-toggle .expiry-tag{margin-left:auto}
+.pantry-row.expiring .pantry-icon{background:#fbe6cf;color:#8a4b0f}
+.theme-nick .expiry-tag,.theme-nick .pantry-row.expiring .pantry-icon{background:#4a3417;color:#f6c98d}
+.app-shell.theme-sophia .expiry-tag{background:#F6D5DE!important;color:#8F0D25!important}
+/* Preise: kompakte Markt-Leiste statt großer Kacheln */
+.retailer-strip-wrap{margin:0 0 16px}
+.retailer-strip{display:flex;flex-wrap:wrap;gap:8px}
+.retailer-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 6px;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
+.retailer-chip .retailer-logo{width:26px;height:26px;border-radius:50%;font-size:12px}
+.retailer-chip b{font-size:12px}
+.retailer-chip small{font-size:10px;color:var(--muted)}
+.retailer-none{display:block;margin-top:8px;font-size:11px}
+@media(max-width:720px){.retailer-strip{flex-wrap:nowrap;overflow-x:auto;contain:inline-size;scrollbar-width:none;padding-bottom:2px}.retailer-strip::-webkit-scrollbar{display:none}.retailer-chip{flex:none}}
+.device-phone .retailer-strip{flex-wrap:nowrap;overflow-x:auto;contain:inline-size;scrollbar-width:none}
+.device-phone .retailer-chip{flex:none}
+.theme-nick .retailer-chip{background:#101a24;border-color:#354556}
+.theme-nick .retailer-chip b{color:#e5edf3}
+/* Einstellungen: Ansicht-Umschalter im dunklen Design */
+.theme-nick .device-switch{background:#101a24;border-color:#354556}
+.theme-nick .device-choice{color:#9fb0bf}
+.theme-nick .device-choice.selected{background:#286257;color:#eafaf5;box-shadow:none}
+.theme-nick .food-price,.theme-nick .price-catalog-value b{color:#9fd8c4}
+.theme-nick .toggle-row{border-bottom-color:#283645}

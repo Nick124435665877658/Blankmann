@@ -48,6 +48,27 @@ export function normalizeUnit(unit: string | null | undefined) {
 export const toBase = (quantity: number, unit: string | null | undefined) => { const u = normalizeUnit(unit); return { quantity: quantity * u.factor, base: u.base } }
 export const fromBase = (quantity: number, unit: string | null | undefined) => quantity / normalizeUnit(unit).factor
 export const sameKind = (a: string | null | undefined, b: string | null | undefined) => normalizeUnit(a).base === normalizeUnit(b).base
+// Mengen anzeigen (0.3.49, Nick): Komma statt Punkt, große g/ml-Mengen als kg/l, Löffel/Stück in Vierteln (¼ ½ ¾).
+// shop: kaufgerecht runden (ab 100 g/ml auf 10). Rezepte bleiben genau (125 g bleibt 125 g).
+const quarters: Record<string, string> = { '0.25': '¼', '0.5': '½', '0.75': '¾' }
+export function niceAmount(quantity: number | string | null | undefined, unit: string | null | undefined, options: { shop?: boolean } = {}): string {
+  if (quantity === null || quantity === undefined || quantity === '' || !Number.isFinite(Number(quantity))) return ''
+  const q = Number(quantity), u = (unit ?? '').trim(), key = keyOf(u)
+  const num = (n: number, digits: number) => n.toLocaleString('de-DE', { maximumFractionDigits: digits })
+  const withUnit = (text: string, label = u) => label ? text + ' ' + label : text
+  if (key === 'g' || key === 'gramm' || key === 'ml') {
+    if (q >= 1000) return withUnit(num(q / 1000, 2), key === 'ml' ? 'l' : 'kg')
+    if (options.shop && q >= 100) return withUnit(num(Math.round(q / 10) * 10, 0))
+    return withUnit(num(q >= 10 ? Math.round(q) : q, 1))
+  }
+  if (key === 'kg' || key === 'l' || key === 'liter') return withUnit(num(q, 2))
+  if (q >= 10) return withUnit(num(q, 1))
+  const whole = Math.floor(q), rest = Math.round((q - whole) * 4) / 4
+  if (rest === 1) return withUnit(String(whole + 1))
+  if (rest === 0) return withUnit(whole ? String(whole) : num(q, 2))
+  return withUnit((whole ? String(whole) : '') + quarters[String(rest)])
+}
+
 export function formatAmount(quantity: number | null, unit: string | null) {
   if (quantity === null) return 'Menge offen'
   return String(round(quantity, 2)).replace('.', ',') + (unit ? ' ' + unit : '')

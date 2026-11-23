@@ -96,7 +96,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
     <div className="panel-head"><div><span className="eyebrow">{meal ? 'GEPLANTES GERICHT · ' + new Date(meal.meal_date + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' }) : 'REZEPT'}</span><h2>{recipe.title}{thermomix && <span className="badge thermomix" title="Thermomix-Rezept aus Cookidoo">Thermomix</span>}</h2><small className="muted">{String(servings).replace('.', ',')} Portionen · geschätzter Einkaufswert ≈ {euro(cost.total)}{missingFoods.length ? ' · ' + missingFoods.length + ' Preis(e) fehlen' : ''}{cost.approximate && !missingFoods.length ? ' · teils Packungspreise' : ''}{timeText ? ' · ⏱ ' + timeText : ''}</small></div><button type="button" className="icon-button" onClick={onClose} aria-label="Schließen"><X size={18} /></button></div>
 
     {thermomix && <div className="thermomix-note"><span>Thermomix-Rezept aus Cookidoo{recipe.description?.startsWith('Thermomix · ') ? ' (' + recipe.description.slice(12) + ')' : ''} – Zutaten und Mengen wie im Original. Die KI ändert keine Mengen, sie ergänzt nur, und schreibt die Anleitung für Herd und Ofen.</span>{recipe.source_url && <a className="button button-light button-small" href={recipe.source_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> In Cookidoo öffnen</a>}</div>}
-    {photoUrl && <img className="recipe-photo" src={photoUrl} alt={'Foto von ' + recipe.title} />}
+    {photoUrl && <img className="recipe-photo" src={photoUrl} alt={'Foto von ' + recipe.title} decoding="async" referrerPolicy="no-referrer" />}
     <div className="recipe-scores">
       <div><span className="eyebrow">HISTAMIN</span>{recipe.histamine_score
         ? <p><span className={'badge histamine h' + (recipe.histamine_score >= 7 ? 'good' : recipe.histamine_score >= 4 ? 'mid' : 'bad')}>{recipe.histamine_score}/10</span> <small className="muted">{recipe.histamine_note || ''} {recipe.histamine_note === 'Von Hand gesetzt' ? '' : '(KI-Schätzung, keine medizinische Beratung – 1 = histaminreich, 10 = kein Histamin)'}</small></p>
@@ -114,7 +114,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
     <span className="eyebrow">ZUTATEN & EINKAUFSWERT</span>
     {cost.lines.length ? cost.lines.map((line, index) => <div className="cost-line" key={line.name + index}>
       <div><b>{line.name}{shownIngredients[index]?.ai_added && <span className="ai-tag" title="Von der KI ergänzt – unter Rezepte → Bearbeiten entfernbar">KI</span>}{isStaple(line.foodId) && <span className="staple-tag">Grundausstattung</span>}</b><small>{formatAmount(line.quantity, line.unit)}{line.hint && line.basis !== 'missing' ? ' · ' + line.hint : ''}</small>
-        {line.basis === 'missing' && <ManualPriceForm householdId={householdId} foodId={line.foodId} foodName={line.name} defaultQuantity={line.quantity} defaultUnit={line.unit} defaultOrganic={preferOrganic} onSaved={onChanged} onError={onError} />}</div>
+        {line.basis === 'missing' && <ManualPriceForm foods={foods} householdId={householdId} foodId={line.foodId} foodName={line.name} defaultQuantity={line.quantity} defaultUnit={line.unit} defaultOrganic={preferOrganic} onSaved={onChanged} onError={onError} />}</div>
       <strong>{line.cost === null ? 'Preis fehlt' : '≈ ' + euro(line.cost)}</strong>
     </div>) : <p className="muted">Für dieses Rezept sind noch keine Zutaten hinterlegt.</p>}
 

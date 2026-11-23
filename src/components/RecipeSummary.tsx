@@ -30,7 +30,7 @@ export default function RecipeSummary({ recipe, photoUrl, costText }: { recipe: 
   // Bei Thermomix-Rezepten mit Gruppe ist die Cookidoo-Liste doppelt – dann nur Gruppe als Abzeichen.
   const info = [isThermomix(recipe) && recipe.category ? '' : recipeListName(recipe), recipe.servings + ' Portionen', (recipe.recipe_ingredients || []).length + ' Zutaten', minutes ? '⏱ ' + minutes + ' Min' : '', costText].filter(Boolean).join(' · ')
   return <>
-    {photoUrl ? <img className="recipe-thumb" src={photoUrl} alt={'Foto von ' + recipe.title}/> : <div className="pantry-icon"><CookingPot size={18}/></div>}
+    {photoUrl ? <img className="recipe-thumb" src={photoUrl} alt={'Foto von ' + recipe.title} loading="lazy" decoding="async" referrerPolicy="no-referrer"/> : <div className="pantry-icon"><CookingPot size={18}/></div>}
     <div className="pantry-name">
       <b>{recipe.title}</b>
       <span className="recipe-badges">

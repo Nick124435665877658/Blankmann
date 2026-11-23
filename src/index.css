@@ -1095,3 +1095,18 @@ div.add-panel-body{display:contents}
 .app-shell.theme-sophia .cook-bar.complete i{background:#7F9A75!important}
 .app-shell.theme-sophia .idea-card{background:#FFF6F8!important;border-color:#EDC3CE!important}
 .app-shell.theme-sophia .missing-tag{background:#F6D5DE!important}
+/* 0.3.52 – Nahrungsmittel per Suche wählen (Bon, Preis, Wochenplan, Vorrat) */
+.food-picker{position:relative;min-width:0;width:100%}
+.food-picker>input[type="text"]{width:100%;min-width:0}
+.food-picker-list{position:absolute;z-index:40;left:0;right:0;top:calc(100% + 4px);max-height:260px;overflow-y:auto;margin:0;padding:4px;list-style:none;background:var(--paper);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px #1c2a2033}
+.food-picker-list li{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--ink)}
+.food-picker-list li small{font-size:10px;color:var(--muted);white-space:nowrap}
+.food-picker-list li[data-active="true"],.food-picker-list li:hover{background:#eef2ea}
+.food-picker-list li[aria-selected="true"] span{font-weight:700}
+.food-picker-list .food-picker-empty{color:var(--muted);cursor:default}
+.price-food-pick{display:grid;gap:6px;width:100%}
+.theme-nick .food-picker-list{background:#101a24;border-color:#354556;box-shadow:0 10px 28px #00000066}
+.theme-nick .food-picker-list li{color:#e5edf3}
+.theme-nick .food-picker-list li[data-active="true"],.theme-nick .food-picker-list li:hover{background:#1d2b38}
+.app-shell.theme-sophia .food-picker-list{background:#FFF6F8!important;border-color:#EDC3CE!important}
+.app-shell.theme-sophia .food-picker-list li[data-active="true"],.app-shell.theme-sophia .food-picker-list li:hover{background:#E1E9D8!important}

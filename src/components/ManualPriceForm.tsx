@@ -3,11 +3,13 @@ import { canSplitToOne, splitOrganic } from '../lib/kitchen'
 import { localISO } from '../lib/dates'
 import { saveMarketPrice } from '../lib/priceStore'
 import { retailerName, selectableRetailers } from '../lib/retailers'
+import FoodPicker from './FoodPicker'
+import type { SearchableFood } from '../lib/foodSearch'
 
 // Fehlender Preis: von Hand eintragen – mit Supermarkt und Bio/normal. Ein Preis je Nahrungsmittel + Markt + Bio/normal
 // (ein vorhandener wird überschrieben). Quelle „Manuell“.
-export default function ManualPriceForm({ householdId, foodId, foodName, defaultQuantity, defaultUnit, defaultOrganic = false, onSaved, onError }: {
-  householdId: string; foodId: string | null; foodName: string; defaultQuantity: number | null; defaultUnit: string | null; defaultOrganic?: boolean
+export default function ManualPriceForm({ householdId, foodId: givenFoodId, foodName, defaultQuantity, defaultUnit, defaultOrganic = false, foods, onSaved, onError }: {
+  householdId: string; foodId: string | null; foodName: string; foods?: SearchableFood[]; defaultQuantity: number | null; defaultUnit: string | null; defaultOrganic?: boolean
   onSaved: () => Promise<void>; onError: (message: string) => void
 }) {
   const [open, setOpen] = useState(false)
@@ -15,7 +17,11 @@ export default function ManualPriceForm({ householdId, foodId, foodName, default
   const [quantityText, setQuantityText] = useState(defaultQuantity === null ? '' : String(defaultQuantity).replace('.', ','))
   const [unit, setUnit] = useState(defaultUnit ?? '')
   const [splitOne, setSplitOne] = useState(false)
-  if (!foodId) return <small className="muted">Nicht im Nahrungsmittel-Katalog – dort anlegen, dann Preis eintragen.</small>
+  // 0.3.52: Ohne Katalog-Zuordnung kann man das Nahrungsmittel hier per Suche wählen.
+  const [chosenId, setChosenId] = useState('')
+  const foodId = givenFoodId ?? (chosenId || null)
+  if (!givenFoodId && !foods) return <small className="muted">Nicht im Nahrungsmittel-Katalog – dort anlegen, dann Preis eintragen.</small>
+  if (!foodId) return <div className="price-food-pick"><small className="muted">Nicht zugeordnet – Nahrungsmittel aus dem Katalog wählen:</small><FoodPicker foods={foods ?? []} value={chosenId} onChange={id => { setChosenId(id); setOpen(true) }} placeholder={foodName} ariaLabel={'Nahrungsmittel für ' + foodName + ' wählen'} /></div>
   if (!open) return <button type="button" className="text-link" onClick={() => setOpen(true)}>Preis eintragen</button>
   const quantityValue = quantityText.trim() ? Number(quantityText.replace(',', '.')) : null
   const canSplit = canSplitToOne(quantityValue, unit.trim() || null)

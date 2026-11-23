@@ -1,7 +1,7 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
 import { applyGlutenYeast, buildRecipeMessages, glutenYeastPenalty, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
-import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
+import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, niceAmount, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
 
 let failed = 0
 const expect = (condition: boolean, message: string) => {
@@ -222,6 +222,15 @@ console.log('\n7b) Preis ohne Packungsgröße (EDEKA-Eier 3,99 ohne Stückzahl, 
   expect(near(ten.cost, (0.5 + 0.798) / 2) && ten.markets === 2, '2 Eier mit EDEKA als 10er: Ø (0,50 + 0,80) = 0,65 €')
   const only = estimateCost({ name: 'Gurke', food_item_id: 'gurke', quantity: 2, unit: 'Stk' }, [{ id: 'gurke', name: 'Gurke', normalized_name: 'gurke' }], [{ food_item_id: 'gurke', price_eur: 0.69, package_quantity: null, package_unit: null, unit_price_eur: null, unit_label: null, observed_at: '2026-11-20', retailer_code: 'penny', is_organic: false }])
   expect(near(only.cost, 1.38) && only.basis === 'exact' && only.hint.includes('Packungsgröße fehlt'), 'Einziger Preis ohne Packungsgröße zählt weiter als Stückpreis (2 Gurken 1,38 €), mit Hinweis')
+}
+
+console.log('\n7c) Mengen anzeigen (Komma, kaufgerecht, kg/l)')
+{
+  const cases: [number | string | null, string | null, string, boolean?][] = [
+    [0.67, 'TL', '¾ TL'], [1.5, 'EL', '1½ EL'], [516.67, 'g', '520 g', true], [516.67, 'g', '517 g'], [125, 'g', '125 g'], [2500, 'g', '2,5 kg'], [1000, 'g', '1 kg'],
+    ['0.33', 'l', '0,33 l'], [1250, 'ml', '1,25 l'], [10, 'Stk', '10 Stk'], [4, 'Packungen', '4 Packungen'], [2.33, 'Stk', '2¼ Stk'], [0.1, 'Prise', '0,1 Prise'], [null, 'g', ''],
+  ]
+  for (const [q, u, want, shop] of cases) expect(niceAmount(q, u, { shop }) === want, `${q} ${u}${shop ? ' (Einkauf)' : ''} → „${want}“ (ist „${niceAmount(q, u, { shop })}“)`)
 }
 
 console.log('\n8) Auf 1 Stk runterrechnen')

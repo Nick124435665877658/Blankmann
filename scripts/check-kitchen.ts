@@ -3,6 +3,8 @@ import { applyGlutenYeast, buildRecipeMessages, glutenYeastPenalty, parseRecipeA
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
 import { compareMatches, matchRecipeToPantry } from '../src/lib/pantryMatch.ts'
 import { rankFoods } from '../src/lib/foodSearch.ts'
+import { bestBeforeFor } from '../src/lib/shelfLife.ts'
+import { weekExpiries } from '../src/lib/expiry.ts'
 import { cookidooImageFrom } from '../src/lib/cookidooImage.ts'
 import { buildPantryIdeasMessages, parsePantryIdeas } from '../src/lib/pantryIdeas.ts'
 import { defaultRules } from '../src/lib/recipeAi.ts'
@@ -344,6 +346,47 @@ console.log('\n13) Nahrungsmittel suchen + Cookidoo-Bild finden')
   expect(cookidooImageFrom(html) === 'https://assets.tmecosys.com/image/upload/t_web_rdp_recipe_584x480/img/recipe/ras/Assets/0CE9/Derivates/F094.jpg', 'og:image von assets.tmecosys.com erkannt')
   expect(cookidooImageFrom('<meta property="og:image" content="https://evil.example/x.jpg">') === null, 'fremde Bild-Hosts werden abgelehnt')
   expect(cookidooImageFrom('<img src="https://assets.tmecosys.com/image/upload/a/b.jpg">') === 'https://assets.tmecosys.com/image/upload/a/b.jpg', 'ohne og:image: erstes Bild von assets.tmecosys.com')
+}
+
+console.log('\n14) Automatisches MHD für Obst und Gemüse (Bon)')
+{
+  const cases: [string, string, string | null][] = [
+    ['Zucchini', 'Gemüse', '2026-12-03'], ['Kartoffeln', 'Gemüse', '2026-12-13'], ['Rote Zwiebeln', 'Gemüse', '2026-12-13'], ['Schalotten', 'Gemüse', '2026-12-13'],
+    ['Süßkartoffeln', 'Gemüse', '2026-12-03'], ['Frühlingszwiebeln', 'Gemüse', '2026-12-03'], ['Feldsalat', 'Gemüse', '2026-11-27'], ['Champignons', 'Gemüse', '2026-11-27'],
+    ['Salatgurke', 'Gemüse', '2026-12-03'], ['Karotten', 'Gemüse', '2026-12-14'], ['Rotkohl', 'Gemüse', '2026-12-14'], ['Blumenkohl', 'Gemüse', '2026-12-03'], ['Kohlrabi', 'Gemüse', '2026-12-03'],
+    ['Knoblauch', 'Gemüse', '2026-12-23'], ['Hokkaido-Kürbis', 'Gemüse', '2026-12-23'], ['Petersilienwurzel', 'Gemüse', '2026-12-14'], ['Mais', 'Gemüse', null], ['Maronen', 'Gemüse', null],
+    ['Apfel', 'Obst', '2026-12-14'], ['Banane', 'Obst', '2026-11-28'], ['Himbeeren', 'Obst', '2026-11-26'], ['Zitrone', 'Obst', '2026-12-07'], ['Birne', 'Obst', '2026-11-30'],
+    ['Zitronensaft', 'Obst', null], ['Rosinen', 'Obst', null], ['Datteln', 'Obst', null],
+    ['Petersilie', 'Kräuter & Gewürze', '2026-11-27'], ['Basilikum', 'Kräuter & Gewürze', '2026-11-27'], ['Koriander gemahlen', 'Kräuter & Gewürze', null], ['Thymian getrocknet', 'Kräuter & Gewürze', null], ['Zimt', 'Kräuter & Gewürze', null],
+    ['Milch', 'Milchprodukte & Eier', null], ['Rahmspinat', 'Tiefkühl', null],
+  ]
+  const wrong = cases.filter(([name, group, want]) => bestBeforeFor(name, group, '2026-11-23') !== want).map(([name, group, want]) => name + ' (' + bestBeforeFor(name, group, '2026-11-23') + ' statt ' + want + ')')
+  expect(!wrong.length, cases.length + ' Fälle ab Bon 23.11.2026 richtig' + (wrong.length ? ': ' + wrong.join(', ') : ''))
+  expect(bestBeforeFor('Kartoffeln', 'Gemüse', '2026-12-25') === '2027-01-14', 'Jahreswechsel: 25.12. + 20 = 14.01.2027')
+}
+
+console.log('\n15) Wochenplan: Was läuft diese Woche ab?')
+{
+  const pantry = [
+    { id: 'p1', name: 'Mozzarella', quantity: 125, best_before: '2026-11-25', food_item_id: 'mozz' },
+    { id: 'p2', name: 'Milch', quantity: 1, best_before: '2026-11-27', food_item_id: 'milch' },
+    { id: 'p3', name: 'Quark', quantity: 500, best_before: '2026-11-22', food_item_id: 'quark' },
+    { id: 'p4', name: 'Kartoffeln', quantity: 2500, best_before: '2026-12-13', food_item_id: 'kart' },
+    { id: 'p5', name: 'Spinat', quantity: 0, best_before: '2026-11-24', food_item_id: 'spinat' },
+    { id: 'p6', name: 'Banane', quantity: 6, best_before: '2026-11-28', food_item_id: 'banane' },
+  ]
+  const meals = [
+    { meal_date: '2026-11-24', meal_type: 'dinner', recipe_id: 'r1', food_item_id: null, custom_title: 'Ofengemüse mit Mozzarella' },
+    { meal_date: '2026-11-28', meal_type: 'dinner', recipe_id: 'r2', food_item_id: null, custom_title: 'Milchreis' },
+    { meal_date: '2026-11-23', meal_type: 'week', recipe_id: null, food_item_id: 'banane', custom_title: 'Banane' },
+  ]
+  const ingredients: Record<string, { food_item_id: string | null; name: string }[]> = { r1: [{ food_item_id: 'mozz', name: 'Mozzarella' }], r2: [{ food_item_id: null, name: 'Milch' }] }
+  const n = weekExpiries(pantry, meals, id => ingredients[id] ?? [], '2026-11-29', '2026-11-23')
+  expect(n.map(x => x.item.name).join(',') === 'Quark,Mozzarella,Milch,Banane', 'Reihenfolge nach MHD; Kartoffeln (nach der Woche) und leerer Spinat fehlen')
+  expect(n[0].expired && !n[0].planned, 'Quark: abgelaufen')
+  expect(n[1].planned?.title === 'Ofengemüse mit Mozzarella', 'Mozzarella: eingeplant am 24.11. (vor dem MHD)')
+  expect(!n[2].planned, 'Milch: Milchreis erst am 28.11., MHD 27.11. → nicht rechtzeitig eingeplant')
+  expect(n[3].planned?.title === 'Banane', 'Banane: über „Für die ganze Woche“ eingeplant')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

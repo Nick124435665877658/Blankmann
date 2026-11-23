@@ -260,3 +260,11 @@ export function instructionSteps(value: unknown): string[] {
   if (steps.length === 1 && /^zubereitung und genaue mengen noch ergänzen/i.test(steps[0])) return []
   return steps
 }
+
+// Vorrat bearbeiten (0.3.53, Nick): Schrittweite für − / + – Stück/Packung 1, g/ml 50 (ab 1 kg / 1 l: 100), kg/l 0,1.
+export function pantryStep(unit: string | null | undefined, quantity: number | null | undefined): number {
+  const key = keyOf(unit ?? '')
+  if (key === 'g' || key === 'gramm' || key === 'ml') return (quantity ?? 0) >= 1000 ? 100 : 50
+  if (key === 'kg' || key === 'l' || key === 'liter') return 0.1
+  return 1
+}

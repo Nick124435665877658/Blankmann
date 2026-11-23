@@ -1,3 +1,4 @@
+import { bestBeforeFor } from '../lib/shelfLife'
 import FoodPicker from './FoodPicker'
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
@@ -236,13 +237,17 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
           // Der Vorrat bekommt die gekaufte Menge (z. B. 2 Stk), auch wenn der Preis auf 1 Stk runtergerechnet wird.
           const amount=pantryAmountFromReceipt({quantity,unit},packages.get(foodId))
           const plan=planPantryAddition(pantryRows,{name,foodId,quantity:amount.quantity,unit:amount.unit,organic})
+          // 0.3.53: MHD für frisches Obst/Gemüse automatisch ab Bondatum (Regeln in lib/shelfLife); beim Zusammenlegen bleibt ein vorhandenes MHD.
+          const catalogFood=foods.find(f=>f.id===foodId)
+          const category=catalogFood?.category??guessCategory(name)
+          const bestBefore=bestBeforeFor(catalogFood?.name??name,category,observedAt)
           if(plan.update){
-            const changed=await supabase.from('pantry_items').update({quantity:plan.update.quantity,updated_at:new Date().toISOString()}).eq('id',plan.update.id).eq('household_id',householdId)
+            const existing=pantryRows.find(r=>r.id===plan.update!.id)
+            const changed=await supabase.from('pantry_items').update({quantity:plan.update.quantity,...(bestBefore&&!existing?.best_before?{best_before:bestBefore}:{}),updated_at:new Date().toISOString()}).eq('id',plan.update.id).eq('household_id',householdId)
             if(changed.error)throw changed.error
-            const row=pantryRows.find(r=>r.id===plan.update!.id);if(row)row.quantity=plan.update.quantity
+            if(existing){existing.quantity=plan.update.quantity;if(bestBefore&&!existing.best_before)existing.best_before=bestBefore}
           }else if(plan.insert){
-            const category=guessCategory(name)
-            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,is_organic:organic,storage_location:storageFor(category),notes:'Aus Kassenbon vom '+new Date(observedAt+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before,is_organic').single()
+            const created=await supabase.from('pantry_items').insert({household_id:householdId,name:plan.insert.name,normalized_name:normalize(plan.insert.name),quantity:plan.insert.quantity,unit:plan.insert.unit,food_item_id:foodId,is_organic:organic,storage_location:storageFor(category),best_before:bestBefore,notes:'Aus Kassenbon vom '+new Date(observedAt+'T12:00:00').toLocaleDateString('de-DE')}).select('id,name,quantity,unit,food_item_id,best_before,is_organic').single()
             if(created.error)throw created.error
             pantryRows.push(created.data as PantryRow)
           }

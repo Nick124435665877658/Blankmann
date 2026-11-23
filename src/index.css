@@ -1168,3 +1168,25 @@ div.add-panel-body{display:contents}
 .app-shell.theme-sophia .expiry-status.warn{background:#F6D5DE!important}
 .app-shell.theme-sophia .expiry-status.warn,.app-shell.theme-sophia .expiry-status.warn *{color:#8F0D25!important}
 .app-shell.theme-sophia .day-expiry{background:#F6D5DE!important}
+/* 0.3.54 – Einstellungen: Alexa verbinden */
+.alexa-panel .setting-block{padding-bottom:0;margin-bottom:0;border:0}
+.alexa-panel .setting-block>small{display:block;line-height:1.55}
+.alexa-links{display:grid;gap:2px;margin:14px 0 4px}
+.alexa-link{display:flex;align-items:center;justify-content:space-between;gap:10px 14px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--line)}
+.alexa-link>div{display:grid;gap:3px;min-width:0}
+.alexa-link b{font-size:13px}
+.alexa-link small{font-size:11px;color:var(--muted)}
+.alexa-connect{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:16px 0 10px}
+.alexa-connect label{display:grid;gap:7px;flex:0 1 240px;min-width:0;font-size:11px;font-weight:600}
+.alexa-connect input::placeholder{letter-spacing:1px;font-weight:500;font-size:14px}
+.alexa-connect input{width:100%;max-width:220px;border:1px solid var(--line);background:#fffefa;border-radius:8px;padding:11px 12px;font-size:18px;font-weight:700;letter-spacing:4px;outline:none}
+.alexa-connect input:focus{border-color:#8ba187;box-shadow:0 0 0 3px #eaf0e7}
+.alexa-connect .button{padding:12px 18px}
+.alexa-how{margin-bottom:10px}
+.alexa-panel .alert{margin:10px 0 0}
+.theme-nick .alexa-link{border-color:#2b3948}
+.theme-nick .alexa-link small{color:#8a9aa8}
+.theme-nick .alexa-connect label{color:#c3cfdb}
+.theme-nick .alexa-connect input{background:#101a24;border-color:#354556;color:#e6edf5}
+.app-shell.theme-sophia .alexa-link{border-color:#EDC3CE!important}
+.app-shell.theme-sophia .alexa-connect input{background:#FFF6F8!important;border-color:#EDC3CE!important}

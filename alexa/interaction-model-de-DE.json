@@ -1,0 +1,3189 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "blankmann",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": [
+            "was kann ich sagen",
+            "hilfe"
+          ]
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": [
+            "fertig",
+            "das wars",
+            "das war alles",
+            "nichts mehr"
+          ]
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": []
+        },
+        {
+          "name": "VerbrauchIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "ich habe {menge} {lebensmittel} verbraucht",
+            "ich habe {menge} {einheit} {lebensmittel} verbraucht",
+            "ich habe {menge} {lebensmittel} verwendet",
+            "ich habe {menge} {einheit} {lebensmittel} verwendet",
+            "ich habe {menge} {lebensmittel} genommen",
+            "ich habe {menge} {einheit} {lebensmittel} genommen",
+            "ich habe {menge} {lebensmittel} gebraucht",
+            "ich habe {menge} {einheit} {lebensmittel} gebraucht",
+            "ich habe {menge} {lebensmittel} benutzt",
+            "ich habe {menge} {einheit} {lebensmittel} benutzt",
+            "ich habe {menge} {lebensmittel} aufgebraucht",
+            "ich habe {menge} {einheit} {lebensmittel} aufgebraucht",
+            "ich habe {menge} {lebensmittel} gegessen",
+            "ich habe {menge} {einheit} {lebensmittel} gegessen",
+            "ich habe {menge} {lebensmittel} verkocht",
+            "ich habe {menge} {einheit} {lebensmittel} verkocht",
+            "ich hab {menge} {lebensmittel} verbraucht",
+            "ich hab {menge} {einheit} {lebensmittel} verbraucht",
+            "ich hab {menge} {lebensmittel} verwendet",
+            "ich hab {menge} {einheit} {lebensmittel} verwendet",
+            "ich hab {menge} {lebensmittel} genommen",
+            "ich hab {menge} {einheit} {lebensmittel} genommen",
+            "ich hab {menge} {lebensmittel} gebraucht",
+            "ich hab {menge} {einheit} {lebensmittel} gebraucht",
+            "ich hab {menge} {lebensmittel} benutzt",
+            "ich hab {menge} {einheit} {lebensmittel} benutzt",
+            "ich hab {menge} {lebensmittel} aufgebraucht",
+            "ich hab {menge} {einheit} {lebensmittel} aufgebraucht",
+            "ich hab {menge} {lebensmittel} gegessen",
+            "ich hab {menge} {einheit} {lebensmittel} gegessen",
+            "ich hab {menge} {lebensmittel} verkocht",
+            "ich hab {menge} {einheit} {lebensmittel} verkocht",
+            "wir haben {menge} {lebensmittel} verbraucht",
+            "wir haben {menge} {einheit} {lebensmittel} verbraucht",
+            "wir haben {menge} {lebensmittel} verwendet",
+            "wir haben {menge} {einheit} {lebensmittel} verwendet",
+            "wir haben {menge} {lebensmittel} genommen",
+            "wir haben {menge} {einheit} {lebensmittel} genommen",
+            "wir haben {menge} {lebensmittel} gebraucht",
+            "wir haben {menge} {einheit} {lebensmittel} gebraucht",
+            "wir haben {menge} {lebensmittel} benutzt",
+            "wir haben {menge} {einheit} {lebensmittel} benutzt",
+            "wir haben {menge} {lebensmittel} aufgebraucht",
+            "wir haben {menge} {einheit} {lebensmittel} aufgebraucht",
+            "wir haben {menge} {lebensmittel} gegessen",
+            "wir haben {menge} {einheit} {lebensmittel} gegessen",
+            "wir haben {menge} {lebensmittel} verkocht",
+            "wir haben {menge} {einheit} {lebensmittel} verkocht",
+            "ich habe {lebensmittel} verbraucht",
+            "ich habe {lebensmittel} verwendet",
+            "ich habe {lebensmittel} aufgebraucht",
+            "ich hab {lebensmittel} verbraucht",
+            "ich hab {lebensmittel} verwendet",
+            "ich hab {lebensmittel} aufgebraucht",
+            "wir haben {lebensmittel} verbraucht",
+            "wir haben {lebensmittel} verwendet",
+            "wir haben {lebensmittel} aufgebraucht",
+            "{menge} {lebensmittel} verbraucht",
+            "{menge} {einheit} {lebensmittel} verbraucht",
+            "{menge} {lebensmittel} verwendet",
+            "{menge} {einheit} {lebensmittel} verwendet",
+            "{menge} {lebensmittel} genommen",
+            "{menge} {einheit} {lebensmittel} genommen",
+            "{menge} {lebensmittel} gebraucht",
+            "{menge} {einheit} {lebensmittel} gebraucht",
+            "{menge} {lebensmittel} benutzt",
+            "{menge} {einheit} {lebensmittel} benutzt",
+            "{menge} {lebensmittel} aufgebraucht",
+            "{menge} {einheit} {lebensmittel} aufgebraucht",
+            "{menge} {lebensmittel} gegessen",
+            "{menge} {einheit} {lebensmittel} gegessen",
+            "{menge} {lebensmittel} verkocht",
+            "{menge} {einheit} {lebensmittel} verkocht",
+            "{menge} {lebensmittel}",
+            "{menge} {einheit} {lebensmittel}",
+            "zieh {menge} {lebensmittel} ab",
+            "zieh {menge} {einheit} {lebensmittel} ab",
+            "zieh {menge} {lebensmittel} vom vorrat ab",
+            "zieh {menge} {einheit} {lebensmittel} vom vorrat ab",
+            "minus {menge} {lebensmittel}",
+            "minus {menge} {einheit} {lebensmittel}",
+            "{lebensmittel} minus {menge}",
+            "{lebensmittel} minus {menge} {einheit}",
+            "nimm {menge} {lebensmittel} raus",
+            "nimm {menge} {einheit} {lebensmittel} raus",
+            "ich möchte {menge} {lebensmittel} abziehen",
+            "ich möchte {menge} {einheit} {lebensmittel} abziehen"
+          ]
+        },
+        {
+          "name": "EinsIntent",
+          "slots": [
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "ich habe ein {lebensmittel} verbraucht",
+            "ich habe ein {lebensmittel} verwendet",
+            "ich habe ein {lebensmittel} genommen",
+            "ich habe ein {lebensmittel} gebraucht",
+            "ich habe ein {lebensmittel} benutzt",
+            "ich habe ein {lebensmittel} gegessen",
+            "ich habe eine {lebensmittel} verbraucht",
+            "ich habe eine {lebensmittel} verwendet",
+            "ich habe eine {lebensmittel} genommen",
+            "ich habe eine {lebensmittel} gebraucht",
+            "ich habe eine {lebensmittel} benutzt",
+            "ich habe eine {lebensmittel} gegessen",
+            "ich habe einen {lebensmittel} verbraucht",
+            "ich habe einen {lebensmittel} verwendet",
+            "ich habe einen {lebensmittel} genommen",
+            "ich habe einen {lebensmittel} gebraucht",
+            "ich habe einen {lebensmittel} benutzt",
+            "ich habe einen {lebensmittel} gegessen",
+            "ich hab ein {lebensmittel} verbraucht",
+            "ich hab ein {lebensmittel} verwendet",
+            "ich hab ein {lebensmittel} genommen",
+            "ich hab ein {lebensmittel} gebraucht",
+            "ich hab ein {lebensmittel} benutzt",
+            "ich hab ein {lebensmittel} gegessen",
+            "ich hab eine {lebensmittel} verbraucht",
+            "ich hab eine {lebensmittel} verwendet",
+            "ich hab eine {lebensmittel} genommen",
+            "ich hab eine {lebensmittel} gebraucht",
+            "ich hab eine {lebensmittel} benutzt",
+            "ich hab eine {lebensmittel} gegessen",
+            "ich hab einen {lebensmittel} verbraucht",
+            "ich hab einen {lebensmittel} verwendet",
+            "ich hab einen {lebensmittel} genommen",
+            "ich hab einen {lebensmittel} gebraucht",
+            "ich hab einen {lebensmittel} benutzt",
+            "ich hab einen {lebensmittel} gegessen",
+            "wir haben ein {lebensmittel} verbraucht",
+            "wir haben ein {lebensmittel} verwendet",
+            "wir haben ein {lebensmittel} genommen",
+            "wir haben ein {lebensmittel} gebraucht",
+            "wir haben ein {lebensmittel} benutzt",
+            "wir haben ein {lebensmittel} gegessen",
+            "wir haben eine {lebensmittel} verbraucht",
+            "wir haben eine {lebensmittel} verwendet",
+            "wir haben eine {lebensmittel} genommen",
+            "wir haben eine {lebensmittel} gebraucht",
+            "wir haben eine {lebensmittel} benutzt",
+            "wir haben eine {lebensmittel} gegessen",
+            "wir haben einen {lebensmittel} verbraucht",
+            "wir haben einen {lebensmittel} verwendet",
+            "wir haben einen {lebensmittel} genommen",
+            "wir haben einen {lebensmittel} gebraucht",
+            "wir haben einen {lebensmittel} benutzt",
+            "wir haben einen {lebensmittel} gegessen",
+            "ich habe eine {einheit} {lebensmittel} verbraucht",
+            "ich habe eine {einheit} {lebensmittel} verwendet",
+            "ich habe eine {einheit} {lebensmittel} aufgebraucht",
+            "ich habe einen {einheit} {lebensmittel} verbraucht",
+            "ich habe einen {einheit} {lebensmittel} verwendet",
+            "ich habe einen {einheit} {lebensmittel} aufgebraucht",
+            "ich habe ein {einheit} {lebensmittel} verbraucht",
+            "ich habe ein {einheit} {lebensmittel} verwendet",
+            "ich habe ein {einheit} {lebensmittel} aufgebraucht",
+            "ich hab eine {einheit} {lebensmittel} verbraucht",
+            "ich hab eine {einheit} {lebensmittel} verwendet",
+            "ich hab eine {einheit} {lebensmittel} aufgebraucht",
+            "ich hab einen {einheit} {lebensmittel} verbraucht",
+            "ich hab einen {einheit} {lebensmittel} verwendet",
+            "ich hab einen {einheit} {lebensmittel} aufgebraucht",
+            "ich hab ein {einheit} {lebensmittel} verbraucht",
+            "ich hab ein {einheit} {lebensmittel} verwendet",
+            "ich hab ein {einheit} {lebensmittel} aufgebraucht",
+            "wir haben eine {einheit} {lebensmittel} verbraucht",
+            "wir haben eine {einheit} {lebensmittel} verwendet",
+            "wir haben eine {einheit} {lebensmittel} aufgebraucht",
+            "wir haben einen {einheit} {lebensmittel} verbraucht",
+            "wir haben einen {einheit} {lebensmittel} verwendet",
+            "wir haben einen {einheit} {lebensmittel} aufgebraucht",
+            "wir haben ein {einheit} {lebensmittel} verbraucht",
+            "wir haben ein {einheit} {lebensmittel} verwendet",
+            "wir haben ein {einheit} {lebensmittel} aufgebraucht",
+            "ein {lebensmittel} verbraucht",
+            "ein {einheit} {lebensmittel} verbraucht",
+            "ein {lebensmittel}",
+            "ein {einheit} {lebensmittel}",
+            "eine {lebensmittel} verbraucht",
+            "eine {einheit} {lebensmittel} verbraucht",
+            "eine {lebensmittel}",
+            "eine {einheit} {lebensmittel}",
+            "einen {lebensmittel} verbraucht",
+            "einen {einheit} {lebensmittel} verbraucht",
+            "einen {lebensmittel}",
+            "einen {einheit} {lebensmittel}"
+          ]
+        },
+        {
+          "name": "BestandIntent",
+          "slots": [
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "wie viel {lebensmittel} habe ich noch",
+            "wie viele {lebensmittel} habe ich noch",
+            "wie viel {lebensmittel} hab ich noch",
+            "wie viele {lebensmittel} hab ich noch",
+            "wie viel {lebensmittel} haben wir noch",
+            "wie viele {lebensmittel} haben wir noch",
+            "wie viel {lebensmittel} ist noch da",
+            "wie viele {lebensmittel} sind noch da",
+            "haben wir noch {lebensmittel}",
+            "habe ich noch {lebensmittel}",
+            "hab ich noch {lebensmittel}",
+            "ist noch {lebensmittel} da",
+            "sind noch {lebensmittel} da",
+            "was ist noch an {lebensmittel} da",
+            "was haben wir noch an {lebensmittel}",
+            "wie viel {lebensmittel} ist im vorrat",
+            "wie viele {lebensmittel} sind im vorrat"
+          ]
+        },
+        {
+          "name": "RueckgaengigIntent",
+          "samples": [
+            "rückgängig",
+            "mach das rückgängig",
+            "mach es rückgängig",
+            "das rückgängig machen",
+            "nimm das zurück",
+            "das war falsch",
+            "letzte änderung rückgängig",
+            "letzte änderung zurücknehmen",
+            "das stimmt nicht",
+            "stopp das war falsch",
+            "mach die letzte änderung rückgängig"
+          ]
+        },
+        {
+          "name": "MengeIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            }
+          ],
+          "samples": [
+            "{menge}",
+            "{menge} {einheit}",
+            "nur {menge}",
+            "nur {menge} {einheit}",
+            "es waren {menge}",
+            "es waren {menge} {einheit}",
+            "ungefähr {menge}",
+            "ungefähr {menge} {einheit}"
+          ]
+        },
+        {
+          "name": "LebensmittelIntent",
+          "slots": [
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "{lebensmittel}",
+            "die {lebensmittel}",
+            "den {lebensmittel}",
+            "das {lebensmittel}",
+            "ich meine {lebensmittel}",
+            "ich meine die {lebensmittel}",
+            "ich meine den {lebensmittel}",
+            "ich meine das {lebensmittel}"
+          ]
+        }
+      ],
+      "types": [
+        {
+          "name": "LEBENSMITTEL",
+          "values": [
+            {
+              "id": "Ahornsirup",
+              "name": {
+                "value": "Ahornsirup"
+              }
+            },
+            {
+              "id": "Ajvar",
+              "name": {
+                "value": "Ajvar"
+              }
+            },
+            {
+              "id": "Amaranth",
+              "name": {
+                "value": "Amaranth"
+              }
+            },
+            {
+              "id": "Ananas",
+              "name": {
+                "value": "Ananas"
+              }
+            },
+            {
+              "id": "Aperol",
+              "name": {
+                "value": "Aperol"
+              }
+            },
+            {
+              "id": "Apfel",
+              "name": {
+                "value": "Apfel",
+                "synonyms": [
+                  "Äpfel"
+                ]
+              }
+            },
+            {
+              "id": "Apfelessig",
+              "name": {
+                "value": "Apfelessig"
+              }
+            },
+            {
+              "id": "Apfelsaft",
+              "name": {
+                "value": "Apfelsaft"
+              }
+            },
+            {
+              "id": "Aprikosen",
+              "name": {
+                "value": "Aprikosen",
+                "synonyms": [
+                  "Aprikose"
+                ]
+              }
+            },
+            {
+              "id": "Aubergine",
+              "name": {
+                "value": "Aubergine",
+                "synonyms": [
+                  "Auberginen"
+                ]
+              }
+            },
+            {
+              "id": "Austernpilze",
+              "name": {
+                "value": "Austernpilze"
+              }
+            },
+            {
+              "id": "Avocado",
+              "name": {
+                "value": "Avocado",
+                "synonyms": [
+                  "Avocados"
+                ]
+              }
+            },
+            {
+              "id": "Babymais",
+              "name": {
+                "value": "Babymais"
+              }
+            },
+            {
+              "id": "Backkakao",
+              "name": {
+                "value": "Backkakao"
+              }
+            },
+            {
+              "id": "Backpulver",
+              "name": {
+                "value": "Backpulver"
+              }
+            },
+            {
+              "id": "Bacon",
+              "name": {
+                "value": "Bacon",
+                "synonyms": [
+                  "Speck"
+                ]
+              }
+            },
+            {
+              "id": "Balsamico",
+              "name": {
+                "value": "Balsamico"
+              }
+            },
+            {
+              "id": "Bambussprossen",
+              "name": {
+                "value": "Bambussprossen"
+              }
+            },
+            {
+              "id": "Banane",
+              "name": {
+                "value": "Banane",
+                "synonyms": [
+                  "Bananen"
+                ]
+              }
+            },
+            {
+              "id": "Bananenchips",
+              "name": {
+                "value": "Bananenchips"
+              }
+            },
+            {
+              "id": "Basilikum",
+              "name": {
+                "value": "Basilikum"
+              }
+            },
+            {
+              "id": "Basmatireis",
+              "name": {
+                "value": "Basmatireis"
+              }
+            },
+            {
+              "id": "Beluga Linsen",
+              "name": {
+                "value": "Beluga Linsen"
+              }
+            },
+            {
+              "id": "Birne",
+              "name": {
+                "value": "Birne",
+                "synonyms": [
+                  "Birnen"
+                ]
+              }
+            },
+            {
+              "id": "Bittermandelaroma",
+              "name": {
+                "value": "Bittermandelaroma"
+              }
+            },
+            {
+              "id": "Blaumohn",
+              "name": {
+                "value": "Blaumohn"
+              }
+            },
+            {
+              "id": "Blauschimmelkäse",
+              "name": {
+                "value": "Blauschimmelkäse"
+              }
+            },
+            {
+              "id": "Blumenkohl",
+              "name": {
+                "value": "Blumenkohl"
+              }
+            },
+            {
+              "id": "Bockshornkleesamen",
+              "name": {
+                "value": "Bockshornkleesamen"
+              }
+            },
+            {
+              "id": "Bratwurst",
+              "name": {
+                "value": "Bratwurst",
+                "synonyms": [
+                  "Bratwürste"
+                ]
+              }
+            },
+            {
+              "id": "Brauner Zucker",
+              "name": {
+                "value": "Brauner Zucker"
+              }
+            },
+            {
+              "id": "Brokkoli",
+              "name": {
+                "value": "Brokkoli"
+              }
+            },
+            {
+              "id": "Brombeeren",
+              "name": {
+                "value": "Brombeeren"
+              }
+            },
+            {
+              "id": "Brot",
+              "name": {
+                "value": "Brot"
+              }
+            },
+            {
+              "id": "Brötchen",
+              "name": {
+                "value": "Brötchen",
+                "synonyms": [
+                  "Semmeln"
+                ]
+              }
+            },
+            {
+              "id": "Brotgewürz",
+              "name": {
+                "value": "Brotgewürz"
+              }
+            },
+            {
+              "id": "Brühe",
+              "name": {
+                "value": "Brühe"
+              }
+            },
+            {
+              "id": "Brühwürstchen",
+              "name": {
+                "value": "Brühwürstchen",
+                "synonyms": [
+                  "Würstchen"
+                ]
+              }
+            },
+            {
+              "id": "Buchweizenmehl",
+              "name": {
+                "value": "Buchweizenmehl"
+              }
+            },
+            {
+              "id": "Bulgur",
+              "name": {
+                "value": "Bulgur"
+              }
+            },
+            {
+              "id": "Butter",
+              "name": {
+                "value": "Butter",
+                "synonyms": [
+                  "Markenbutter",
+                  "Deutsche Markenbutter"
+                ]
+              }
+            },
+            {
+              "id": "Butter Vanille Aroma",
+              "name": {
+                "value": "Butter Vanille Aroma"
+              }
+            },
+            {
+              "id": "Butterkekse",
+              "name": {
+                "value": "Butterkekse"
+              }
+            },
+            {
+              "id": "Butterschmalz",
+              "name": {
+                "value": "Butterschmalz"
+              }
+            },
+            {
+              "id": "Camembert",
+              "name": {
+                "value": "Camembert"
+              }
+            },
+            {
+              "id": "Cantuccini",
+              "name": {
+                "value": "Cantuccini"
+              }
+            },
+            {
+              "id": "Cashewkerne",
+              "name": {
+                "value": "Cashewkerne"
+              }
+            },
+            {
+              "id": "Cayennepfeffer",
+              "name": {
+                "value": "Cayennepfeffer"
+              }
+            },
+            {
+              "id": "Champignons",
+              "name": {
+                "value": "Champignons",
+                "synonyms": [
+                  "Champignon",
+                  "Pilze"
+                ]
+              }
+            },
+            {
+              "id": "Cheddar",
+              "name": {
+                "value": "Cheddar"
+              }
+            },
+            {
+              "id": "Cherrytomaten",
+              "name": {
+                "value": "Cherrytomaten"
+              }
+            },
+            {
+              "id": "Chiasamen",
+              "name": {
+                "value": "Chiasamen"
+              }
+            },
+            {
+              "id": "Chiliflocken",
+              "name": {
+                "value": "Chiliflocken"
+              }
+            },
+            {
+              "id": "Chilipaste",
+              "name": {
+                "value": "Chilipaste"
+              }
+            },
+            {
+              "id": "Chilipulver",
+              "name": {
+                "value": "Chilipulver"
+              }
+            },
+            {
+              "id": "Chilischote",
+              "name": {
+                "value": "Chilischote",
+                "synonyms": [
+                  "Chilischoten"
+                ]
+              }
+            },
+            {
+              "id": "Chinakohl",
+              "name": {
+                "value": "Chinakohl"
+              }
+            },
+            {
+              "id": "Ciabatta",
+              "name": {
+                "value": "Ciabatta"
+              }
+            },
+            {
+              "id": "Cidre",
+              "name": {
+                "value": "Cidre"
+              }
+            },
+            {
+              "id": "Cognac",
+              "name": {
+                "value": "Cognac"
+              }
+            },
+            {
+              "id": "Couscous",
+              "name": {
+                "value": "Couscous"
+              }
+            },
+            {
+              "id": "Cranberrys",
+              "name": {
+                "value": "Cranberrys"
+              }
+            },
+            {
+              "id": "Crema di Balsamico",
+              "name": {
+                "value": "Crema di Balsamico"
+              }
+            },
+            {
+              "id": "Crème double",
+              "name": {
+                "value": "Crème double"
+              }
+            },
+            {
+              "id": "Crème fraîche",
+              "name": {
+                "value": "Crème fraîche"
+              }
+            },
+            {
+              "id": "Curry",
+              "name": {
+                "value": "Curry"
+              }
+            },
+            {
+              "id": "Currypaste",
+              "name": {
+                "value": "Currypaste"
+              }
+            },
+            {
+              "id": "Datteln",
+              "name": {
+                "value": "Datteln"
+              }
+            },
+            {
+              "id": "Dill",
+              "name": {
+                "value": "Dill"
+              }
+            },
+            {
+              "id": "Dinkelkörner",
+              "name": {
+                "value": "Dinkelkörner"
+              }
+            },
+            {
+              "id": "Dinkelmehl",
+              "name": {
+                "value": "Dinkelmehl"
+              }
+            },
+            {
+              "id": "Dominosteine",
+              "name": {
+                "value": "Dominosteine"
+              }
+            },
+            {
+              "id": "Eier",
+              "name": {
+                "value": "Eier",
+                "synonyms": [
+                  "Ei",
+                  "Hühnereier"
+                ]
+              }
+            },
+            {
+              "id": "Eierlikör",
+              "name": {
+                "value": "Eierlikör"
+              }
+            },
+            {
+              "id": "Eisbergsalat",
+              "name": {
+                "value": "Eisbergsalat"
+              }
+            },
+            {
+              "id": "Emmentaler",
+              "name": {
+                "value": "Emmentaler"
+              }
+            },
+            {
+              "id": "Entenbrust",
+              "name": {
+                "value": "Entenbrust"
+              }
+            },
+            {
+              "id": "Erbsen",
+              "name": {
+                "value": "Erbsen"
+              }
+            },
+            {
+              "id": "Erdbeeren",
+              "name": {
+                "value": "Erdbeeren",
+                "synonyms": [
+                  "Erdbeere"
+                ]
+              }
+            },
+            {
+              "id": "Erdbeerkonfitüre",
+              "name": {
+                "value": "Erdbeerkonfitüre",
+                "synonyms": [
+                  "Erdbeermarmelade"
+                ]
+              }
+            },
+            {
+              "id": "Erdnusscreme",
+              "name": {
+                "value": "Erdnusscreme",
+                "synonyms": [
+                  "Erdnussbutter"
+                ]
+              }
+            },
+            {
+              "id": "Erdnüsse",
+              "name": {
+                "value": "Erdnüsse"
+              }
+            },
+            {
+              "id": "Espresso",
+              "name": {
+                "value": "Espresso"
+              }
+            },
+            {
+              "id": "Essig",
+              "name": {
+                "value": "Essig"
+              }
+            },
+            {
+              "id": "Estragon",
+              "name": {
+                "value": "Estragon"
+              }
+            },
+            {
+              "id": "Feldsalat",
+              "name": {
+                "value": "Feldsalat"
+              }
+            },
+            {
+              "id": "Fenchel",
+              "name": {
+                "value": "Fenchel"
+              }
+            },
+            {
+              "id": "Feta",
+              "name": {
+                "value": "Feta"
+              }
+            },
+            {
+              "id": "Fleischbrühe",
+              "name": {
+                "value": "Fleischbrühe"
+              }
+            },
+            {
+              "id": "Flohsamenschalen",
+              "name": {
+                "value": "Flohsamenschalen"
+              }
+            },
+            {
+              "id": "Fontina",
+              "name": {
+                "value": "Fontina"
+              }
+            },
+            {
+              "id": "Frankfurter grüne Kräuter",
+              "name": {
+                "value": "Frankfurter grüne Kräuter"
+              }
+            },
+            {
+              "id": "Franzbrötchen",
+              "name": {
+                "value": "Franzbrötchen"
+              }
+            },
+            {
+              "id": "Frischkäse",
+              "name": {
+                "value": "Frischkäse"
+              }
+            },
+            {
+              "id": "Frühlingszwiebeln",
+              "name": {
+                "value": "Frühlingszwiebeln",
+                "synonyms": [
+                  "Frühlingszwiebel",
+                  "Lauchzwiebeln"
+                ]
+              }
+            },
+            {
+              "id": "Garam Masala",
+              "name": {
+                "value": "Garam Masala"
+              }
+            },
+            {
+              "id": "Garnelen",
+              "name": {
+                "value": "Garnelen"
+              }
+            },
+            {
+              "id": "Geflügelfond",
+              "name": {
+                "value": "Geflügelfond"
+              }
+            },
+            {
+              "id": "Gelatine",
+              "name": {
+                "value": "Gelatine"
+              }
+            },
+            {
+              "id": "Gelierzucker",
+              "name": {
+                "value": "Gelierzucker"
+              }
+            },
+            {
+              "id": "Gemüsebrühe",
+              "name": {
+                "value": "Gemüsebrühe"
+              }
+            },
+            {
+              "id": "Gewürzgurken",
+              "name": {
+                "value": "Gewürzgurken"
+              }
+            },
+            {
+              "id": "Ghee",
+              "name": {
+                "value": "Ghee"
+              }
+            },
+            {
+              "id": "Ginger Ale",
+              "name": {
+                "value": "Ginger Ale"
+              }
+            },
+            {
+              "id": "Glutenfreie Mehlmischung",
+              "name": {
+                "value": "Glutenfreie Mehlmischung"
+              }
+            },
+            {
+              "id": "Gochujang",
+              "name": {
+                "value": "Gochujang"
+              }
+            },
+            {
+              "id": "Gorgonzola",
+              "name": {
+                "value": "Gorgonzola"
+              }
+            },
+            {
+              "id": "Götterspeise",
+              "name": {
+                "value": "Götterspeise"
+              }
+            },
+            {
+              "id": "Gouda",
+              "name": {
+                "value": "Gouda"
+              }
+            },
+            {
+              "id": "Granatapfelsirup",
+              "name": {
+                "value": "Granatapfelsirup"
+              }
+            },
+            {
+              "id": "Grapefruit",
+              "name": {
+                "value": "Grapefruit"
+              }
+            },
+            {
+              "id": "Griechischer Joghurt",
+              "name": {
+                "value": "Griechischer Joghurt"
+              }
+            },
+            {
+              "id": "Grüne Bohnen",
+              "name": {
+                "value": "Grüne Bohnen"
+              }
+            },
+            {
+              "id": "Grüne Pfefferkörner",
+              "name": {
+                "value": "Grüne Pfefferkörner"
+              }
+            },
+            {
+              "id": "Grünkohl",
+              "name": {
+                "value": "Grünkohl"
+              }
+            },
+            {
+              "id": "Gurke",
+              "name": {
+                "value": "Gurke",
+                "synonyms": [
+                  "Gurken",
+                  "Salatgurke"
+                ]
+              }
+            },
+            {
+              "id": "Hackfleisch gemischt",
+              "name": {
+                "value": "Hackfleisch gemischt",
+                "synonyms": [
+                  "Hackfleisch",
+                  "Hack"
+                ]
+              }
+            },
+            {
+              "id": "Haferdrink",
+              "name": {
+                "value": "Haferdrink",
+                "synonyms": [
+                  "Hafermilch"
+                ]
+              }
+            },
+            {
+              "id": "Haferflocken",
+              "name": {
+                "value": "Haferflocken"
+              }
+            },
+            {
+              "id": "Hähnchen Geschnetzeltes",
+              "name": {
+                "value": "Hähnchen Geschnetzeltes"
+              }
+            },
+            {
+              "id": "Hähnchenbrustfilet",
+              "name": {
+                "value": "Hähnchenbrustfilet",
+                "synonyms": [
+                  "Hähnchenbrust",
+                  "Hähnchen"
+                ]
+              }
+            },
+            {
+              "id": "Hähnchenschenkel",
+              "name": {
+                "value": "Hähnchenschenkel"
+              }
+            },
+            {
+              "id": "Haselnüsse",
+              "name": {
+                "value": "Haselnüsse"
+              }
+            },
+            {
+              "id": "Hefe",
+              "name": {
+                "value": "Hefe",
+                "synonyms": [
+                  "frische Hefe"
+                ]
+              }
+            },
+            {
+              "id": "Hefeflocken",
+              "name": {
+                "value": "Hefeflocken"
+              }
+            },
+            {
+              "id": "Heidelbeeren",
+              "name": {
+                "value": "Heidelbeeren",
+                "synonyms": [
+                  "Blaubeeren"
+                ]
+              }
+            },
+            {
+              "id": "Himbeeren",
+              "name": {
+                "value": "Himbeeren"
+              }
+            },
+            {
+              "id": "Hirschrücken",
+              "name": {
+                "value": "Hirschrücken"
+              }
+            },
+            {
+              "id": "Hokkaido Kürbis",
+              "name": {
+                "value": "Hokkaido Kürbis"
+              }
+            },
+            {
+              "id": "Honig",
+              "name": {
+                "value": "Honig"
+              }
+            },
+            {
+              "id": "Hühnerbrühe",
+              "name": {
+                "value": "Hühnerbrühe"
+              }
+            },
+            {
+              "id": "Ingwer",
+              "name": {
+                "value": "Ingwer"
+              }
+            },
+            {
+              "id": "Ingwer gemahlen",
+              "name": {
+                "value": "Ingwer gemahlen"
+              }
+            },
+            {
+              "id": "Jalapeños",
+              "name": {
+                "value": "Jalapeños"
+              }
+            },
+            {
+              "id": "Jasminreis",
+              "name": {
+                "value": "Jasminreis"
+              }
+            },
+            {
+              "id": "Kabeljau",
+              "name": {
+                "value": "Kabeljau"
+              }
+            },
+            {
+              "id": "Kaffee",
+              "name": {
+                "value": "Kaffee"
+              }
+            },
+            {
+              "id": "Kaffir Limettenblätter",
+              "name": {
+                "value": "Kaffir Limettenblätter"
+              }
+            },
+            {
+              "id": "Kakaopulver",
+              "name": {
+                "value": "Kakaopulver"
+              }
+            },
+            {
+              "id": "Kardamom",
+              "name": {
+                "value": "Kardamom"
+              }
+            },
+            {
+              "id": "Karotten",
+              "name": {
+                "value": "Karotten",
+                "synonyms": [
+                  "Karotte",
+                  "Möhren",
+                  "Möhre"
+                ]
+              }
+            },
+            {
+              "id": "Kartoffel Gnocchi",
+              "name": {
+                "value": "Kartoffel Gnocchi",
+                "synonyms": [
+                  "Gnocchi"
+                ]
+              }
+            },
+            {
+              "id": "Kartoffelbrötchen",
+              "name": {
+                "value": "Kartoffelbrötchen"
+              }
+            },
+            {
+              "id": "Kartoffelchips",
+              "name": {
+                "value": "Kartoffelchips",
+                "synonyms": [
+                  "Chips"
+                ]
+              }
+            },
+            {
+              "id": "Kartoffeln",
+              "name": {
+                "value": "Kartoffeln",
+                "synonyms": [
+                  "Kartoffel"
+                ]
+              }
+            },
+            {
+              "id": "Kasseler",
+              "name": {
+                "value": "Kasseler"
+              }
+            },
+            {
+              "id": "Ketchup",
+              "name": {
+                "value": "Ketchup"
+              }
+            },
+            {
+              "id": "Kichererbsen",
+              "name": {
+                "value": "Kichererbsen"
+              }
+            },
+            {
+              "id": "Kidneybohnen",
+              "name": {
+                "value": "Kidneybohnen"
+              }
+            },
+            {
+              "id": "Kinder Bueno White",
+              "name": {
+                "value": "Kinder Bueno White"
+              }
+            },
+            {
+              "id": "Kirschen",
+              "name": {
+                "value": "Kirschen"
+              }
+            },
+            {
+              "id": "Kirschkonfitüre",
+              "name": {
+                "value": "Kirschkonfitüre"
+              }
+            },
+            {
+              "id": "Kiwi",
+              "name": {
+                "value": "Kiwi",
+                "synonyms": [
+                  "Kiwis"
+                ]
+              }
+            },
+            {
+              "id": "Knoblauch",
+              "name": {
+                "value": "Knoblauch",
+                "synonyms": [
+                  "Knoblauchzehe",
+                  "Knoblauchzehen"
+                ]
+              }
+            },
+            {
+              "id": "Knoblauchpulver",
+              "name": {
+                "value": "Knoblauchpulver"
+              }
+            },
+            {
+              "id": "Knollensellerie",
+              "name": {
+                "value": "Knollensellerie"
+              }
+            },
+            {
+              "id": "Kohlrabi",
+              "name": {
+                "value": "Kohlrabi"
+              }
+            },
+            {
+              "id": "Kokosdrink",
+              "name": {
+                "value": "Kokosdrink"
+              }
+            },
+            {
+              "id": "Kokosfett",
+              "name": {
+                "value": "Kokosfett"
+              }
+            },
+            {
+              "id": "Kokosmilch",
+              "name": {
+                "value": "Kokosmilch"
+              }
+            },
+            {
+              "id": "Kokosmilch light",
+              "name": {
+                "value": "Kokosmilch light"
+              }
+            },
+            {
+              "id": "Kokosöl",
+              "name": {
+                "value": "Kokosöl"
+              }
+            },
+            {
+              "id": "Kokosraspeln",
+              "name": {
+                "value": "Kokosraspeln"
+              }
+            },
+            {
+              "id": "Kondensmilch",
+              "name": {
+                "value": "Kondensmilch"
+              }
+            },
+            {
+              "id": "Konfitüre Aprikose",
+              "name": {
+                "value": "Konfitüre Aprikose",
+                "synonyms": [
+                  "Aprikosenmarmelade"
+                ]
+              }
+            },
+            {
+              "id": "Koriander",
+              "name": {
+                "value": "Koriander"
+              }
+            },
+            {
+              "id": "Koriander gemahlen",
+              "name": {
+                "value": "Koriander gemahlen"
+              }
+            },
+            {
+              "id": "Kräuter",
+              "name": {
+                "value": "Kräuter"
+              }
+            },
+            {
+              "id": "Kräuter der Provence",
+              "name": {
+                "value": "Kräuter der Provence"
+              }
+            },
+            {
+              "id": "Kräuterseitlinge",
+              "name": {
+                "value": "Kräuterseitlinge"
+              }
+            },
+            {
+              "id": "Kresse",
+              "name": {
+                "value": "Kresse"
+              }
+            },
+            {
+              "id": "Kreuzkümmel",
+              "name": {
+                "value": "Kreuzkümmel"
+              }
+            },
+            {
+              "id": "Kümmel",
+              "name": {
+                "value": "Kümmel"
+              }
+            },
+            {
+              "id": "Kürbis",
+              "name": {
+                "value": "Kürbis"
+              }
+            },
+            {
+              "id": "Kürbiskerne",
+              "name": {
+                "value": "Kürbiskerne"
+              }
+            },
+            {
+              "id": "Kurkuma",
+              "name": {
+                "value": "Kurkuma"
+              }
+            },
+            {
+              "id": "Kuvertüre weiß",
+              "name": {
+                "value": "Kuvertüre weiß"
+              }
+            },
+            {
+              "id": "Lachsfilet",
+              "name": {
+                "value": "Lachsfilet",
+                "synonyms": [
+                  "Lachs"
+                ]
+              }
+            },
+            {
+              "id": "Lasagneplatten",
+              "name": {
+                "value": "Lasagneplatten"
+              }
+            },
+            {
+              "id": "Lauch",
+              "name": {
+                "value": "Lauch"
+              }
+            },
+            {
+              "id": "Laugenbrezeln",
+              "name": {
+                "value": "Laugenbrezeln",
+                "synonyms": [
+                  "Brezeln"
+                ]
+              }
+            },
+            {
+              "id": "Lebkuchengewürz",
+              "name": {
+                "value": "Lebkuchengewürz"
+              }
+            },
+            {
+              "id": "Leinsamen",
+              "name": {
+                "value": "Leinsamen"
+              }
+            },
+            {
+              "id": "Leipziger Allerlei",
+              "name": {
+                "value": "Leipziger Allerlei"
+              }
+            },
+            {
+              "id": "Limette",
+              "name": {
+                "value": "Limette",
+                "synonyms": [
+                  "Limetten"
+                ]
+              }
+            },
+            {
+              "id": "Limettensaft",
+              "name": {
+                "value": "Limettensaft"
+              }
+            },
+            {
+              "id": "Linsen braun",
+              "name": {
+                "value": "Linsen braun"
+              }
+            },
+            {
+              "id": "Linsen grün",
+              "name": {
+                "value": "Linsen grün"
+              }
+            },
+            {
+              "id": "Linsen rot",
+              "name": {
+                "value": "Linsen rot",
+                "synonyms": [
+                  "rote Linsen"
+                ]
+              }
+            },
+            {
+              "id": "Lorbeerblatt",
+              "name": {
+                "value": "Lorbeerblatt",
+                "synonyms": [
+                  "Lorbeer",
+                  "Lorbeerblätter"
+                ]
+              }
+            },
+            {
+              "id": "Lotus Kekse",
+              "name": {
+                "value": "Lotus Kekse"
+              }
+            },
+            {
+              "id": "Macadamianüsse",
+              "name": {
+                "value": "Macadamianüsse"
+              }
+            },
+            {
+              "id": "Mais",
+              "name": {
+                "value": "Mais"
+              }
+            },
+            {
+              "id": "Majoran",
+              "name": {
+                "value": "Majoran"
+              }
+            },
+            {
+              "id": "Makkaroni",
+              "name": {
+                "value": "Makkaroni"
+              }
+            },
+            {
+              "id": "Malzbier",
+              "name": {
+                "value": "Malzbier"
+              }
+            },
+            {
+              "id": "Mamba Kaubonbons",
+              "name": {
+                "value": "Mamba Kaubonbons"
+              }
+            },
+            {
+              "id": "Mandarine",
+              "name": {
+                "value": "Mandarine",
+                "synonyms": [
+                  "Mandarinen"
+                ]
+              }
+            },
+            {
+              "id": "Mandeln",
+              "name": {
+                "value": "Mandeln"
+              }
+            },
+            {
+              "id": "Mandeln gehobelt",
+              "name": {
+                "value": "Mandeln gehobelt",
+                "synonyms": [
+                  "Mandelblättchen"
+                ]
+              }
+            },
+            {
+              "id": "Mandeln gemahlen",
+              "name": {
+                "value": "Mandeln gemahlen"
+              }
+            },
+            {
+              "id": "Mandelstifte",
+              "name": {
+                "value": "Mandelstifte"
+              }
+            },
+            {
+              "id": "Mango",
+              "name": {
+                "value": "Mango"
+              }
+            },
+            {
+              "id": "Mangold",
+              "name": {
+                "value": "Mangold"
+              }
+            },
+            {
+              "id": "Margarine",
+              "name": {
+                "value": "Margarine"
+              }
+            },
+            {
+              "id": "Maronen",
+              "name": {
+                "value": "Maronen"
+              }
+            },
+            {
+              "id": "Marsala",
+              "name": {
+                "value": "Marsala"
+              }
+            },
+            {
+              "id": "Marzipan",
+              "name": {
+                "value": "Marzipan"
+              }
+            },
+            {
+              "id": "Mascarpone",
+              "name": {
+                "value": "Mascarpone"
+              }
+            },
+            {
+              "id": "Mayonnaise",
+              "name": {
+                "value": "Mayonnaise",
+                "synonyms": [
+                  "Mayo"
+                ]
+              }
+            },
+            {
+              "id": "Meersalz",
+              "name": {
+                "value": "Meersalz"
+              }
+            },
+            {
+              "id": "Mehl",
+              "name": {
+                "value": "Mehl"
+              }
+            },
+            {
+              "id": "Melone",
+              "name": {
+                "value": "Melone"
+              }
+            },
+            {
+              "id": "Mezzo Mix",
+              "name": {
+                "value": "Mezzo Mix"
+              }
+            },
+            {
+              "id": "Mie Nudeln",
+              "name": {
+                "value": "Mie Nudeln"
+              }
+            },
+            {
+              "id": "Milch",
+              "name": {
+                "value": "Milch",
+                "synonyms": [
+                  "Vollmilch",
+                  "Frischmilch"
+                ]
+              }
+            },
+            {
+              "id": "Milchreis",
+              "name": {
+                "value": "Milchreis"
+              }
+            },
+            {
+              "id": "Mineralwasser",
+              "name": {
+                "value": "Mineralwasser",
+                "synonyms": [
+                  "Wasser"
+                ]
+              }
+            },
+            {
+              "id": "Minze",
+              "name": {
+                "value": "Minze"
+              }
+            },
+            {
+              "id": "Mohn",
+              "name": {
+                "value": "Mohn"
+              }
+            },
+            {
+              "id": "Mozzarella",
+              "name": {
+                "value": "Mozzarella"
+              }
+            },
+            {
+              "id": "Muskatnuss",
+              "name": {
+                "value": "Muskatnuss"
+              }
+            },
+            {
+              "id": "Natron",
+              "name": {
+                "value": "Natron"
+              }
+            },
+            {
+              "id": "Naturjoghurt",
+              "name": {
+                "value": "Naturjoghurt",
+                "synonyms": [
+                  "Joghurt"
+                ]
+              }
+            },
+            {
+              "id": "Nektarine",
+              "name": {
+                "value": "Nektarine",
+                "synonyms": [
+                  "Nektarinen"
+                ]
+              }
+            },
+            {
+              "id": "Nelken",
+              "name": {
+                "value": "Nelken"
+              }
+            },
+            {
+              "id": "Noriblätter",
+              "name": {
+                "value": "Noriblätter"
+              }
+            },
+            {
+              "id": "Nudeln",
+              "name": {
+                "value": "Nudeln",
+                "synonyms": [
+                  "Pasta"
+                ]
+              }
+            },
+            {
+              "id": "Nürnberger Rostbratwürstchen",
+              "name": {
+                "value": "Nürnberger Rostbratwürstchen"
+              }
+            },
+            {
+              "id": "Nüsse",
+              "name": {
+                "value": "Nüsse"
+              }
+            },
+            {
+              "id": "Oblaten",
+              "name": {
+                "value": "Oblaten"
+              }
+            },
+            {
+              "id": "Öl",
+              "name": {
+                "value": "Öl"
+              }
+            },
+            {
+              "id": "Olivenöl",
+              "name": {
+                "value": "Olivenöl"
+              }
+            },
+            {
+              "id": "Orange",
+              "name": {
+                "value": "Orange",
+                "synonyms": [
+                  "Orangen"
+                ]
+              }
+            },
+            {
+              "id": "Orangeat",
+              "name": {
+                "value": "Orangeat"
+              }
+            },
+            {
+              "id": "Orangenlimonade",
+              "name": {
+                "value": "Orangenlimonade"
+              }
+            },
+            {
+              "id": "Orangensaft",
+              "name": {
+                "value": "Orangensaft"
+              }
+            },
+            {
+              "id": "Oregano",
+              "name": {
+                "value": "Oregano"
+              }
+            },
+            {
+              "id": "Oreo Kekse",
+              "name": {
+                "value": "Oreo Kekse"
+              }
+            },
+            {
+              "id": "Pak Choi",
+              "name": {
+                "value": "Pak Choi"
+              }
+            },
+            {
+              "id": "Paniermehl",
+              "name": {
+                "value": "Paniermehl"
+              }
+            },
+            {
+              "id": "Paprika gegrillt",
+              "name": {
+                "value": "Paprika gegrillt"
+              }
+            },
+            {
+              "id": "Paprika gelb",
+              "name": {
+                "value": "Paprika gelb",
+                "synonyms": [
+                  "gelbe Paprika"
+                ]
+              }
+            },
+            {
+              "id": "Paprika grün",
+              "name": {
+                "value": "Paprika grün",
+                "synonyms": [
+                  "grüne Paprika"
+                ]
+              }
+            },
+            {
+              "id": "Paprika rot",
+              "name": {
+                "value": "Paprika rot",
+                "synonyms": [
+                  "rote Paprika"
+                ]
+              }
+            },
+            {
+              "id": "Paprikamark",
+              "name": {
+                "value": "Paprikamark"
+              }
+            },
+            {
+              "id": "Paprikapulver",
+              "name": {
+                "value": "Paprikapulver"
+              }
+            },
+            {
+              "id": "Parmesan",
+              "name": {
+                "value": "Parmesan"
+              }
+            },
+            {
+              "id": "Pastinaken",
+              "name": {
+                "value": "Pastinaken",
+                "synonyms": [
+                  "Pastinake"
+                ]
+              }
+            },
+            {
+              "id": "Paulaner Spezi",
+              "name": {
+                "value": "Paulaner Spezi",
+                "synonyms": [
+                  "Spezi"
+                ]
+              }
+            },
+            {
+              "id": "Pecorino",
+              "name": {
+                "value": "Pecorino"
+              }
+            },
+            {
+              "id": "Penne",
+              "name": {
+                "value": "Penne"
+              }
+            },
+            {
+              "id": "Petersilie",
+              "name": {
+                "value": "Petersilie"
+              }
+            },
+            {
+              "id": "Petersilienwurzel",
+              "name": {
+                "value": "Petersilienwurzel"
+              }
+            },
+            {
+              "id": "Pfeffer",
+              "name": {
+                "value": "Pfeffer"
+              }
+            },
+            {
+              "id": "Pfirsich",
+              "name": {
+                "value": "Pfirsich",
+                "synonyms": [
+                  "Pfirsiche"
+                ]
+              }
+            },
+            {
+              "id": "Pflaumen",
+              "name": {
+                "value": "Pflaumen"
+              }
+            },
+            {
+              "id": "Pflaumenmus",
+              "name": {
+                "value": "Pflaumenmus"
+              }
+            },
+            {
+              "id": "Piment",
+              "name": {
+                "value": "Piment"
+              }
+            },
+            {
+              "id": "Pinienkerne",
+              "name": {
+                "value": "Pinienkerne"
+              }
+            },
+            {
+              "id": "Pistazien",
+              "name": {
+                "value": "Pistazien"
+              }
+            },
+            {
+              "id": "Preiselbeermarmelade",
+              "name": {
+                "value": "Preiselbeermarmelade",
+                "synonyms": [
+                  "Preiselbeeren"
+                ]
+              }
+            },
+            {
+              "id": "Provolone",
+              "name": {
+                "value": "Provolone"
+              }
+            },
+            {
+              "id": "Puddingpulver",
+              "name": {
+                "value": "Puddingpulver"
+              }
+            },
+            {
+              "id": "Puderzucker",
+              "name": {
+                "value": "Puderzucker"
+              }
+            },
+            {
+              "id": "Putenbrust",
+              "name": {
+                "value": "Putenbrust"
+              }
+            },
+            {
+              "id": "Quark",
+              "name": {
+                "value": "Quark"
+              }
+            },
+            {
+              "id": "Quinoa",
+              "name": {
+                "value": "Quinoa"
+              }
+            },
+            {
+              "id": "Radieschen",
+              "name": {
+                "value": "Radieschen"
+              }
+            },
+            {
+              "id": "Rahmspinat",
+              "name": {
+                "value": "Rahmspinat"
+              }
+            },
+            {
+              "id": "Ramen Nudeln",
+              "name": {
+                "value": "Ramen Nudeln"
+              }
+            },
+            {
+              "id": "Rapsöl",
+              "name": {
+                "value": "Rapsöl"
+              }
+            },
+            {
+              "id": "Räucherforelle",
+              "name": {
+                "value": "Räucherforelle"
+              }
+            },
+            {
+              "id": "Rauchsalz",
+              "name": {
+                "value": "Rauchsalz"
+              }
+            },
+            {
+              "id": "Rehfilet",
+              "name": {
+                "value": "Rehfilet"
+              }
+            },
+            {
+              "id": "Reis",
+              "name": {
+                "value": "Reis"
+              }
+            },
+            {
+              "id": "Reisdrink",
+              "name": {
+                "value": "Reisdrink"
+              }
+            },
+            {
+              "id": "Reisessig",
+              "name": {
+                "value": "Reisessig"
+              }
+            },
+            {
+              "id": "Reismehl",
+              "name": {
+                "value": "Reismehl"
+              }
+            },
+            {
+              "id": "Rhabarber",
+              "name": {
+                "value": "Rhabarber"
+              }
+            },
+            {
+              "id": "Rigatoni",
+              "name": {
+                "value": "Rigatoni"
+              }
+            },
+            {
+              "id": "Rinderfond",
+              "name": {
+                "value": "Rinderfond"
+              }
+            },
+            {
+              "id": "Rindergulasch",
+              "name": {
+                "value": "Rindergulasch"
+              }
+            },
+            {
+              "id": "Rinderhackfleisch",
+              "name": {
+                "value": "Rinderhackfleisch",
+                "synonyms": [
+                  "Rinderhack"
+                ]
+              }
+            },
+            {
+              "id": "Rindernacken",
+              "name": {
+                "value": "Rindernacken"
+              }
+            },
+            {
+              "id": "Rinderschulter",
+              "name": {
+                "value": "Rinderschulter"
+              }
+            },
+            {
+              "id": "Rindersteak",
+              "name": {
+                "value": "Rindersteak",
+                "synonyms": [
+                  "Steak"
+                ]
+              }
+            },
+            {
+              "id": "Rindfleisch",
+              "name": {
+                "value": "Rindfleisch"
+              }
+            },
+            {
+              "id": "Risottoreis",
+              "name": {
+                "value": "Risottoreis"
+              }
+            },
+            {
+              "id": "Roggenmehl",
+              "name": {
+                "value": "Roggenmehl"
+              }
+            },
+            {
+              "id": "Romanesco",
+              "name": {
+                "value": "Romanesco"
+              }
+            },
+            {
+              "id": "Rosenkohl",
+              "name": {
+                "value": "Rosenkohl"
+              }
+            },
+            {
+              "id": "Rosinen",
+              "name": {
+                "value": "Rosinen"
+              }
+            },
+            {
+              "id": "Rosmarin",
+              "name": {
+                "value": "Rosmarin"
+              }
+            },
+            {
+              "id": "Rote Bete",
+              "name": {
+                "value": "Rote Bete"
+              }
+            },
+            {
+              "id": "Rote Zwiebeln",
+              "name": {
+                "value": "Rote Zwiebeln",
+                "synonyms": [
+                  "rote Zwiebel"
+                ]
+              }
+            },
+            {
+              "id": "Rotkohl",
+              "name": {
+                "value": "Rotkohl"
+              }
+            },
+            {
+              "id": "Rotwein",
+              "name": {
+                "value": "Rotwein"
+              }
+            },
+            {
+              "id": "Rotweinessig",
+              "name": {
+                "value": "Rotweinessig"
+              }
+            },
+            {
+              "id": "Rucola",
+              "name": {
+                "value": "Rucola"
+              }
+            },
+            {
+              "id": "Rum",
+              "name": {
+                "value": "Rum"
+              }
+            },
+            {
+              "id": "Saft",
+              "name": {
+                "value": "Saft"
+              }
+            },
+            {
+              "id": "Sahne",
+              "name": {
+                "value": "Sahne",
+                "synonyms": [
+                  "Schlagsahne"
+                ]
+              }
+            },
+            {
+              "id": "Sahnesteif",
+              "name": {
+                "value": "Sahnesteif"
+              }
+            },
+            {
+              "id": "Sake",
+              "name": {
+                "value": "Sake"
+              }
+            },
+            {
+              "id": "Salat",
+              "name": {
+                "value": "Salat"
+              }
+            },
+            {
+              "id": "Salbei",
+              "name": {
+                "value": "Salbei"
+              }
+            },
+            {
+              "id": "Salz",
+              "name": {
+                "value": "Salz"
+              }
+            },
+            {
+              "id": "Sambal Oelek",
+              "name": {
+                "value": "Sambal Oelek"
+              }
+            },
+            {
+              "id": "Sauerkirschen",
+              "name": {
+                "value": "Sauerkirschen"
+              }
+            },
+            {
+              "id": "Sauerkraut",
+              "name": {
+                "value": "Sauerkraut"
+              }
+            },
+            {
+              "id": "Saure Sahne",
+              "name": {
+                "value": "Saure Sahne"
+              }
+            },
+            {
+              "id": "Scamorza",
+              "name": {
+                "value": "Scamorza"
+              }
+            },
+            {
+              "id": "Schalotten",
+              "name": {
+                "value": "Schalotten",
+                "synonyms": [
+                  "Schalotte"
+                ]
+              }
+            },
+            {
+              "id": "Schinkenspeckwürfel",
+              "name": {
+                "value": "Schinkenspeckwürfel",
+                "synonyms": [
+                  "Speckwürfel"
+                ]
+              }
+            },
+            {
+              "id": "Schmand",
+              "name": {
+                "value": "Schmand"
+              }
+            },
+            {
+              "id": "Schmelzkäse",
+              "name": {
+                "value": "Schmelzkäse"
+              }
+            },
+            {
+              "id": "Schnittlauch",
+              "name": {
+                "value": "Schnittlauch"
+              }
+            },
+            {
+              "id": "Schokolade weiß",
+              "name": {
+                "value": "Schokolade weiß",
+                "synonyms": [
+                  "weiße Schokolade"
+                ]
+              }
+            },
+            {
+              "id": "Schokotropfen",
+              "name": {
+                "value": "Schokotropfen"
+              }
+            },
+            {
+              "id": "Schweinebauch",
+              "name": {
+                "value": "Schweinebauch"
+              }
+            },
+            {
+              "id": "Schweinefilet",
+              "name": {
+                "value": "Schweinefilet"
+              }
+            },
+            {
+              "id": "Schweinegulasch",
+              "name": {
+                "value": "Schweinegulasch"
+              }
+            },
+            {
+              "id": "Schweinehackfleisch",
+              "name": {
+                "value": "Schweinehackfleisch"
+              }
+            },
+            {
+              "id": "Schweineschmalz",
+              "name": {
+                "value": "Schweineschmalz"
+              }
+            },
+            {
+              "id": "Schweineschnitzel",
+              "name": {
+                "value": "Schweineschnitzel",
+                "synonyms": [
+                  "Schnitzel"
+                ]
+              }
+            },
+            {
+              "id": "Seitan",
+              "name": {
+                "value": "Seitan"
+              }
+            },
+            {
+              "id": "Sekt",
+              "name": {
+                "value": "Sekt"
+              }
+            },
+            {
+              "id": "Sellerie",
+              "name": {
+                "value": "Sellerie"
+              }
+            },
+            {
+              "id": "Semmelwürfel",
+              "name": {
+                "value": "Semmelwürfel"
+              }
+            },
+            {
+              "id": "Senf",
+              "name": {
+                "value": "Senf"
+              }
+            },
+            {
+              "id": "Senfkörner",
+              "name": {
+                "value": "Senfkörner"
+              }
+            },
+            {
+              "id": "Sesam",
+              "name": {
+                "value": "Sesam"
+              }
+            },
+            {
+              "id": "Sesamöl",
+              "name": {
+                "value": "Sesamöl"
+              }
+            },
+            {
+              "id": "Shiitakepilze",
+              "name": {
+                "value": "Shiitakepilze"
+              }
+            },
+            {
+              "id": "Sojadrink",
+              "name": {
+                "value": "Sojadrink",
+                "synonyms": [
+                  "Sojamilch"
+                ]
+              }
+            },
+            {
+              "id": "Sojasauce",
+              "name": {
+                "value": "Sojasauce",
+                "synonyms": [
+                  "Sojasoße"
+                ]
+              }
+            },
+            {
+              "id": "Sonnenblumenkerne",
+              "name": {
+                "value": "Sonnenblumenkerne"
+              }
+            },
+            {
+              "id": "Sonnenblumenöl",
+              "name": {
+                "value": "Sonnenblumenöl"
+              }
+            },
+            {
+              "id": "Spaghetti",
+              "name": {
+                "value": "Spaghetti"
+              }
+            },
+            {
+              "id": "Spargel grün",
+              "name": {
+                "value": "Spargel grün"
+              }
+            },
+            {
+              "id": "Spargel weiß",
+              "name": {
+                "value": "Spargel weiß",
+                "synonyms": [
+                  "Spargel"
+                ]
+              }
+            },
+            {
+              "id": "Spätzle",
+              "name": {
+                "value": "Spätzle"
+              }
+            },
+            {
+              "id": "Speisestärke",
+              "name": {
+                "value": "Speisestärke",
+                "synonyms": [
+                  "Stärke"
+                ]
+              }
+            },
+            {
+              "id": "Spekulatius",
+              "name": {
+                "value": "Spekulatius"
+              }
+            },
+            {
+              "id": "Spinat",
+              "name": {
+                "value": "Spinat"
+              }
+            },
+            {
+              "id": "Staudensellerie",
+              "name": {
+                "value": "Staudensellerie"
+              }
+            },
+            {
+              "id": "Sternanis",
+              "name": {
+                "value": "Sternanis"
+              }
+            },
+            {
+              "id": "Sumach",
+              "name": {
+                "value": "Sumach"
+              }
+            },
+            {
+              "id": "Suppengemüse",
+              "name": {
+                "value": "Suppengemüse"
+              }
+            },
+            {
+              "id": "Süßkartoffeln",
+              "name": {
+                "value": "Süßkartoffeln",
+                "synonyms": [
+                  "Süßkartoffel"
+                ]
+              }
+            },
+            {
+              "id": "Sweet Chili Sauce",
+              "name": {
+                "value": "Sweet Chili Sauce"
+              }
+            },
+            {
+              "id": "Taleggio",
+              "name": {
+                "value": "Taleggio"
+              }
+            },
+            {
+              "id": "Tapiokastärke",
+              "name": {
+                "value": "Tapiokastärke"
+              }
+            },
+            {
+              "id": "Tee",
+              "name": {
+                "value": "Tee"
+              }
+            },
+            {
+              "id": "Tempeh",
+              "name": {
+                "value": "Tempeh"
+              }
+            },
+            {
+              "id": "Thunfisch",
+              "name": {
+                "value": "Thunfisch"
+              }
+            },
+            {
+              "id": "Thymian",
+              "name": {
+                "value": "Thymian"
+              }
+            },
+            {
+              "id": "Tikka Paste",
+              "name": {
+                "value": "Tikka Paste"
+              }
+            },
+            {
+              "id": "Toastbrot",
+              "name": {
+                "value": "Toastbrot",
+                "synonyms": [
+                  "Toast"
+                ]
+              }
+            },
+            {
+              "id": "Tomaten",
+              "name": {
+                "value": "Tomaten",
+                "synonyms": [
+                  "Tomate"
+                ]
+              }
+            },
+            {
+              "id": "Tomaten passiert",
+              "name": {
+                "value": "Tomaten passiert",
+                "synonyms": [
+                  "passierte Tomaten"
+                ]
+              }
+            },
+            {
+              "id": "Tomaten stückig",
+              "name": {
+                "value": "Tomaten stückig",
+                "synonyms": [
+                  "stückige Tomaten"
+                ]
+              }
+            },
+            {
+              "id": "Tomatenmark",
+              "name": {
+                "value": "Tomatenmark"
+              }
+            },
+            {
+              "id": "Tortillas",
+              "name": {
+                "value": "Tortillas"
+              }
+            },
+            {
+              "id": "Trauben",
+              "name": {
+                "value": "Trauben",
+                "synonyms": [
+                  "Weintrauben"
+                ]
+              }
+            },
+            {
+              "id": "Traubensaft",
+              "name": {
+                "value": "Traubensaft"
+              }
+            },
+            {
+              "id": "Trockenhefe",
+              "name": {
+                "value": "Trockenhefe"
+              }
+            },
+            {
+              "id": "Trockenpflaumen",
+              "name": {
+                "value": "Trockenpflaumen"
+              }
+            },
+            {
+              "id": "Udon Nudeln",
+              "name": {
+                "value": "Udon Nudeln"
+              }
+            },
+            {
+              "id": "Vanilleextrakt",
+              "name": {
+                "value": "Vanilleextrakt"
+              }
+            },
+            {
+              "id": "Vanillepuddingpulver",
+              "name": {
+                "value": "Vanillepuddingpulver"
+              }
+            },
+            {
+              "id": "Vanilleschote",
+              "name": {
+                "value": "Vanilleschote"
+              }
+            },
+            {
+              "id": "Vanillezucker",
+              "name": {
+                "value": "Vanillezucker"
+              }
+            },
+            {
+              "id": "Vollkornreis",
+              "name": {
+                "value": "Vollkornreis"
+              }
+            },
+            {
+              "id": "Vollmilchschokolade",
+              "name": {
+                "value": "Vollmilchschokolade",
+                "synonyms": [
+                  "Schokolade"
+                ]
+              }
+            },
+            {
+              "id": "Wacholderbeeren",
+              "name": {
+                "value": "Wacholderbeeren"
+              }
+            },
+            {
+              "id": "Walnussbrötchen",
+              "name": {
+                "value": "Walnussbrötchen"
+              }
+            },
+            {
+              "id": "Walnüsse",
+              "name": {
+                "value": "Walnüsse"
+              }
+            },
+            {
+              "id": "Wassermelone",
+              "name": {
+                "value": "Wassermelone"
+              }
+            },
+            {
+              "id": "Weinessig",
+              "name": {
+                "value": "Weinessig"
+              }
+            },
+            {
+              "id": "Weinstein Backpulver",
+              "name": {
+                "value": "Weinstein Backpulver"
+              }
+            },
+            {
+              "id": "Weiße Bohnen",
+              "name": {
+                "value": "Weiße Bohnen"
+              }
+            },
+            {
+              "id": "Weißkohl",
+              "name": {
+                "value": "Weißkohl"
+              }
+            },
+            {
+              "id": "Weißwein",
+              "name": {
+                "value": "Weißwein"
+              }
+            },
+            {
+              "id": "Weizengrieß",
+              "name": {
+                "value": "Weizengrieß",
+                "synonyms": [
+                  "Grieß"
+                ]
+              }
+            },
+            {
+              "id": "Weizenkörner",
+              "name": {
+                "value": "Weizenkörner"
+              }
+            },
+            {
+              "id": "Weizenmehl",
+              "name": {
+                "value": "Weizenmehl"
+              }
+            },
+            {
+              "id": "Weizenvollkornmehl",
+              "name": {
+                "value": "Weizenvollkornmehl"
+              }
+            },
+            {
+              "id": "Wermut",
+              "name": {
+                "value": "Wermut"
+              }
+            },
+            {
+              "id": "Wildgulasch",
+              "name": {
+                "value": "Wildgulasch"
+              }
+            },
+            {
+              "id": "Wirsing",
+              "name": {
+                "value": "Wirsing"
+              }
+            },
+            {
+              "id": "Worcestersauce",
+              "name": {
+                "value": "Worcestersauce"
+              }
+            },
+            {
+              "id": "Zartbitterkuvertüre",
+              "name": {
+                "value": "Zartbitterkuvertüre"
+              }
+            },
+            {
+              "id": "Zartbitterschokolade",
+              "name": {
+                "value": "Zartbitterschokolade"
+              }
+            },
+            {
+              "id": "Ziegenfrischkäse",
+              "name": {
+                "value": "Ziegenfrischkäse"
+              }
+            },
+            {
+              "id": "Ziegengouda",
+              "name": {
+                "value": "Ziegengouda"
+              }
+            },
+            {
+              "id": "Zimt",
+              "name": {
+                "value": "Zimt"
+              }
+            },
+            {
+              "id": "Zimt Zucker",
+              "name": {
+                "value": "Zimt Zucker"
+              }
+            },
+            {
+              "id": "Zimtstange",
+              "name": {
+                "value": "Zimtstange",
+                "synonyms": [
+                  "Zimtstangen"
+                ]
+              }
+            },
+            {
+              "id": "Zitrone",
+              "name": {
+                "value": "Zitrone",
+                "synonyms": [
+                  "Zitronen"
+                ]
+              }
+            },
+            {
+              "id": "Zitronengras",
+              "name": {
+                "value": "Zitronengras"
+              }
+            },
+            {
+              "id": "Zitronenmelisse",
+              "name": {
+                "value": "Zitronenmelisse"
+              }
+            },
+            {
+              "id": "Zitronensaft",
+              "name": {
+                "value": "Zitronensaft"
+              }
+            },
+            {
+              "id": "Zitronenthymian",
+              "name": {
+                "value": "Zitronenthymian"
+              }
+            },
+            {
+              "id": "Zucchini",
+              "name": {
+                "value": "Zucchini"
+              }
+            },
+            {
+              "id": "Zucker",
+              "name": {
+                "value": "Zucker"
+              }
+            },
+            {
+              "id": "Zuckerrübensirup",
+              "name": {
+                "value": "Zuckerrübensirup"
+              }
+            },
+            {
+              "id": "Zuckerschoten",
+              "name": {
+                "value": "Zuckerschoten"
+              }
+            },
+            {
+              "id": "Zuckerstreusel",
+              "name": {
+                "value": "Zuckerstreusel"
+              }
+            },
+            {
+              "id": "Zwetschgen",
+              "name": {
+                "value": "Zwetschgen"
+              }
+            },
+            {
+              "id": "Zwiebeln",
+              "name": {
+                "value": "Zwiebeln",
+                "synonyms": [
+                  "Zwiebel"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "EINHEIT",
+          "values": [
+            {
+              "id": "g",
+              "name": {
+                "value": "Gramm"
+              }
+            },
+            {
+              "id": "kg",
+              "name": {
+                "value": "Kilo",
+                "synonyms": [
+                  "Kilogramm",
+                  "Kilos"
+                ]
+              }
+            },
+            {
+              "id": "ml",
+              "name": {
+                "value": "Milliliter"
+              }
+            },
+            {
+              "id": "l",
+              "name": {
+                "value": "Liter"
+              }
+            },
+            {
+              "id": "Stk",
+              "name": {
+                "value": "Stück",
+                "synonyms": [
+                  "Stücke"
+                ]
+              }
+            },
+            {
+              "id": "Packung",
+              "name": {
+                "value": "Packung",
+                "synonyms": [
+                  "Packungen",
+                  "Päckchen",
+                  "Pack"
+                ]
+              }
+            },
+            {
+              "id": "Dose",
+              "name": {
+                "value": "Dose",
+                "synonyms": [
+                  "Dosen"
+                ]
+              }
+            },
+            {
+              "id": "Becher",
+              "name": {
+                "value": "Becher"
+              }
+            },
+            {
+              "id": "Glas",
+              "name": {
+                "value": "Glas",
+                "synonyms": [
+                  "Gläser"
+                ]
+              }
+            },
+            {
+              "id": "Flasche",
+              "name": {
+                "value": "Flasche",
+                "synonyms": [
+                  "Flaschen"
+                ]
+              }
+            },
+            {
+              "id": "Bund",
+              "name": {
+                "value": "Bund"
+              }
+            },
+            {
+              "id": "EL",
+              "name": {
+                "value": "Esslöffel"
+              }
+            },
+            {
+              "id": "TL",
+              "name": {
+                "value": "Teelöffel"
+              }
+            },
+            {
+              "id": "Scheibe",
+              "name": {
+                "value": "Scheibe",
+                "synonyms": [
+                  "Scheiben"
+                ]
+              }
+            },
+            {
+              "id": "Tüte",
+              "name": {
+                "value": "Tüte",
+                "synonyms": [
+                  "Tüten"
+                ]
+              }
+            },
+            {
+              "id": "Beutel",
+              "name": {
+                "value": "Beutel"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,415 @@
+# Lebensmittel, die Alexa als Beispiele kennt (Stand Katalog 23.11.2026). Eine Zeile je Lebensmittel,
+# Synonyme nach „|“. Neue Katalogeinträge funktionieren auch ohne Eintrag hier – Alexa versteht sie nur etwas schlechter.
+# Nach Änderungen: node --experimental-strip-types scripts/build-alexa-model.ts → JSON neu in die Alexa-Konsole laden.
+Ahornsirup
+Ajvar
+Amaranth
+Ananas
+Aperol
+Apfel|Äpfel
+Apfelessig
+Apfelsaft
+Aprikosen|Aprikose
+Aubergine|Auberginen
+Austernpilze
+Avocado|Avocados
+Babymais
+Backkakao
+Backpulver
+Bacon|Speck
+Balsamico
+Bambussprossen
+Banane|Bananen
+Bananenchips
+Basilikum
+Basmatireis
+Beluga Linsen
+Birne|Birnen
+Bittermandelaroma
+Blaumohn
+Blauschimmelkäse
+Blumenkohl
+Bockshornkleesamen
+Bratwurst|Bratwürste
+Brauner Zucker
+Brokkoli
+Brombeeren
+Brot
+Brötchen|Semmeln
+Brotgewürz
+Brühe
+Brühwürstchen|Würstchen
+Buchweizenmehl
+Bulgur
+Butter|Markenbutter|Deutsche Markenbutter
+Butter Vanille Aroma
+Butterkekse
+Butterschmalz
+Camembert
+Cantuccini
+Cashewkerne
+Cayennepfeffer
+Champignons|Champignon|Pilze
+Cheddar
+Cherrytomaten
+Chiasamen
+Chiliflocken
+Chilipaste
+Chilipulver
+Chilischote|Chilischoten
+Chinakohl
+Ciabatta
+Cidre
+Cognac
+Couscous
+Cranberrys
+Crema di Balsamico
+Crème double
+Crème fraîche
+Curry
+Currypaste
+Datteln
+Dill
+Dinkelkörner
+Dinkelmehl
+Dominosteine
+Eier|Ei|Hühnereier
+Eierlikör
+Eisbergsalat
+Emmentaler
+Entenbrust
+Erbsen
+Erdbeeren|Erdbeere
+Erdbeerkonfitüre|Erdbeermarmelade
+Erdnusscreme|Erdnussbutter
+Erdnüsse
+Espresso
+Essig
+Estragon
+Feldsalat
+Fenchel
+Feta
+Fleischbrühe
+Flohsamenschalen
+Fontina
+Frankfurter grüne Kräuter
+Franzbrötchen
+Frischkäse
+Frühlingszwiebeln|Frühlingszwiebel|Lauchzwiebeln
+Garam Masala
+Garnelen
+Geflügelfond
+Gelatine
+Gelierzucker
+Gemüsebrühe
+Gewürzgurken
+Ghee
+Ginger Ale
+Glutenfreie Mehlmischung
+Gochujang
+Gorgonzola
+Götterspeise
+Gouda
+Granatapfelsirup
+Grapefruit
+Griechischer Joghurt
+Grüne Bohnen
+Grüne Pfefferkörner
+Grünkohl
+Gurke|Gurken|Salatgurke
+Hackfleisch gemischt|Hackfleisch|Hack
+Haferdrink|Hafermilch
+Haferflocken
+Hähnchen Geschnetzeltes
+Hähnchenbrustfilet|Hähnchenbrust|Hähnchen
+Hähnchenschenkel
+Haselnüsse
+Hefe|frische Hefe
+Hefeflocken
+Heidelbeeren|Blaubeeren
+Himbeeren
+Hirschrücken
+Hokkaido Kürbis
+Honig
+Hühnerbrühe
+Ingwer
+Ingwer gemahlen
+Jalapeños
+Jasminreis
+Kabeljau
+Kaffee
+Kaffir Limettenblätter
+Kakaopulver
+Kardamom
+Karotten|Karotte|Möhren|Möhre
+Kartoffel Gnocchi|Gnocchi
+Kartoffelbrötchen
+Kartoffelchips|Chips
+Kartoffeln|Kartoffel
+Kasseler
+Ketchup
+Kichererbsen
+Kidneybohnen
+Kinder Bueno White
+Kirschen
+Kirschkonfitüre
+Kiwi|Kiwis
+Knoblauch|Knoblauchzehe|Knoblauchzehen
+Knoblauchpulver
+Knollensellerie
+Kohlrabi
+Kokosdrink
+Kokosfett
+Kokosmilch
+Kokosmilch light
+Kokosöl
+Kokosraspeln
+Kondensmilch
+Konfitüre Aprikose|Aprikosenmarmelade
+Koriander
+Koriander gemahlen
+Kräuter
+Kräuter der Provence
+Kräuterseitlinge
+Kresse
+Kreuzkümmel
+Kümmel
+Kürbis
+Kürbiskerne
+Kurkuma
+Kuvertüre weiß
+Lachsfilet|Lachs
+Lasagneplatten
+Lauch
+Laugenbrezeln|Brezeln
+Lebkuchengewürz
+Leinsamen
+Leipziger Allerlei
+Limette|Limetten
+Limettensaft
+Linsen braun
+Linsen grün
+Linsen rot|rote Linsen
+Lorbeerblatt|Lorbeer|Lorbeerblätter
+Lotus Kekse
+Macadamianüsse
+Mais
+Majoran
+Makkaroni
+Malzbier
+Mamba Kaubonbons
+Mandarine|Mandarinen
+Mandeln
+Mandeln gehobelt|Mandelblättchen
+Mandeln gemahlen
+Mandelstifte
+Mango
+Mangold
+Margarine
+Maronen
+Marsala
+Marzipan
+Mascarpone
+Mayonnaise|Mayo
+Meersalz
+Mehl
+Melone
+Mezzo Mix
+Mie Nudeln
+Milch|Vollmilch|Frischmilch
+Milchreis
+Mineralwasser|Wasser
+Minze
+Mohn
+Mozzarella
+Muskatnuss
+Natron
+Naturjoghurt|Joghurt
+Nektarine|Nektarinen
+Nelken
+Noriblätter
+Nudeln|Pasta
+Nürnberger Rostbratwürstchen
+Nüsse
+Oblaten
+Öl
+Olivenöl
+Orange|Orangen
+Orangeat
+Orangenlimonade
+Orangensaft
+Oregano
+Oreo Kekse
+Pak Choi
+Paniermehl
+Paprika gegrillt
+Paprika gelb|gelbe Paprika
+Paprika grün|grüne Paprika
+Paprika rot|rote Paprika
+Paprikamark
+Paprikapulver
+Parmesan
+Pastinaken|Pastinake
+Paulaner Spezi|Spezi
+Pecorino
+Penne
+Petersilie
+Petersilienwurzel
+Pfeffer
+Pfirsich|Pfirsiche
+Pflaumen
+Pflaumenmus
+Piment
+Pinienkerne
+Pistazien
+Preiselbeermarmelade|Preiselbeeren
+Provolone
+Puddingpulver
+Puderzucker
+Putenbrust
+Quark
+Quinoa
+Radieschen
+Rahmspinat
+Ramen Nudeln
+Rapsöl
+Räucherforelle
+Rauchsalz
+Rehfilet
+Reis
+Reisdrink
+Reisessig
+Reismehl
+Rhabarber
+Rigatoni
+Rinderfond
+Rindergulasch
+Rinderhackfleisch|Rinderhack
+Rindernacken
+Rinderschulter
+Rindersteak|Steak
+Rindfleisch
+Risottoreis
+Roggenmehl
+Romanesco
+Rosenkohl
+Rosinen
+Rosmarin
+Rote Bete
+Rote Zwiebeln|rote Zwiebel
+Rotkohl
+Rotwein
+Rotweinessig
+Rucola
+Rum
+Saft
+Sahne|Schlagsahne
+Sahnesteif
+Sake
+Salat
+Salbei
+Salz
+Sambal Oelek
+Sauerkirschen
+Sauerkraut
+Saure Sahne
+Scamorza
+Schalotten|Schalotte
+Schinkenspeckwürfel|Speckwürfel
+Schmand
+Schmelzkäse
+Schnittlauch
+Schokolade weiß|weiße Schokolade
+Schokotropfen
+Schweinebauch
+Schweinefilet
+Schweinegulasch
+Schweinehackfleisch
+Schweineschmalz
+Schweineschnitzel|Schnitzel
+Seitan
+Sekt
+Sellerie
+Semmelwürfel
+Senf
+Senfkörner
+Sesam
+Sesamöl
+Shiitakepilze
+Sojadrink|Sojamilch
+Sojasauce|Sojasoße
+Sonnenblumenkerne
+Sonnenblumenöl
+Spaghetti
+Spargel grün
+Spargel weiß|Spargel
+Spätzle
+Speisestärke|Stärke
+Spekulatius
+Spinat
+Staudensellerie
+Sternanis
+Sumach
+Suppengemüse
+Süßkartoffeln|Süßkartoffel
+Sweet Chili Sauce
+Taleggio
+Tapiokastärke
+Tee
+Tempeh
+Thunfisch
+Thymian
+Tikka Paste
+Toastbrot|Toast
+Tomaten|Tomate
+Tomaten passiert|passierte Tomaten
+Tomaten stückig|stückige Tomaten
+Tomatenmark
+Tortillas
+Trauben|Weintrauben
+Traubensaft
+Trockenhefe
+Trockenpflaumen
+Udon Nudeln
+Vanilleextrakt
+Vanillepuddingpulver
+Vanilleschote
+Vanillezucker
+Vollkornreis
+Vollmilchschokolade|Schokolade
+Wacholderbeeren
+Walnussbrötchen
+Walnüsse
+Wassermelone
+Weinessig
+Weinstein Backpulver
+Weiße Bohnen
+Weißkohl
+Weißwein
+Weizengrieß|Grieß
+Weizenkörner
+Weizenmehl
+Weizenvollkornmehl
+Wermut
+Wildgulasch
+Wirsing
+Worcestersauce
+Zartbitterkuvertüre
+Zartbitterschokolade
+Ziegenfrischkäse
+Ziegengouda
+Zimt
+Zimt Zucker
+Zimtstange|Zimtstangen
+Zitrone|Zitronen
+Zitronengras
+Zitronenmelisse
+Zitronensaft
+Zitronenthymian
+Zucchini
+Zucker
+Zuckerrübensirup
+Zuckerschoten
+Zuckerstreusel
+Zwetschgen
+Zwiebeln|Zwiebel

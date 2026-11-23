@@ -1190,3 +1190,14 @@ div.add-panel-body{display:contents}
 .theme-nick .alexa-connect input{background:#101a24;border-color:#354556;color:#e6edf5}
 .app-shell.theme-sophia .alexa-link{border-color:#EDC3CE!important}
 .app-shell.theme-sophia .alexa-connect input{background:#FFF6F8!important;border-color:#EDC3CE!important}
+/* 0.3.55 – Nahrungsmittel: übliche Packung */
+.food-pack-form{display:grid;grid-template-columns:minmax(0,96px) minmax(0,72px) auto;align-items:end;gap:6px;flex-basis:100%;max-width:320px;margin-top:6px}
+.food-pack-form label{display:grid;gap:4px;font-size:10px;font-weight:600;color:var(--muted);min-width:0}
+.food-pack-form input{width:100%!important;min-width:0!important;font-size:12px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);background:#fffefa;color:inherit}
+.food-pack-form .button{padding:7px 11px;white-space:nowrap}
+@media(max-width:720px){.food-pack-form{grid-template-columns:minmax(0,1fr) minmax(0,80px);max-width:240px}.food-pack-form .button{grid-column:1/-1;justify-self:start}}
+.device-phone .food-pack-form{grid-template-columns:minmax(0,1fr) minmax(0,80px);max-width:240px}.device-phone .food-pack-form .button{grid-column:1/-1;justify-self:start}
+@media(max-width:1024px){.food-pack-form input{font-size:14px;padding:8px 9px}.food-pack-form label{font-size:11px}}
+.theme-nick .food-pack-form input{background:#101a24;border-color:#354556;color:#e6edf5}
+.theme-nick .food-pack-form label{color:#a9b6c3}
+.app-shell.theme-sophia .food-pack-form input{background:#FFF6F8!important;border-color:#EDC3CE!important}

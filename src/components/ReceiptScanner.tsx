@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'rea
 import { Camera, Check, CircleDollarSign, LoaderCircle, ReceiptText, Sparkles, Upload } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { prepareReceiptImages } from '../lib/receiptImage'
-import { checkReceiptTotal, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, knownPacks, likelyFood, normalize, parseReceipt, prefillPackage, type Food, type KnownPack, type Line, type OCRWord } from '../lib/receiptParser'
-import { canSplitToOne, normalizeUnit, pantryAmountFromReceipt, planPantryAddition, splitOrganic, type PantryRow } from '../lib/kitchen'
+import { checkReceiptTotal, choosePacks, combineReceiptRuns, findReceiptDiscount, findReceiptTotal, likelyFood, normalize, parseReceipt, prefillPackage, type Food, type KnownPack, type Line, type OCRWord, type PackRow } from '../lib/receiptParser'
+import { canSplitToOne, pantryAmountFromReceipt, planPantryAddition, splitOrganic, type PantryRow } from '../lib/kitchen'
 import { localISO } from '../lib/dates'
 import { saveMarketPrice } from '../lib/priceStore'
 import { retailers } from '../lib/retailers'
@@ -70,14 +70,14 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
   const refresh=useCallback(async()=>{
     if(!supabase)return
     const [foodRows,receiptRows,packRows]=await Promise.all([
-      supabase.from('household_foods').select('id,name,normalized_name,category,default_unit').eq('household_id',householdId).order('name'),
+      supabase.from('household_foods').select('id,name,normalized_name,category,default_unit,typical_package_quantity,typical_package_unit').eq('household_id',householdId).order('name'),
       supabase.from('receipt_uploads').select('id,image_path,retailer_code,purchase_date,status,created_at').eq('household_id',householdId).order('created_at',{ascending:false}),
-      supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at').eq('household_id',householdId).not('package_quantity','is',null)
+      supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at,source_name').eq('household_id',householdId).not('package_quantity','is',null)
     ])
     if(foodRows.error)throw foodRows.error
     if(receiptRows.error)throw receiptRows.error
     setFoods((foodRows.data??[]) as Food[]);setReceipts((receiptRows.data??[]) as Receipt[])
-    if(!packRows.error)setPacks(knownPacks((packRows.data??[]) as {food_item_id:string;package_quantity:number|null;package_unit:string|null;observed_at:string|null}[]))
+    if(!packRows.error)setPacks(choosePacks((packRows.data??[]) as PackRow[],(foodRows.data??[]) as Food[]))
   },[householdId])
   useEffect(()=>{refresh().catch(e=>setError(e.message))},[refresh])
   const selectedCount=useMemo(()=>lines.filter(l=>l.selected&&Number(l.price.replace(',','.'))>0).length,[lines])
@@ -195,16 +195,13 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
       if(fillPantry){
         const [stock,packs]=await Promise.all([
           supabase.from('pantry_items').select('id,name,quantity,unit,food_item_id,best_before,is_organic').eq('household_id',householdId),
-          supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at').eq('household_id',householdId).not('package_quantity','is',null).order('observed_at',{ascending:false}),
+          supabase.from('household_food_prices').select('food_item_id,package_quantity,package_unit,observed_at,source_name').eq('household_id',householdId).not('package_quantity','is',null),
         ])
         if(stock.error)throw stock.error
         if(packs.error)throw packs.error
         pantryRows.push(...((stock.data??[]) as PantryRow[]))
-        // Packungsgröße je Nahrungsmittel: bevorzugt eine echte Menge (g/ml), sonst die neueste Angabe.
-        for(const row of (packs.data??[]) as {food_item_id:string;package_quantity:number|null;package_unit:string|null}[]){
-          const known=packages.get(row.food_item_id)
-          if(!known||(normalizeUnit(known.package_unit).base==='stk'&&normalizeUnit(row.package_unit).base!=='stk'))packages.set(row.food_item_id,row)
-        }
+        // Packungsgröße je Nahrungsmittel (0.3.55): zuletzt gekauft → übliche Packung → Online-Preis (wie beim Vorschlag in der Prüfliste).
+        for(const [foodId,pack] of choosePacks((packs.data??[]) as PackRow[],foods))packages.set(foodId,{package_quantity:pack.quantity,package_unit:pack.unit})
       }
       // Ein Preis je Nahrungsmittel + Supermarkt + Bio/normal: vorhandener Preis desselben Markts wird überschrieben.
       const market=retailer||activeReceipt.retailer_code||'other'

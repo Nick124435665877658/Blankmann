@@ -2,6 +2,8 @@
 import { applyGlutenYeast, buildRecipeMessages, glutenYeastPenalty, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
 import { compareMatches, matchRecipeToPantry } from '../src/lib/pantryMatch.ts'
+import { rankFoods } from '../src/lib/foodSearch.ts'
+import { cookidooImageFrom } from '../src/lib/cookidooImage.ts'
 import { buildPantryIdeasMessages, parsePantryIdeas } from '../src/lib/pantryIdeas.ts'
 import { defaultRules } from '../src/lib/recipeAi.ts'
 import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, niceAmount, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
@@ -326,6 +328,22 @@ console.log('\n12) Was kochen? – KI-Ideen auswerten')
   expect(ideas[0].histamine.score === 6, 'Gluten (2 EL Mehl) senkt Histamin 7 → 6')
   const msgs = buildPantryIdeasMessages([{ name: 'Mozzarella', quantity: 125, unit: 'g', best_before: '2026-11-25' }, { name: 'Kartoffeln', quantity: 2500, unit: 'g', best_before: null }], ['Salz'], defaultRules, '2026-11-26', 4)
   expect(msgs[1].content.includes('- ! Mozzarella (125 g)') && msgs[1].content.includes('höchstens 2 Zutaten') && msgs[1].content.includes('Keine Tomaten'), 'Prompt: bald Ablaufendes markiert, höchstens 2 fehlende, Haushaltsregeln')
+}
+
+console.log('\n13) Nahrungsmittel suchen + Cookidoo-Bild finden')
+{
+  const foods = ['Kartoffeln', 'Süßkartoffeln', 'Kartoffel-Gnocchi', 'Käse', 'Frischkäse', 'Mandeln gehobelt', 'Mohn', 'Zwiebeln', 'Rote Zwiebeln'].map((name, i) => ({ id: 'f' + i, name, category: i === 6 ? 'Nüsse & Saaten' : 'Test' }))
+  const names = (q: string) => rankFoods(foods, q).map(f => f.name)
+  expect(names('kart')[0] === 'Kartoffeln' && names('kart').includes('Süßkartoffeln'), '„kart“ → Kartoffeln zuerst, Süßkartoffeln auch')
+  expect(names('kaese')[0] === 'Käse' && names('kase')[0] === 'Käse' && names('Käse')[0] === 'Käse', 'ä/ae/a egal: „kaese“, „kase“, „Käse“ → Käse')
+  expect(names('zwiebel')[0] === 'Zwiebeln' && names('zwiebel')[1] === 'Rote Zwiebeln', 'Wortanfang zählt: Zwiebeln vor Rote Zwiebeln')
+  expect(names('mandeln geh')[0] === 'Mandeln gehobelt', 'Mehrere Suchwörter')
+  expect(names('nüsse')[0] === 'Mohn', 'Gruppe als letzter Treffer (Mohn in „Nüsse & Saaten“)')
+  expect(names('').length === 9 && names('')[0] === 'Frischkäse', 'Leere Suche → alphabetisch')
+  const html = '<html><head><meta property="og:image" content="https://assets.tmecosys.com/image/upload/t_web_rdp_recipe_584x480/img/recipe/ras/Assets/0CE9/Derivates/F094.jpg"/></head></html>'
+  expect(cookidooImageFrom(html) === 'https://assets.tmecosys.com/image/upload/t_web_rdp_recipe_584x480/img/recipe/ras/Assets/0CE9/Derivates/F094.jpg', 'og:image von assets.tmecosys.com erkannt')
+  expect(cookidooImageFrom('<meta property="og:image" content="https://evil.example/x.jpg">') === null, 'fremde Bild-Hosts werden abgelehnt')
+  expect(cookidooImageFrom('<img src="https://assets.tmecosys.com/image/upload/a/b.jpg">') === 'https://assets.tmecosys.com/image/upload/a/b.jpg', 'ohne og:image: erstes Bild von assets.tmecosys.com')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

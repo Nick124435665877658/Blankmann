@@ -11,6 +11,14 @@ export async function fetchPantryIdeas(householdId: string, accessToken: string)
   return body.ideas
 }
 
+// 0.3.52: Bild-Adressen von Cookidoo-Rezeptseiten (höchstens 8 je Aufruf); images[id] = null → kein Bild gefunden.
+export async function fetchCookidooImages(recipeIds: string[], accessToken: string): Promise<{ images: Record<string, string | null>; blocked: number }> {
+  const response = await fetch('/api/cookidoo-image', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ recipeIds }) })
+  const body = (await response.json().catch(() => ({}))) as { images?: Record<string, string | null>; blocked?: number; error?: string }
+  if (!response.ok || !body.images) throw new Error(body.error || 'Cookidoo-Bilder konnten nicht geladen werden (' + response.status + ').')
+  return { images: body.images, blocked: body.blocked ?? 0 }
+}
+
 type FoodRow = { id: string; name: string; normalized_name: string; category: string }
 
 // Legt das Gericht in der Rezeptliste an; Zutaten werden dem Katalog zugeordnet, Unbekanntes wird angelegt (wie bei KI-Ergänzungen).

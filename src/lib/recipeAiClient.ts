@@ -40,7 +40,7 @@ export async function completeRecipeWithAi(recipeId: string, householdId: string
   // Histaminwert: bei neuer Anleitung oder neuen Zutaten neu bewerten (außer von Hand gesetzt), sonst nur eintragen, wo noch keiner steht.
   let histamine: number | null = null
   if (body.histamine?.score) {
-    let query = supabase.from('recipes').update({ histamine_score: body.histamine.score, histamine_note: body.histamine.note }).eq('id', recipeId).eq('household_id', householdId)
+    let query = supabase.from('recipes').update({ histamine_score: body.histamine.score, histamine_note: body.histamine.note, histamine_version: 2 }).eq('id', recipeId).eq('household_id', householdId)
     if (!replaceSteps && !(addIngredients && body.additions?.length)) query = query.is('histamine_score', null)
     // Von Hand gesetzte Histaminwerte überschreibt die KI nie.
     else query = query.or('histamine_note.is.null,histamine_note.neq."Von Hand gesetzt"')
@@ -90,4 +90,25 @@ async function saveAdditions(recipeId: string, householdId: string, additions: A
     added.push(food.name)
   }
   return added
+}
+
+// 0.3.57 (Nick 24.11.2026): Histamin aller Rezepte einmalig mit Nachkommastelle neu schätzen (KI, im Hintergrund).
+// Von Hand gesetzte Werte („Von Hand gesetzt“) bleiben immer – das prüft auch die Datenbank-Abfrage beim Speichern.
+export type HistamineEstimate = { id: string; score: number | null; note: string | null }
+export class QuotaError extends Error {}
+export async function estimateHistamine(recipeIds: string[], accessToken: string): Promise<HistamineEstimate[]> {
+  const response = await fetch('/api/recipe-histamine', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ recipeIds }) })
+  const body = await response.json().catch(() => null) as { results?: HistamineEstimate[]; error?: string } | null
+  if (response.status === 429) throw new QuotaError(body?.error || 'KI-Tageskontingent aufgebraucht.')
+  if (!response.ok || !body?.results) throw new Error(body?.error || 'Die KI-Funktion ist nicht erreichbar (' + response.status + ').')
+  return body.results
+}
+export async function saveHistamineEstimate(estimate: HistamineEstimate, householdId: string): Promise<boolean> {
+  if (!supabase || estimate.score === null) return false
+  const { data, error } = await supabase.from('recipes').update({ histamine_score: estimate.score, histamine_note: estimate.note, histamine_version: 2 })
+    .eq('id', estimate.id).eq('household_id', householdId)
+    .or('and(or(histamine_version.is.null,histamine_version.lt.2),or(histamine_note.is.null,histamine_note.neq."Von Hand gesetzt"))')
+    .select('id')
+  if (error) throw new Error('Histaminwert konnte nicht gespeichert werden: ' + error.message)
+  return (data ?? []).length > 0
 }

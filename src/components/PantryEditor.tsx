@@ -1,7 +1,8 @@
 // Vorrat-Eintrag bearbeiten (0.3.53, Nick): Menge mit − / + oder eintippen, MHD und Lagerort ändern.
 // Menge 0 → Eintrag löschen (mit der üblichen Sicherheitsabfrage in App.tsx).
+// 0.3.56 (Nick): Löschen sitzt nur noch hier (nicht mehr als Mülleimer in jeder Vorrat-Zeile).
 import { useState } from 'react'
-import { Minus, Plus } from 'lucide-react'
+import { Minus, Plus, Trash2 } from 'lucide-react'
 import { pantryStep } from '../lib/kitchen'
 
 export type PantryChanges = { quantity: number | null; best_before: string | null; storage_location: string }
@@ -9,7 +10,7 @@ type Item = { id: string; name: string; quantity: number | string | null; unit: 
 const places = ['Kühlschrank', 'Gefrierfach', 'Vorratsschrank']
 const show = (n: number) => String(Math.round(n * 1000) / 1000).replace('.', ',')
 
-export default function PantryEditor({ item, busy, onSave, onCancel }: { item: Item; busy: boolean; onSave: (changes: PantryChanges) => void; onCancel: () => void }) {
+export default function PantryEditor({ item, busy, onSave, onDelete, onCancel }: { item: Item; busy: boolean; onSave: (changes: PantryChanges) => void; onDelete: () => void; onCancel: () => void }) {
   const start = item.quantity === null || item.quantity === '' ? null : Number(item.quantity)
   const [text, setText] = useState(start === null ? '' : show(start))
   const [bestBefore, setBestBefore] = useState(item.best_before ?? '')
@@ -31,6 +32,7 @@ export default function PantryEditor({ item, busy, onSave, onCancel }: { item: I
     <div className="pantry-editor-actions">
       <button className={'button ' + (toZero ? 'button-danger' : 'button-dark')} disabled={busy || !valid}>{toZero ? 'Aufgebraucht – löschen' : 'Übernehmen'}</button>
       <button type="button" className="button button-light" onClick={onCancel}>Abbrechen</button>
+      {!toZero && <button type="button" className="text-link pantry-delete" onClick={onDelete} disabled={busy}><Trash2 size={14} /> Löschen</button>}
     </div>
     {!valid && <small className="error-text">Bitte eine Zahl ab 0 eintragen.</small>}
   </form>

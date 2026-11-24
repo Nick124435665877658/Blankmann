@@ -2,6 +2,7 @@ import { CookingPot } from 'lucide-react'
 import { isThermomix } from '../lib/recipeAi'
 
 // Eine Rezeptzeile wie in der Rezeptliste: Foto, Abzeichen (Thermomix, Histamin, Bewertung) und Eckdaten.
+// 0.3.56 (Nick, ruhigere Optik): Abzeichen dezent und kurz („TM“, „★ 9,5“); farbig nur Histamin, wenn es kritisch ist.
 // Wird in der Rezeptliste und in der Rezept-Auswahl im Wochenplan genutzt, damit beide dieselben Infos zeigen.
 export type SummaryRecipe = {
   title: string
@@ -35,9 +36,9 @@ export default function RecipeSummary({ recipe, photoUrl, costText }: { recipe: 
       <b>{recipe.title}</b>
       <span className="recipe-badges">
         {recipe.category && <span className="badge group" title="Gruppe">{recipe.category}</span>}
-        {isThermomix(recipe) && <span className="badge thermomix" title="Thermomix-Rezept aus Cookidoo">Thermomix</span>}
+        {isThermomix(recipe) && <span className="badge thermomix" title="Thermomix-Rezept aus Cookidoo" aria-label="Thermomix">TM</span>}
         {recipe.histamine_score ? <span className={histamineClass(recipe.histamine_score)} title={recipe.histamine_note || 'KI-Schätzung'}>Histamin {recipe.histamine_score}/10</span> : null}
-        {recipe.rating != null ? <span className="badge rating">★ {String(Number(recipe.rating)).replace('.', ',')}/10</span> : null}
+        {recipe.rating != null ? <span className="badge rating" title="Bewertung von 10">★ {String(Number(recipe.rating)).replace('.', ',')}</span> : null}
       </span>
       <small>{info}</small>
     </div>

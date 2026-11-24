@@ -258,7 +258,7 @@ export default function ReceiptScanner({householdId,userId,onDone}:{householdId:
     finally{setBusy(false)}
   }
   return <section>
-    <div className="page-heading"><div><div className="eyebrow">PREISDATENBANK FÜTTERN</div><h1>Kassenbon-Auswertung</h1><p>Foto hochladen, Artikel erkennen und Preise in euren Haushaltskatalog übernehmen.</p></div><div className="heading-icon"><ReceiptText size={25}/></div></div>
+    <div className="page-heading"><div><h1>Kassenbon-Auswertung</h1></div></div>
     <div className="shopping-layout">
       <div className="panel add-panel stack-form receipt-upload-panel">
         <span className="eyebrow">NEUER KASSENBON</span><h2>Bon fotografieren</h2>

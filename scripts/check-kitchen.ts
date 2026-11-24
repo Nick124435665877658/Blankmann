@@ -1,4 +1,5 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
+import { recipeMatches } from '../src/lib/recipeSearch.ts'
 import { applyGlutenYeast, buildHistamineMessages, buildRecipeMessages, glutenYeastPenalty, parseHistamine, parseHistamineBatch, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
 import { compareMatches, matchRecipeToPantry } from '../src/lib/pantryMatch.ts'
@@ -404,6 +405,19 @@ console.log('\n16) Histamin mit Nachkommastelle (0.3.57)')
   expect(prompt.includes('R1: Tomatensuppe') && prompt.includes('- 800 g Tomaten') && !prompt.includes('Sahne') && /Nachkommastelle/.test(prompt), 'Sammel-Prompt mit Zutaten (ohne optionale) und Nachkommastelle')
   const full = buildRecipeMessages({ title: 'X', description: null, servings: 2, prep_minutes: null, cook_minutes: null }, [])[1].content
   expect(/mit einer Nachkommastelle/.test(full) && /Orientierung: 9–10/.test(full), 'Rezept-Prompt fragt Nachkommastelle mit Skala ab')
+}
+
+console.log('\n17) Rezeptsuche (0.3.58)')
+{
+  const r = { title: 'Gnocchi mit Lachs und Spinat', description: 'Thermomix · Hauptgerichte', category: 'Hauptgericht', recipe_ingredients: [{ name: 'Lachsfilet' }, { name: 'Frischkäse' }, { name: 'Kartoffel-Gnocchi' }] }
+  expect(recipeMatches(r, '') && recipeMatches(r, '   '), 'leere Suche zeigt alles')
+  expect(recipeMatches(r, 'gnocchi') && recipeMatches(r, 'GNOCCHI'), 'Name, Groß/klein egal')
+  expect(recipeMatches(r, 'lachsfilet') && recipeMatches(r, 'frischkäse'), 'Zutaten werden durchsucht')
+  expect(recipeMatches(r, 'frischkaese') && recipeMatches(r, 'frischkase'), 'ä/ae/a egal')
+  expect(recipeMatches(r, 'lachs spinat') && !recipeMatches(r, 'lachs reis'), 'mehrere Wörter müssen alle passen')
+  expect(recipeMatches(r, 'hauptger') && recipeMatches(r, 'thermomix'), 'Gruppe und Liste durchsucht (auch „Thermomix“)')
+  expect(!recipeMatches(r, 'kuchen'), 'kein Treffer bei fremdem Wort')
+  expect(recipeMatches({ title: 'Möhren-Kichererbsen-Suppe' }, 'mohren') && recipeMatches({ title: 'Möhren-Kichererbsen-Suppe' }, 'moehren suppe'), 'Umlaut im Titel, Bindestrich trennt Wörter')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

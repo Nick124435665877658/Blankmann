@@ -1,6 +1,6 @@
 // Suche im Nahrungsmittel-Katalog (0.3.52, Nick 23.11.2026): beste Treffer zuerst, ä/ae/a egal, Groß/klein egal.
 // Reihenfolge: genau → Name beginnt so → ein Wort beginnt so → kommt vor → alle Suchwörter kommen vor → Gruppe passt.
-const fold = (value: string, umlaut: 'ae' | 'a') => value.toLocaleLowerCase('de-DE')
+export const fold = (value: string, umlaut: 'ae' | 'a') => value.toLocaleLowerCase('de-DE')
   .replace(/ä/g, umlaut === 'ae' ? 'ae' : 'a').replace(/ö/g, umlaut === 'ae' ? 'oe' : 'o').replace(/ü/g, umlaut === 'ae' ? 'ue' : 'u').replace(/ß/g, 'ss')
   .replace(/[^a-z0-9]+/g, ' ').trim()
 

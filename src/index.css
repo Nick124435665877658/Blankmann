@@ -1201,3 +1201,103 @@ div.add-panel-body{display:contents}
 .theme-nick .food-pack-form input{background:#101a24;border-color:#354556;color:#e6edf5}
 .theme-nick .food-pack-form label{color:#a9b6c3}
 .app-shell.theme-sophia .food-pack-form input{background:#FFF6F8!important;border-color:#EDC3CE!important}
+
+/* ===================== 0.3.56 – ruhigere Optik (Nick, 24.11.2026), alle Funktionen bleiben ===================== */
+/* Seitenköpfe: nur Titel (Übersicht behält das Datum) */
+.page-heading{margin-bottom:16px}
+.page-heading h1{margin:0}
+.panel-head .eyebrow{display:none}
+/* Version/Build in der Fußzeile */
+.footer{display:flex;flex-wrap:wrap;gap:4px 14px;justify-content:center}
+.footer .app-version{opacity:.75}
+/* Anlegen als schmale Zeile */
+.add-panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.add-panel-head h2{display:flex;align-items:center;gap:6px;margin:0}
+.add-panel.collapsed,.form-panel.collapsed{padding-top:13px!important;padding-bottom:13px!important}
+.add-panel.collapsed .add-panel-head h2{font-size:15px!important}
+/* Listen ohne Symbol-Kacheln */
+.pantry-row,.food-row{grid-template-columns:minmax(0,1fr) auto!important}
+.pantry-amount{padding:6px 11px}
+.pantry-editor-actions{align-items:center}
+.pantry-editor-actions .pantry-delete{margin-left:auto;display:inline-flex;align-items:center;gap:5px;color:#b2352a}
+/* Wochenplan: drei kleine Knöpfe */
+.plan-quick{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.quick-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:999px;padding:8px 13px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.quick-chip.active{border-color:var(--green);color:var(--green)}
+.quick-chip.warn span{color:#c0392b}
+/* Wochenplan: Mahlzeiten ohne Kasten im Kasten */
+.planned-meal-wrap{border:0!important;background:transparent!important;box-shadow:none!important;padding:6px 0!important;margin:2px 0!important;border-radius:0!important}
+.planned-meal-wrap+.planned-meal-wrap{border-top:1px solid var(--line)!important}
+.meal-cost{opacity:.75}
+@media(max-width:720px){.app-shell:not(.device-tablet) .planner-day{border:0!important;border-top:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:12px 2px 6px!important}.app-shell:not(.device-tablet) .planner-grid{gap:0!important}}
+.device-phone .planner-day{border:0!important;border-top:1px solid var(--line)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;padding:12px 2px 6px!important}
+.device-phone .planner-grid{gap:0!important}
+/* Rezepte: Antippen öffnet, Aktionen im „…“-Menü */
+.recipe-card-editable>.recipe-row.recipe-open{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:10px 12px;cursor:pointer;flex-wrap:nowrap}
+.recipe-row.recipe-open>.meal-menu{grid-column:1/-1}
+.recipe-row.recipe-open:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:8px}
+.ai-complete{display:inline-flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
+.page-note{display:block;margin:14px 2px 0;line-height:1.5}
+/* Abzeichen: neutral, Farbe nur für Warnungen */
+.recipe-badges .badge,.staple-tag,.ai-tag{background:transparent!important;border:1px solid var(--line)!important;color:var(--muted)!important;font-weight:600;font-size:10px!important;padding:1px 7px!important}
+.recipe-badges .badge.histamine.hbad{border-color:#e3a0a6!important;color:#c0392b!important}
+.bio-tag{background:transparent!important;border:1px solid var(--green)!important;color:var(--green)!important}
+/* Einkaufsliste: Grundausstattung am Ende */
+.staple-group h3{margin-bottom:4px}
+.staple-group h3 .food-category-toggle{font:inherit;font-weight:700}
+.staple-group h3 small{font-weight:500;opacity:.75;margin-left:4px}
+.staple-group.closed .food-category-chevron{transform:rotate(-90deg)}
+/* Übersicht: kompakte Zahlen */
+.stat-card{font:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:13px 15px!important;min-height:0!important;width:100%}
+.stat-card .stat-label{font-size:11px;font-weight:600;color:var(--muted)}
+.stat-card>strong{font-size:24px!important;line-height:1.15}
+.stat-card>small{font-size:11px}
+.stat-card.warn{border-color:#e8b4a9}
+/* Handy: 5 feste Knöpfe + „Mehr“ */
+.nav-more,.nav-short{display:none!important}
+.more-backdrop{position:fixed;inset:0;z-index:60;background:rgba(10,15,20,.35);display:flex;align-items:flex-end;justify-content:center}
+.more-sheet{width:100%;max-width:520px;margin-bottom:76px;margin-inline:10px;border-radius:16px;padding:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:var(--paper);border:1px solid var(--line);box-shadow:0 12px 40px rgba(0,0,0,.25)}
+.more-sheet button{display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--ink);border-radius:11px;padding:13px 12px;font-size:14px;font-weight:600;text-align:left}
+.more-sheet button.active{background:rgba(95,122,87,.14);color:var(--green)}
+@media(max-width:720px){
+  .app-shell:not(.device-tablet) .sidebar nav{justify-content:space-around!important;overflow:visible!important;scroll-snap-type:none!important;gap:2px!important}
+  .app-shell:not(.device-tablet) .sidebar nav .nav-secondary{display:none!important}
+  .app-shell:not(.device-tablet) .sidebar nav .nav-more{display:flex!important}
+  .app-shell:not(.device-tablet) .sidebar nav .nav-item{flex:1 1 0!important;min-width:0!important;flex-direction:column!important;justify-content:center!important;gap:3px!important;padding:6px 2px!important;font-size:10px!important;text-align:center}
+  .app-shell:not(.device-tablet) .sidebar nav .nav-item .nav-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .app-shell:not(.device-tablet) .sidebar nav .nav-item:has(.nav-short) .nav-label{display:none}
+  .app-shell:not(.device-tablet) .sidebar nav .nav-item .nav-short{display:inline!important}
+}
+.device-phone .sidebar nav{justify-content:space-around!important;overflow:visible!important;scroll-snap-type:none!important;gap:2px!important}
+.device-phone .sidebar nav .nav-secondary{display:none!important}
+.device-phone .sidebar nav .nav-more{display:flex!important}
+.device-phone .sidebar nav .nav-item{flex:1 1 0!important;min-width:0!important;flex-direction:column!important;justify-content:center!important;gap:3px!important;padding:6px 2px!important;font-size:10px!important;text-align:center}
+.device-phone .sidebar nav .nav-item:has(.nav-short) .nav-label{display:none}
+.device-phone .sidebar nav .nav-item .nav-short{display:inline!important}
+/* Nick-Design */
+.theme-nick .quick-chip{background:#17212c;border-color:#2b3948;color:#c9d5e1}
+.theme-nick .quick-chip.active{border-color:#5fbf9f;color:#9bd9c9}
+.theme-nick .quick-chip.warn span{color:#f2a49a}
+.theme-nick .more-sheet{background:#17212c;border-color:#2b3948}
+.theme-nick .more-sheet button{color:#dfe8f1}
+.theme-nick .more-sheet button.active{background:#203b39;color:#9bd9c9}
+.theme-nick .stat-card .stat-label{color:#9aa8b8}
+.theme-nick .recipe-badges .badge,.theme-nick .staple-tag,.theme-nick .ai-tag{border-color:#354556!important;color:#a9b6c3!important}
+.theme-nick .recipe-badges .badge.histamine.hbad{border-color:#8a4a50!important;color:#f2a49a!important}
+.theme-nick .bio-tag{border-color:#5fbf9f!important;color:#9bd9c9!important}
+.theme-nick .pantry-editor-actions .pantry-delete{color:#f2a49a}
+/* Sophia-Design (Rosa, Rot, Salbei) */
+.app-shell.theme-sophia .quick-chip{background:#FFF6F8!important;border-color:#EDC3CE!important}
+.app-shell.theme-sophia .quick-chip.active{border-color:#7F9A75!important;background:#E1E9D8!important}
+.app-shell.theme-sophia .more-sheet{background:#FFF6F8!important;border-color:#EDC3CE!important}
+.app-shell.theme-sophia .more-sheet button.active{background:#E1E9D8!important}
+.app-shell.theme-sophia .recipe-badges .badge,.app-shell.theme-sophia .staple-tag,.app-shell.theme-sophia .ai-tag{border-color:#EDC3CE!important;background:transparent!important}
+.app-shell.theme-sophia .recipe-badges .badge.histamine.hbad{border-color:#B3122E!important;background:#FBE6EC!important}
+.app-shell.theme-sophia .bio-tag{border-color:#7F9A75!important;background:transparent!important}
+.app-shell.theme-sophia .stat-card.warn{border-color:#B3122E!important}
+/* 0.3.56 Feinschliff: Knöpfe im Wochenplan in einer Zeile, eine Linie pro Tag */
+.plan-quick{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.plan-quick::-webkit-scrollbar{display:none}
+@media(max-width:720px){.quick-chip{font-size:11px;padding:7px 10px;gap:5px}.plan-quick{gap:6px}.app-shell:not(.device-tablet) .planner-day-head{border-bottom:0!important;padding-bottom:2px!important}}
+.device-phone .quick-chip{font-size:11px;padding:7px 10px;gap:5px}
+.device-phone .planner-day-head{border-bottom:0!important;padding-bottom:2px!important}

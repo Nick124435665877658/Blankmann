@@ -15,7 +15,7 @@ export type AiAddition = { name: string; quantity: number | null; unit: string |
 // Gluten und Hefe (Nick, 22.11.2026): senken den Histaminwert zusätzlich – als Hauptzutat je −2, in kleinen Mengen −1,
 // zusammen höchstens −4, der Wert bleibt mindestens 1. Die App rechnet das fest nach der KI-Bewertung ein (gleiche Regel
 // wie bei der einmaligen Neubewertung am 22.11.2026). Hafer zählt nicht mit; Reis, Mais, Buchweizen, Kartoffel & Co. sind glutenfrei.
-type PenaltyIngredient = { name: string; quantity: number | null; unit: string | null; is_optional?: boolean }
+export type PenaltyIngredient = { name: string; quantity: number | null; unit: string | null; is_optional?: boolean }
 const glutenFree = /glutenfrei|glasnudel|reisnudel|zucchininudel|reispapier|maisgriess|polenta|buchweizen|reismehl|maismehl|kartoffelmehl|mandelmehl|kokosmehl|kichererbsenmehl|johannisbrot|tapioka|staerke|brotgewuerz|hirse|quinoa|amaranth/
 const glutenWords = /weizen|dinkel|roggen|gerste|graupen|gruenkern|emmer|einkorn|kamut|seitan|mehl|griess|semmel|brot|broetchen|toast|ciabatta|baguette|brez|laugen|nudel|spaghetti|penne|rigatoni|makkaroni|macaroni|lasagne|tagliatelle|fusilli|farfalle|spaetzle|maultasch|gnocchi|couscous|bulgur|udon|ramen|\bmie\b|teig|keks|cookie|biskuit|cantuccini|spekulatius|oreo|lotus|zwieback|waffel|oblate|dominostein|tortilla|wrap|\bmalz|bier\b|soja ?sauce|sojasosse/
 const yeastSmall = /hefeflocken|hefeextrakt/
@@ -50,7 +50,7 @@ export function applyGlutenYeast(histamine: AiHistamine, ingredients: PenaltyIng
   if (!p.penalty) return histamine
   const parts = [p.gluten ? 'Gluten (' + [...new Set(p.glutenNames)].slice(0, 3).join(', ') + ')' : '', p.yeast ? 'Hefe' : ''].filter(Boolean).join(' und ')
   const note = [histamine.note, parts + ' ' + (p.gluten && p.yeast ? 'senken' : 'senkt') + ' den Wert zusätzlich um ' + p.penalty + '.'].filter(Boolean).join(' ').slice(0, 300)
-  return { score: Math.max(1, histamine.score - p.penalty), note }
+  return { score: Math.max(1, Math.round((histamine.score - p.penalty) * 10) / 10), note }
 }
 // Haushaltsregeln aus den Einstellungen (Standard wie in household_settings: alles an).
 export type AiRules = { tomatoFree: boolean; creamFree: boolean; histamineLow: boolean; vegetableRich: boolean; notes: string | null }
@@ -105,7 +105,7 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     thermomix ? 'Schreibe die Anleitung ohne Thermomix – ganz normal mit Herd, Backofen, Topf, Pfanne, Schüssel, Schneebesen, Handrührgerät oder Pürierstab. Keine Thermomix-Angaben wie Stufe, Linkslauf, Varoma, Mixtopf oder Sanftrührstufe.' : '',
     'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
     'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
-    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei. Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
+    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei, mit einer Nachkommastelle (z. B. 6,5) – ' + histamineScale + ' Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
     'Ordne das Rezept genau einer Gruppe zu: ' + recipeGroups.join(', ') + '.',
     '',
     'Antworte genau in diesem Format, ohne Einleitung und ohne Schlusswort:',
@@ -113,7 +113,7 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     missing.length ? missing.map(i => '- ' + i.name + ' | Zahl | Einheit').join('\n') : '- keine',
     ...(add ? ['ERGÄNZT:', '- Name | Zahl | Einheit | Grundausstattung ja/nein', '(eine Zeile je zusätzlicher Zutat, oder „- keine“)'] : []),
     'ZEIT: Vorbereitung Zahl Min | Kochen Zahl Min',
-    'HISTAMIN: Zahl von 1 bis 10 | kurze Begründung',
+    'HISTAMIN: Zahl von 1 bis 10 mit einer Nachkommastelle | kurze Begründung',
     'GRUPPE: eine der genannten Gruppen',
     'SCHRITTE:',
     '1. …',
@@ -149,12 +149,53 @@ export function parseTimes(lines: string[]): AiTimes {
   return { prepMinutes: minutes(/vorbereit\w*\D{0,12}?(\d{1,3})/i), cookMinutes: minutes(/(?:kochen|kochzeit|garen|garzeit|backen|backzeit)\D{0,12}?(\d{1,3})/i) }
 }
 
+// Histaminwert mit einer Nachkommastelle (0.3.57, Nick 24.11.2026): „6,5“, „6.5“, „6,5/10“ oder ganze Zahlen.
+const histamineValue = (raw: string | undefined) => {
+  const n = Number(String(raw ?? '').replace(',', '.'))
+  return Number.isFinite(n) && n >= 1 && n <= 10 ? Math.round(n * 10) / 10 : null
+}
 export function parseHistamine(lines: string[]): AiHistamine {
-  const line = lines.find(l => /^histamin/i.test(l)) ?? ''
-  const match = line.match(/^histamin\w*\s*:?\s*(\d{1,2})\s*(?:\/\s*10)?\s*(?:[|–—:-]\s*(.*))?$/i)
-  const score = match ? Number(match[1]) : NaN
-  if (!Number.isInteger(score) || score < 1 || score > 10) return { score: null, note: null }
+  const line = (lines.find(l => /^\W*histamin/i.test(l)) ?? '').replace(/^[^a-z]+/i, '').replace(/\*\*/g, '')
+  const match = line.match(/^histamin\w*\s*:?\s*(\d{1,2}(?:[.,]\d+)?)\s*(?:\/\s*10)?\s*(?:[|–—:-]\s*(.*))?$/i)
+  const score = histamineValue(match?.[1])
+  if (score === null) return { score: null, note: null }
   return { score, note: (match?.[2] ?? '').trim().slice(0, 240) || null }
+}
+
+// Orientierung für die Skala, damit die Werte über viele Rezepte vergleichbar bleiben.
+export const histamineScale = 'Orientierung: 9–10 = nur frische, unkritische Zutaten (frisches Gemüse außer Tomate/Spinat/Aubergine/Avocado, Reis, Kartoffeln, frisches Fleisch oder Geflügel, Milch, junger Käse); 7–8 = einzelne kritische Zutaten nur in kleinen Mengen; 4–6 = eine kritische Hauptzutat (z. B. Tomaten, Spinat, Hartkäse, Hülsenfrüchte, Zitrusfrüchte, Wein zum Kochen); 1–3 = mehrere stark histaminreiche Hauptzutaten (z. B. gereifter Käse, Salami/Schinken/Speck, Sauerkraut, Thunfisch/Räucherfisch, Rotwein, Sojasauce in größerer Menge). Nutze das ganze Spektrum.'
+
+// Nur Histamin neu schätzen (0.3.57): mehrere Rezepte in einer kurzen Anfrage, Antwort je Zeile „R1: 6,5 | Begründung“.
+export type HistamineRecipe = { title: string; ingredients: PenaltyIngredient[] }
+export function buildHistamineMessages(recipes: HistamineRecipe[]) {
+  const blocks = recipes.map((r, n) => 'R' + (n + 1) + ': ' + r.title + '\n' + (r.ingredients.filter(i => !i.is_optional).map(i => '- ' + (i.quantity !== null ? String(i.quantity).replace('.', ',') + (i.unit ? ' ' + i.unit : '') + ' ' : '') + i.name).join('\n') || '- (keine Zutaten)'))
+  const user = [
+    'Bewerte für jedes Rezept, wie histaminarm es ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei, mit einer Nachkommastelle (z. B. 6,5).',
+    histamineScale,
+    'Achte auf histaminreiche Lebensmittel und Histaminliberatoren (gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und darauf, ob sie Haupt- oder Nebenzutat sind. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein.',
+    '',
+    ...blocks,
+    '',
+    'Antworte genau in diesem Format, eine Zeile je Rezept, ohne Einleitung:',
+    ...recipes.map((_, n) => 'R' + (n + 1) + ': Zahl | kurzer Satz, welche Zutaten den Wert drücken'),
+  ].join('\n')
+  return [
+    { role: 'system', content: 'Du bist Ernährungsfachkraft für Histaminintoleranz und bewertest Rezepte knapp und einheitlich auf Deutsch.' },
+    { role: 'user', content: user },
+  ]
+}
+export function parseHistamineBatch(text: string, count: number): AiHistamine[] {
+  const out: AiHistamine[] = Array.from({ length: count }, () => ({ score: null, note: null }))
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/\*\*/g, '').trim()
+    const match = line.match(/^(?:[-*•]\s*)?(?:rezept\s*)?r?(\d{1,2})\s*[:.)\]-]\s*(?:histamin\w*\s*:?\s*)?(\d{1,2}(?:[.,]\d+)?)\s*(?:\/\s*10)?\s*(?:[|–—:-]\s*(.*))?$/i)
+    if (!match) continue
+    const index = Number(match[1]) - 1
+    const score = histamineValue(match[2])
+    if (index < 0 || index >= count || score === null || out[index].score !== null) continue
+    out[index] = { score, note: (match[3] ?? '').trim().slice(0, 240) || null }
+  }
+  return out
 }
 
 const additionsHeader = /^(?:erg(?:ä|ae)nzt|erg(?:ä|ae)nzte zutaten|zus(?:ä|ae)tzliche zutaten)\s*:?\s*$/i

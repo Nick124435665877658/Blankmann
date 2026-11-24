@@ -1,5 +1,5 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
-import { applyGlutenYeast, buildRecipeMessages, glutenYeastPenalty, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
+import { applyGlutenYeast, buildHistamineMessages, buildRecipeMessages, glutenYeastPenalty, parseHistamine, parseHistamineBatch, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
 import { compareMatches, matchRecipeToPantry } from '../src/lib/pantryMatch.ts'
 import { rankFoods } from '../src/lib/foodSearch.ts'
@@ -387,6 +387,23 @@ console.log('\n15) Wochenplan: Was läuft diese Woche ab?')
   expect(n[1].planned?.title === 'Ofengemüse mit Mozzarella', 'Mozzarella: eingeplant am 24.11. (vor dem MHD)')
   expect(!n[2].planned, 'Milch: Milchreis erst am 28.11., MHD 27.11. → nicht rechtzeitig eingeplant')
   expect(n[3].planned?.title === 'Banane', 'Banane: über „Für die ganze Woche“ eingeplant')
+}
+
+console.log('\n16) Histamin mit Nachkommastelle (0.3.57)')
+{
+  expect(parseHistamine(['HISTAMIN: 6,5 | Tomaten']).score === 6.5, '„6,5“ gelesen')
+  expect(parseHistamine(['HISTAMIN: 7.25/10 – wenig kritisch']).score === 7.3, '„7.25/10“ → 7,3')
+  expect(parseHistamine(['**HISTAMIN:** 8 | frisch']).score === 8, 'Markdown-Fett und ganze Zahl gelesen')
+  expect(parseHistamine(['HISTAMIN: 10,5']).score === null && parseHistamine(['HISTAMIN: 0,5']).score === null, 'außerhalb 1–10 verworfen')
+  const batch = parseHistamineBatch('R1: 6,5 | Tomaten als Hauptzutat\nR2: 9.0 | unkritisch\n**R3:** 3,2 – Salami und Parmesan\nR3: 8 | doppelt', 3)
+  expect(batch[0].score === 6.5 && batch[0].note === 'Tomaten als Hauptzutat' && batch[1].score === 9 && batch[2].score === 3.2, 'Sammelantwort R1–R3 gelesen, erste Zeile je Rezept zählt')
+  expect(parseHistamineBatch('R2: 7,5', 2)[0].score === null, 'fehlende Zeile → kein Wert')
+  const scaled = applyGlutenYeast({ score: 6.5, note: null }, [{ name: 'Weizenmehl', quantity: 2, unit: 'EL' }])
+  expect(scaled.score === 5.5, 'Gluten-Abzug bleibt bei einer Nachkommastelle (6,5 − 1 = 5,5)')
+  const prompt = buildHistamineMessages([{ title: 'Tomatensuppe', ingredients: [{ name: 'Tomaten', quantity: 800, unit: 'g' }, { name: 'Sahne', quantity: null, unit: null, is_optional: true }] }])[1].content
+  expect(prompt.includes('R1: Tomatensuppe') && prompt.includes('- 800 g Tomaten') && !prompt.includes('Sahne') && /Nachkommastelle/.test(prompt), 'Sammel-Prompt mit Zutaten (ohne optionale) und Nachkommastelle')
+  const full = buildRecipeMessages({ title: 'X', description: null, servings: 2, prep_minutes: null, cook_minutes: null }, [])[1].content
+  expect(/mit einer Nachkommastelle/.test(full) && /Orientierung: 9–10/.test(full), 'Rezept-Prompt fragt Nachkommastelle mit Skala ab')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

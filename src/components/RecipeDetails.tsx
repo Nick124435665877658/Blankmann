@@ -5,6 +5,7 @@ import { estimateRecipeCost, formatAmount, instructionSteps, planPantryDeduction
 import ManualPriceForm from './ManualPriceForm'
 import { completeRecipeWithAi } from '../lib/recipeAiClient'
 import { isThermomix } from '../lib/recipeAi'
+import { formatScore, healthClass, type HealthResult } from '../lib/health'
 
 export type DetailsRecipe = { id: string; title: string; description: string | null; source_type?: string | null; source_url?: string | null; servings: number; prep_minutes: number | null; cook_minutes: number | null; instructions?: unknown; histamine_score?: number | null; histamine_note?: string | null; rating?: number | null; photo_path?: string | null; recipe_ingredients?: IngredientRef[] }
 export type DetailsMeal = { id: string; servings: number; cooked_at: string | null; meal_date: string }
@@ -12,8 +13,8 @@ export type DetailsMeal = { id: string; servings: number; cooked_at: string | nu
 const euro = (n: number) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(n)
 
 // Rezept öffnen: Zutaten mit geschätztem Einkaufswert, KI-Kochanleitung und „Gekocht“ (zieht die Zutaten vom Vorrat ab).
-export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, preferOrganic = false, pantry, householdId, accessToken, onChanged, onClose, onNotice, onError }: {
-  photoUrl: string | null; recipe: DetailsRecipe; meal: DetailsMeal | null; foods: FoodRef[]; prices: PriceRow[]; preferOrganic?: boolean; pantry: PantryRow[]; householdId: string; accessToken: string
+export default function RecipeDetails({ photoUrl, recipe, health = null, meal, foods, prices, preferOrganic = false, pantry, householdId, accessToken, onChanged, onClose, onNotice, onError }: {
+  photoUrl: string | null; recipe: DetailsRecipe; health?: HealthResult | null; meal: DetailsMeal | null; foods: FoodRef[]; prices: PriceRow[]; preferOrganic?: boolean; pantry: PantryRow[]; householdId: string; accessToken: string
   onChanged: () => Promise<void>; onClose: () => void; onNotice: (message: string) => void; onError: (message: string) => void
 }) {
   const servings = Number(meal?.servings || recipe.servings || 2)
@@ -50,7 +51,7 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
     try {
       const result = await completeRecipeWithAi(recipe.id, householdId, accessToken, replaceSteps, addIngredients)
       await onChanged()
-      const parts = [result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.added.length ? result.added.length + ' Zutat(en) ergänzt: ' + result.added.join(', ') : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : '', result.times ? 'Kochzeit eingetragen' : '', result.histamine ? 'Histaminwert ' + result.histamine + '/10' : ''].filter(Boolean)
+      const parts = [result.steps ? 'Anleitung mit ' + result.steps + ' Schritten erstellt' : '', result.added.length ? result.added.length + ' Zutat(en) ergänzt: ' + result.added.join(', ') : '', result.quantities ? result.quantities + ' fehlende Mengen ergänzt' : '', result.times ? 'Kochzeit eingetragen' : '', result.histamine ? 'Histaminwert ' + formatScore(result.histamine) + '/10' : ''].filter(Boolean)
       const none = addIngredients && !replaceSteps && !result.added.length ? 'keine weiteren Zutaten nötig' : 'nichts mehr zu ergänzen'
       onNotice('KI für „' + recipe.title + '“: ' + (parts.join(', ') || none) + '.' + (result.added.length ? ' Ergänzte Zutaten sind mit „KI“ markiert und lassen sich unter Rezepte → Bearbeiten wieder entfernen.' + (!replaceSteps && steps.length ? ' Mit „Anleitung neu erzeugen“ kommen sie auch in die Anleitung.' : '') : ' Du kannst alles bearbeiten.'))
     } catch (error) { onError(error instanceof Error ? error.message : 'Die KI konnte das Rezept nicht ergänzen.') }
@@ -98,8 +99,9 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
     {thermomix && <div className="thermomix-note"><span>Thermomix-Rezept aus Cookidoo{recipe.description?.startsWith('Thermomix · ') ? ' (' + recipe.description.slice(12) + ')' : ''} – Zutaten und Mengen wie im Original. Die KI ändert keine Mengen, sie ergänzt nur, und schreibt die Anleitung für Herd und Ofen.</span>{recipe.source_url && <a className="button button-light button-small" href={recipe.source_url} target="_blank" rel="noopener noreferrer"><ExternalLink size={14} /> In Cookidoo öffnen</a>}</div>}
     {photoUrl && <img className="recipe-photo" src={photoUrl} alt={'Foto von ' + recipe.title} decoding="async" referrerPolicy="no-referrer" />}
     <div className="recipe-scores">
+      {health && <HealthBlock health={health} />}
       <div><span className="eyebrow">HISTAMIN</span>{recipe.histamine_score
-        ? <p><span className={'badge histamine h' + (recipe.histamine_score >= 7 ? 'good' : recipe.histamine_score >= 4 ? 'mid' : 'bad')}>{recipe.histamine_score}/10</span> <small className="muted">{recipe.histamine_note || ''} {recipe.histamine_note === 'Von Hand gesetzt' ? '' : '(KI-Schätzung, keine medizinische Beratung – 1 = histaminreich, 10 = kein Histamin)'}</small></p>
+        ? <p><span className={'badge histamine h' + (Number(recipe.histamine_score) >= 7 ? 'good' : Number(recipe.histamine_score) >= 4 ? 'mid' : 'bad')}>{formatScore(Number(recipe.histamine_score))}/10</span> <small className="muted">{recipe.histamine_note || ''} {recipe.histamine_note === 'Von Hand gesetzt' ? '' : '(KI-Schätzung, keine medizinische Beratung – 1 = histaminreich, 10 = kein Histamin)'}</small></p>
         : <p className="muted">Noch kein Wert – „Mit KI ergänzen“ vergibt ihn.</p>}</div>
       <div><span className="eyebrow">EURE BEWERTUNG</span>
         <form className="rating-form" onSubmit={e => { e.preventDefault(); const text = String(new FormData(e.currentTarget).get('rating') || '').replace(',', '.').trim(); const value = Number(text); if (!text || !(value >= 1 && value <= 10)) { onError('Bitte eine Bewertung zwischen 1 und 10 eintragen, z. B. 6,7.'); return } void setRating(Math.round(value * 10) / 10) }}>
@@ -141,5 +143,29 @@ export default function RecipeDetails({ photoUrl, recipe, meal, foods, prices, p
         {cooked.unconvertible.length ? 'Im Vorrat, aber Menge/Einheit nicht verrechenbar (bitte im Vorrat selbst anpassen): ' + cooked.unconvertible.join(', ') + '.' : ''}
       </span></div>
       : <button type="button" className="button button-dark" disabled={busy !== ''} onClick={markCooked}><ChefHat size={16} /> {busy === 'cook' ? 'Vorrat wird aktualisiert …' : 'Gekocht – Zutaten vom Vorrat abziehen'}</button>}
+  </div>
+}
+
+// 0.3.57 (Nick 24.11.2026): Gesundheitswert mit Begründung und Nährwerten je Portion.
+const one = (n: number) => (Math.round(n * 10) / 10).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+function HealthBlock({ health }: { health: HealthResult }) {
+  const p = health.portion
+  return <div className="health-block"><span className="eyebrow">GESUNDHEIT</span>
+    {health.score !== null ? <>
+      <p><span className={'badge health h' + healthClass(health.score)}>{formatScore(health.score)}/10</span> <small className="muted">je Portion ≈ {Math.round(p.grams)} g</small></p>
+      {(health.good.length > 0 || health.bad.length > 0) && <ul className="health-reasons">
+        {health.good.map(text => <li className="good" key={'g' + text}>+ {text}</li>)}
+        {health.bad.map(text => <li className="bad" key={'b' + text}>− {text}</li>)}
+      </ul>}
+      <dl className="health-nutrients">
+        <div><dt>Energie</dt><dd>{Math.round(p.kcal)} kcal</dd></div>
+        <div><dt>Eiweiß</dt><dd>{one(p.protein)} g</dd></div>
+        <div><dt>Fett</dt><dd>{one(p.fat)} g <small>ges. {one(p.satFat)} g</small></dd></div>
+        <div><dt>Kohlenhydrate</dt><dd>{one(p.carbs)} g <small>Zucker {one(p.sugar)} g</small></dd></div>
+        <div><dt>Ballaststoffe</dt><dd>{one(p.fiber)} g</dd></div>
+        <div><dt>Salz</dt><dd>{one(p.salt)} g</dd></div>
+      </dl>
+      <small className="muted">Berechnet aus euren Zutaten und Mengen mit Nährwerten des Bundeslebensmittelschlüssels (BLS 4.0), bewertet wie der Nutri-Score plus DGE-Empfehlungen 2024 – Richtwert, keine medizinische Beratung.{health.coverage < 0.99 ? ' ' + Math.round(health.coverage * 100) + ' % der Zutatenmenge haben Nährwerte.' : ''}</small>
+    </> : <p className="muted">Noch kein Wert – zu wenige Zutaten mit Mengen und Nährwerten{health.missing.length ? ' (fehlen: ' + health.missing.slice(0, 4).join(', ') + ')' : ''}.</p>}
   </div>
 }

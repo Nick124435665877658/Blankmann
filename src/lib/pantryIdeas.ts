@@ -32,7 +32,7 @@ export function buildPantryIdeasMessages(pantry: IdeaPantryItem[], staples: stri
     '- Mengen für 2 Portionen, realistisch und in g, ml, Stk, EL, TL oder Prise.',
     '- Zubereitung am Herd oder im Backofen, kein Thermomix. Am Herd Hitzestufen statt °C, °C nur für den Backofen.',
     ...ruleLines(rules).map(line => '- ' + line),
-    '- Histaminwert von 1 (sehr histaminreich) bis 10 (histaminarm). Gluten und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein.',
+    '- Histaminwert von 1 (sehr histaminreich) bis 10 (histaminarm) mit einer Nachkommastelle (z. B. 6,5). Gluten und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein.',
     '- Ordne jedes Gericht genau einer Gruppe zu: ' + recipeGroups.join(', ') + '.',
     'Format – für jedes Gericht genau so, Gerichte getrennt durch eine Zeile mit ---:',
     'GERICHT: Name des Gerichts',

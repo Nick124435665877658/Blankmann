@@ -1,7 +1,7 @@
 {
   "name": "blankmann",
   "private": true,
-  "version": "0.3.56",
+  "version": "0.3.57",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -9,7 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "test:receipt": "node --experimental-strip-types scripts/check-receipt-parser.ts",
     "test:kitchen": "node --experimental-strip-types scripts/check-kitchen.ts",
-    "test:alexa": "node --experimental-strip-types scripts/check-alexa.ts"
+    "test:alexa": "node --experimental-strip-types scripts/check-alexa.ts",
+    "test:health": "node --experimental-strip-types scripts/check-health.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.1",

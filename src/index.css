@@ -1334,3 +1334,9 @@ div.add-panel-body{display:contents}
 .theme-nick .health-goal-mark{background:#1d3a2c;color:#8fd8a5}
 .theme-nick .health-goal.open .health-goal-mark{background:#3a3220;color:#e6c879}
 .histamine-run{margin-bottom:12px}
+/* 0.3.58 Suche in der Rezeptliste (Nick) */
+.recipe-list-search{margin:0 0 10px}
+.list-search-clear{flex:none;border:0;background:transparent;color:var(--muted);font-size:14px;line-height:1;padding:6px 2px;cursor:pointer}
+.list-search-clear:hover{color:var(--ink)}
+.list-search input::-webkit-search-cancel-button{display:none}
+.recipe-search-count{white-space:nowrap}

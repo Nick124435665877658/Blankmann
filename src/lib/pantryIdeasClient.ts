@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { baseKey } from './kitchen'
 import { guessCategory } from './categories'
 import type { PantryIdea } from './pantryIdeas'
+import { HISTAMINE_VERSION } from './recipeAi'
 
 export async function fetchPantryIdeas(householdId: string, accessToken: string): Promise<PantryIdea[]> {
   const response = await fetch('/api/pantry-ideas', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ householdId }) })
@@ -27,7 +28,7 @@ export async function saveIdeaAsRecipe(idea: PantryIdea, householdId: string, us
   const created = await supabase.from('recipes').insert({
     household_id: householdId, title: idea.title, description: idea.description, source_type: 'manual', servings: idea.servings,
     prep_minutes: idea.prepMinutes, cook_minutes: idea.cookMinutes, instructions: idea.steps, notes: 'KI-Idee aus dem Vorrat („Was kochen?“)',
-    category: idea.group, histamine_score: idea.histamine.score, histamine_note: idea.histamine.note, histamine_version: idea.histamine.score === null ? null : 2, created_by: userId,
+    category: idea.group, histamine_score: idea.histamine.score, histamine_note: idea.histamine.note, histamine_version: idea.histamine.score === null ? null : HISTAMINE_VERSION, created_by: userId,
   }).select('id').single()
   if (created.error || !created.data) throw new Error('Rezept konnte nicht gespeichert werden: ' + (created.error?.message ?? 'unbekannter Fehler'))
   const recipeId = (created.data as { id: string }).id

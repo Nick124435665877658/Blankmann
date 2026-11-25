@@ -1,7 +1,8 @@
 // „Was kochen?“ – KI-Ideen aus dem Vorrat (0.3.50, Nick 23.11.2026): Prompt und Auswertung der Antwort.
 // Regeln (Nick): hauptsächlich aus dem Vorrat, bald Ablaufendes zuerst, höchstens 2–3 fehlende Zutaten,
 // Haushaltsregeln (histaminarm, tomatenfrei …) und Gluten/Hefe-Regel wie bei den Rezepten. Nur auf Knopfdruck.
-import { applyGlutenYeast, forbidden, parseHistamine, parseNumber, parseTimes, ruleLines, stepsOf, unitAliases, type AiHistamine, type AiRules } from './recipeAi.ts'
+import { applyHistamineRules } from './histamineRules.ts'
+import { forbidden, parseHistamine, parseNumber, parseTimes, ruleLines, stepsOf, unitAliases, type AiHistamine, type AiRules } from './recipeAi.ts'
 import { matchRecipeGroup, recipeGroups } from './recipeGroups.ts'
 
 export type IdeaPantryItem = { name: string; quantity: number | string | null; unit: string | null; best_before: string | null }
@@ -74,10 +75,11 @@ function parseBlock(block: string, rules: AiRules): PantryIdea | null {
   }
   const steps = stepsOf(lines.slice(stepsAt + 1).filter(line => !header.test(line)))
   if (ingredients.length < 2 || steps.length < 2) return null
-  const servings = Number(value(/^portionen\w*\s*:\s*/i).match(/\d{1,2}/)?.[0] ?? 2)
+  const servingsRaw = Number(value(/^portionen\w*\s*:\s*/i).match(/\d{1,2}/)?.[0] ?? 2)
+  const servings = servingsRaw >= 1 && servingsRaw <= 12 ? servingsRaw : 2
   const times = parseTimes(lines)
-  const histamine = applyGlutenYeast(parseHistamine(lines), ingredients)
-  return { title, description: value(/^beschreibung\w*\s*:\s*/i).slice(0, 200) || null, group: matchRecipeGroup(value(/^gruppe\w*\s*:\s*/i).split('|')[0]), servings: servings >= 1 && servings <= 12 ? servings : 2, prepMinutes: times.prepMinutes, cookMinutes: times.cookMinutes, histamine, ingredients, steps }
+  const histamine = applyHistamineRules(parseHistamine(lines), ingredients, servings)
+  return { title, description: value(/^beschreibung\w*\s*:\s*/i).slice(0, 200) || null, group: matchRecipeGroup(value(/^gruppe\w*\s*:\s*/i).split('|')[0]), servings, prepMinutes: times.prepMinutes, cookMinutes: times.cookMinutes, histamine, ingredients, steps }
 }
 
 export function parsePantryIdeas(text: string, rules: AiRules): PantryIdea[] {

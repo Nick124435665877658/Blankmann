@@ -1,14 +1,15 @@
 // Cloudflare Pages Function: POST /api/recipe-histamine  { recipeIds: string[] (1–4) }
 // 0.3.57 (Nick 24.11.2026): schätzt nur den Histaminwert neu – mit einer Nachkommastelle, mehrere Rezepte je Anfrage
-// (spart KI-Kontingent). Gluten und Hefe rechnet die App wie immer fest ein (applyGlutenYeast).
+// (spart KI-Kontingent). Danach fest: Deckel für kritische Zutaten (0.3.59, histamineRules) und Gluten/Hefe (applyGlutenYeast).
 // Antwort: { results: [{ id, score, note }], model } – gespeichert wird in der App (von Hand gesetzte Werte bleiben).
 // Sicherheit: Rezepte werden mit dem Login des Nutzers aus Supabase geladen (Zeilenschutz/RLS).
-import { applyGlutenYeast, buildHistamineMessages, parseHistamineBatch, type PenaltyIngredient } from '../../src/lib/recipeAi'
+import { buildHistamineMessages, parseHistamineBatch } from '../../src/lib/recipeAi'
+import { applyHistamineRules, type RuleIngredient } from '../../src/lib/histamineRules'
 
 type AiBinding = { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }
 type Env = { AI?: AiBinding; VITE_SUPABASE_URL?: string; VITE_SUPABASE_PUBLISHABLE_KEY?: string }
 type Context = { request: Request; env: Env }
-type RecipeRow = { id: string; title: string; recipe_ingredients: PenaltyIngredient[] }
+type RecipeRow = { id: string; title: string; servings: number | null; recipe_ingredients: RuleIngredient[] }
 
 const SUPABASE_URL = 'https://rrjsolyytdktfmrykdca.supabase.co'
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_v66KgLKqMrY-UknWgXR-7Q_lDGBHTvF'
@@ -41,7 +42,7 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
 
   const url = env.VITE_SUPABASE_URL || SUPABASE_URL
   const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || SUPABASE_PUBLISHABLE_KEY
-  const select = 'id,title,recipe_ingredients(name,quantity,unit,is_optional)'
+  const select = 'id,title,servings,recipe_ingredients(name,quantity,unit,is_optional,food:household_foods!recipe_ingredients_food_item_id_fkey(name,grams_per_piece,typical_package_quantity,typical_package_unit,nutrition_source,nutr_kcal))'
   const loaded = await fetch(url + '/rest/v1/recipes?id=in.(' + ids.join(',') + ')&select=' + encodeURIComponent(select), { headers: { apikey: key, Authorization: 'Bearer ' + token } })
   if (loaded.status === 401 || loaded.status === 403) return json({ error: 'Anmeldung abgelaufen – bitte neu anmelden.' }, 401)
   if (!loaded.ok) return json({ error: 'Rezepte konnten nicht geladen werden (' + loaded.status + ').' }, 502)
@@ -54,7 +55,7 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
     try {
       const scores = parseHistamineBatch(textOf(await env.AI.run(model.id, model.input(messages))), recipes.length)
       if (!scores.some(s => s.score !== null)) { lastError = 'leere Antwort'; continue }
-      const results = recipes.map((r, n) => ({ id: r.id, ...applyGlutenYeast(scores[n], r.recipe_ingredients ?? []) }))
+      const results = recipes.map((r, n) => ({ id: r.id, ...applyHistamineRules(scores[n], r.recipe_ingredients ?? [], Number(r.servings || 1)) }))
       return json({ results, model: model.id })
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error)

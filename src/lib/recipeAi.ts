@@ -61,7 +61,7 @@ export function ruleLines(rules: AiRules) {
   return [
     rules.tomatoFree ? 'Keine Tomaten und keine Tomatenprodukte (auch kein Tomatenmark, Ketchup, passierte Tomaten).' : '',
     rules.creamFree ? 'Keine Sahne (auch keine Kochsahne, kein Schmand, keine Crème fraîche).' : '',
-    rules.histamineLow ? 'Histaminarm: keine histaminreichen Zutaten oder Histaminliberatoren ergänzen (z. B. gereifter Käse, Spinat, Aubergine, Avocado, Essig, Sojasauce, Hefeextrakt, Zitrusfrüchte, Nüsse, Wein, Wurst, Räucherfisch).' : '',
+    rules.histamineLow ? 'Histaminarm: keine histaminreichen Zutaten oder Histaminliberatoren ergänzen (z. B. gereifter Käse, Spinat, Tomaten, Erdbeeren, Aubergine, Avocado, Essig, Sojasauce, Hefeextrakt, Zitrusfrüchte, Banane, Ananas, Nüsse, Schokolade, Wein, Wurst, Räucherfisch).' : '',
     rules.vegetableRich ? 'Gemüse darf gern einen großen Teil ausmachen.' : '',
     rules.notes ? 'Weitere Hinweise des Haushalts: ' + rules.notes.slice(0, 300) : '',
   ].filter(Boolean)
@@ -105,7 +105,7 @@ export function buildRecipeMessages(recipe: AiRecipe, ingredients: AiIngredient[
     thermomix ? 'Schreibe die Anleitung ohne Thermomix – ganz normal mit Herd, Backofen, Topf, Pfanne, Schüssel, Schneebesen, Handrührgerät oder Pürierstab. Keine Thermomix-Angaben wie Stufe, Linkslauf, Varoma, Mixtopf oder Sanftrührstufe.' : '',
     'Temperaturen in °C nur für den Backofen; auf dem Herd schreibe Hitzestufen wie „mittlere Hitze“ oder „hohe Hitze“.',
     'Gib außerdem eine realistische Zeit an: Vorbereitung (Waschen, Schneiden) und Kochen (Garzeit am Herd/im Ofen) in Minuten, passend zu deinen Schritten.',
-    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei, mit einer Nachkommastelle (z. B. 6,5) – ' + histamineScale + ' Achte auf histaminreiche Lebensmittel und Histaminliberatoren (z. B. gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und auf lange Lager- oder Garzeiten. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
+    'Bewerte zuletzt, wie histaminarm das Gericht ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei, mit einer Nachkommastelle (z. B. 6,5) – ' + histamineScale + ' ' + histamineCritical + ' Achte darauf, ob sie Haupt- oder Nebenzutat sind. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein. Nenne in einem kurzen Satz die Zutaten, die den Wert drücken.',
     'Ordne das Rezept genau einer Gruppe zu: ' + recipeGroups.join(', ') + '.',
     '',
     'Antworte genau in diesem Format, ohne Einleitung und ohne Schlusswort:',
@@ -149,6 +149,10 @@ export function parseTimes(lines: string[]): AiTimes {
   return { prepMinutes: minutes(/vorbereit\w*\D{0,12}?(\d{1,3})/i), cookMinutes: minutes(/(?:kochen|kochzeit|garen|garzeit|backen|backzeit)\D{0,12}?(\d{1,3})/i) }
 }
 
+// Stand der Histamin-Schätzung: 2 = mit Nachkommastelle (0.3.57), 3 = mit fester Regel für kritische Zutaten (0.3.59).
+// Rezepte mit kleinerer Version schätzt die App im Hintergrund neu (von Hand gesetzte Werte nie).
+export const HISTAMINE_VERSION = 3
+
 // Histaminwert mit einer Nachkommastelle (0.3.57, Nick 24.11.2026): „6,5“, „6.5“, „6,5/10“ oder ganze Zahlen.
 const histamineValue = (raw: string | undefined) => {
   const n = Number(String(raw ?? '').replace(',', '.'))
@@ -163,7 +167,8 @@ export function parseHistamine(lines: string[]): AiHistamine {
 }
 
 // Orientierung für die Skala, damit die Werte über viele Rezepte vergleichbar bleiben.
-export const histamineScale = 'Orientierung: 9–10 = nur frische, unkritische Zutaten (frisches Gemüse außer Tomate/Spinat/Aubergine/Avocado, Reis, Kartoffeln, frisches Fleisch oder Geflügel, Milch, junger Käse); 7–8 = einzelne kritische Zutaten nur in kleinen Mengen; 4–6 = eine kritische Hauptzutat (z. B. Tomaten, Spinat, Hartkäse, Hülsenfrüchte, Zitrusfrüchte, Wein zum Kochen); 1–3 = mehrere stark histaminreiche Hauptzutaten (z. B. gereifter Käse, Salami/Schinken/Speck, Sauerkraut, Thunfisch/Räucherfisch, Rotwein, Sojasauce in größerer Menge). Nutze das ganze Spektrum.'
+export const histamineCritical = 'Kritisch (Liste TU München): setzen Histamin frei – Erdbeeren, Zitrusfrüchte (auch Saft), Tomaten, Meeresfrüchte, Alkohol, Glutamat; bremsen den Histamin-Abbau – Banane, Ananas, Papaya, Cashew, Walnüsse, Kakao/Schokolade; histaminreich – Kiwi, Himbeeren, Nüsse, Spinat, Sauerkraut, gereifter Käse, Wurst/Geräuchertes, Thunfisch/Makrele/Fischkonserven, Soja/Sojasauce, Rotweinessig/Balsamico, Hefeextrakt, Marmelade, Algen, Eingelegtes. Auch Aubergine, Avocado, nicht ganz frischer Fisch und lange Lager- oder Garzeiten senken den Wert.'
+export const histamineScale = 'Orientierung: 9–10 = nur frische, unkritische Zutaten (frisches Gemüse außer Tomate/Spinat/Aubergine/Avocado, Reis, Kartoffeln, frisches Fleisch oder Geflügel, Milch, junger Käse); 7–8 = einzelne kritische Zutaten nur in kleinen Mengen; 4–6 = eine kritische Hauptzutat (z. B. Erdbeeren, Tomaten, Spinat, Hartkäse, Hülsenfrüchte, Zitrusfrüchte, Banane, Wein zum Kochen); 1–3 = mehrere stark histaminreiche Hauptzutaten (z. B. gereifter Käse, Salami/Schinken/Speck, Sauerkraut, Thunfisch/Räucherfisch, Rotwein, Sojasauce in größerer Menge). Nutze das ganze Spektrum.'
 
 // Nur Histamin neu schätzen (0.3.57): mehrere Rezepte in einer kurzen Anfrage, Antwort je Zeile „R1: 6,5 | Begründung“.
 export type HistamineRecipe = { title: string; ingredients: PenaltyIngredient[] }
@@ -172,7 +177,7 @@ export function buildHistamineMessages(recipes: HistamineRecipe[]) {
   const user = [
     'Bewerte für jedes Rezept, wie histaminarm es ist: 1 = sehr histaminreich, 10 = praktisch histaminfrei, mit einer Nachkommastelle (z. B. 6,5).',
     histamineScale,
-    'Achte auf histaminreiche Lebensmittel und Histaminliberatoren (gereifter Käse, Tomaten, Spinat, Aubergine, Avocado, Fermentiertes, Essig, Hefeextrakt, geräuchertes oder gepökeltes Fleisch, nicht ganz frischer Fisch, Zitrusfrüchte, Nüsse, Schokolade, Alkohol) und darauf, ob sie Haupt- oder Nebenzutat sind. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein.',
+    histamineCritical + ' Achte darauf, ob sie Haupt- oder Nebenzutat sind. Gluten (Weizen, Dinkel, Roggen, Gerste) und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein.',
     '',
     ...blocks,
     '',

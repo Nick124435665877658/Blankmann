@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { baseKey } from './kitchen'
 import { guessCategory } from './categories'
+import { HISTAMINE_VERSION } from './recipeAi'
 
 type Addition = { name: string; quantity: number | null; unit: string | null; staple: boolean }
 export type AiResult = { steps: number; quantities: number; times: number; histamine: number | null; added: string[]; group: string | null }
@@ -40,7 +41,7 @@ export async function completeRecipeWithAi(recipeId: string, householdId: string
   // Histaminwert: bei neuer Anleitung oder neuen Zutaten neu bewerten (außer von Hand gesetzt), sonst nur eintragen, wo noch keiner steht.
   let histamine: number | null = null
   if (body.histamine?.score) {
-    let query = supabase.from('recipes').update({ histamine_score: body.histamine.score, histamine_note: body.histamine.note, histamine_version: 2 }).eq('id', recipeId).eq('household_id', householdId)
+    let query = supabase.from('recipes').update({ histamine_score: body.histamine.score, histamine_note: body.histamine.note, histamine_version: HISTAMINE_VERSION }).eq('id', recipeId).eq('household_id', householdId)
     if (!replaceSteps && !(addIngredients && body.additions?.length)) query = query.is('histamine_score', null)
     // Von Hand gesetzte Histaminwerte überschreibt die KI nie.
     else query = query.or('histamine_note.is.null,histamine_note.neq."Von Hand gesetzt"')
@@ -105,9 +106,9 @@ export async function estimateHistamine(recipeIds: string[], accessToken: string
 }
 export async function saveHistamineEstimate(estimate: HistamineEstimate, householdId: string): Promise<boolean> {
   if (!supabase || estimate.score === null) return false
-  const { data, error } = await supabase.from('recipes').update({ histamine_score: estimate.score, histamine_note: estimate.note, histamine_version: 2 })
+  const { data, error } = await supabase.from('recipes').update({ histamine_score: estimate.score, histamine_note: estimate.note, histamine_version: HISTAMINE_VERSION })
     .eq('id', estimate.id).eq('household_id', householdId)
-    .or('and(or(histamine_version.is.null,histamine_version.lt.2),or(histamine_note.is.null,histamine_note.neq."Von Hand gesetzt"))')
+    .or('and(or(histamine_version.is.null,histamine_version.lt.' + HISTAMINE_VERSION + '),or(histamine_note.is.null,histamine_note.neq."Von Hand gesetzt"))')
     .select('id')
   if (error) throw new Error('Histaminwert konnte nicht gespeichert werden: ' + error.message)
   return (data ?? []).length > 0

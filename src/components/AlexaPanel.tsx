@@ -1,5 +1,5 @@
 // Alexa verbinden (0.3.54, Nick 23.11.2026): „Alexa, öffne Blankmann“ → Alexa nennt einen 4-stelligen Code → hier eingeben.
-// Danach: „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“ Verbundene Alexa-Konten lassen sich trennen (mit Sicherheitsabfrage).
+// Danach: „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“ (0.3.61: auch eintragen und Vorrat ansagen) Verbundene Alexa-Konten lassen sich trennen (mit Sicherheitsabfrage).
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -45,7 +45,7 @@ export default function AlexaPanel({ householdId }: { householdId: string }) {
     <div className="setting-block">
       <span className="eyebrow">SPRACHSTEUERUNG</span>
       <h2>Alexa</h2>
-      <small className="muted">Verbrauch per Sprache vom Vorrat abziehen: „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“ Auch: „… wie viele Eier habe ich noch?“ und „… rückgängig“.</small>
+      <small className="muted">Verbrauch per Sprache vom Vorrat abziehen: „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“ Eintragen: „… ich habe sechs Eier gekauft“ oder „… Vorrat erfassen“ – fehlt etwas, fragt Alexa nach. Auch: „… was ist im Kühlschrank?“, „… wie viele Eier habe ich noch?“ und „… rückgängig“.</small>
       {links.length > 0 && <div className="alexa-links">{links.map(link => <div className="alexa-link" key={link.id}>
         <div><b>{link.label}</b><small>verbunden am {when(link.created_at)} · {link.last_used_at ? 'zuletzt genutzt ' + when(link.last_used_at) : 'noch nicht genutzt'}</small></div>
         <button type="button" className="button button-light button-small" onClick={() => disconnect(link)}>Trennen</button>

@@ -54,8 +54,8 @@ type Recipe = { id: string; title: string; description: string | null; source_ty
 
 
 // Version und Build an einer Stelle (Nick: bei jedem Update anpassen und im Chat bestätigen).
-const APP_VERSION = '0.3.60'
-const APP_BUILD = '26.11.26-BT'
+const APP_VERSION = '0.3.61'
+const APP_BUILD = '26.11.26-BU'
 
 // 0.3.56 (Nick): auf dem Handy unten nur Übersicht, Wochenplan, Einkauf, Was kochen? und „Mehr“ – der Rest liegt unter „Mehr“.
 const phoneNav: Tab[] = ['overview', 'planner', 'shopping', 'cook']

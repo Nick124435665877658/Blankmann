@@ -2,19 +2,25 @@
 // „Alexa, sag Blankmann, ich habe drei Eier verbraucht“ → Eier 10 → 7, Alexa: „Okay, Eier minus 3. Noch 7 da. Noch was?“
 // Regeln (Nick): mehrere Einträge desselben Lebensmittels → frühestes MHD zuerst, ohne Rückfrage; bei 0 Sicherheitsabfrage
 // wie in der App („Sicher, dass du das Element … löschen willst?“); „Wie viele … hab ich noch?“; „Rückgängig“; „Noch was?“.
+// 0.3.61 (Nick 26.11.2026): Vorrat erfassen („ich habe sechs Eier gekauft“, mit Rückfragen) und ansagen → alexaAdd.ts.
 // Ohne Browser/Datenbank testbar: die Datenbank kommt als `AlexaBackend` herein (scripts/check-alexa.ts).
-import { fromBase, normalizeUnit, sameKind, splitOrganic, toBase } from './kitchen.ts'
+import { fromBase, sameKind, splitOrganic, toBase } from './kitchen.ts'
+import { addDays, beginAdd, continueAdd, listStock, parsePlace, type AddContext, type AddPending, type AlexaFood, type AlexaNewItem, type Answer, type ListPending } from './alexaAdd.ts'
+import { fold, keys, more, num, plain, readFood, round, sameName, slotValues, speakAmount, splitFoodPhrase, spokenAmount, spokenUnit, stem, total, unitLabel, SORRY, sorry } from './alexaText.ts'
+export { speakAmount, splitFoodPhrase, SORRY, sorry }
 
-export type AlexaPantryRow = { id: string; name: string; quantity: number | string | null; unit: string | null; best_before: string | null; food_item_id: string | null; food_name: string | null; is_organic?: boolean | null }
+export type AlexaPantryRow = { id: string; name: string; quantity: number | string | null; unit: string | null; best_before: string | null; food_item_id: string | null; food_name: string | null; is_organic?: boolean | null; storage_location?: string | null }
 export type AlexaContext = { status: 'linked'; pantry: AlexaPantryRow[]; can_undo?: boolean } | { status: 'pending'; code: string } | { status: 'wrong_app' }
 export type AlexaBackend = {
   context(): Promise<AlexaContext>
   apply(label: string, updates: { id: string; quantity: number }[]): Promise<void>
   remove(label: string, ids: string[]): Promise<void>
   undo(): Promise<{ ok: boolean; label?: string }>
+  foods(): Promise<AlexaFood[]>
+  add(label: string, item: AlexaNewItem): Promise<void>
 }
 
-type Slot = { name?: string; value?: string; resolutions?: { resolutionsPerAuthority?: { status?: { code?: string }; values?: { value?: { name?: string; id?: string } }[] }[] } }
+export type Slot = { name?: string; value?: string; resolutions?: { resolutionsPerAuthority?: { status?: { code?: string }; values?: { value?: { name?: string; id?: string } }[] }[] } }
 export type AlexaRequest = {
   version?: string
   session?: { new?: boolean; attributes?: Record<string, unknown>; application?: { applicationId?: string }; user?: { userId?: string } }
@@ -49,16 +55,6 @@ export function checkEnvelope(body: AlexaRequest, now = Date.now()): string | nu
   if (!Number.isFinite(time) || Math.abs(now - time) > 150_000) return 'Zeitstempel ungültig'
   return null
 }
-
-// ---------------------------------------------------------------- Lebensmittel finden
-const fold = (value: string) => splitOrganic(value).base.toLocaleLowerCase('de-DE')
-  .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
-// Einzahl/Mehrzahl gleich behandeln: Eier/Ei, Kartoffeln/Kartoffel, Tomaten/Tomate, Äpfel/Apfel, Champignons/Champignon.
-// Jeder Name hat zwei Schlüssel: so wie geschrieben und mit gekürzter Endung; passt einer, passt der Name.
-const stemWord = (word: string) => word.length > 3 ? word.replace(/(en|er|n|e|s)$/, '') : word.replace(/er$/, '')
-const keys = (value: string) => { const words = fold(value).split(' ').filter(Boolean); return [...new Set([words.join(' '), words.map(stemWord).join(' ')])].filter(Boolean) }
-const stem = (value: string) => keys(value).slice(-1)[0] ?? ''
-const sameName = (a: string, b: string) => { const kb = keys(b); return keys(a).some(k => kb.includes(k)) }
 
 type Candidate = { row: AlexaPantryRow; score: number }
 // 0 = gleicher Name (Katalog- oder Vorratsname), 1 = zusammengesetztes Wort endet so („Markenbutter“, „Kokosmilch“),
@@ -106,28 +102,6 @@ export function matchPantry(spoken: string[], pantry: AlexaPantryRow[]): FoodMat
   return { status: 'one', name: displayName(rows[0]), rows: byExpiry }
 }
 
-// ---------------------------------------------------------------- Mengen sprechen
-const num = (value: number | string | null | undefined) => value === null || value === undefined || value === '' || !Number.isFinite(Number(value)) ? null : Number(value)
-const round = (value: number) => Math.round(value * 1000) / 1000
-const spokenNumber = (n: number) => n.toLocaleString('de-DE', { maximumFractionDigits: 2 })
-const unitWords: Record<string, [string, string]> = {
-  g: ['Gramm', 'Gramm'], ml: ['Milliliter', 'Milliliter'], stk: ['', ''], packung: ['Packung', 'Packungen'], dose: ['Dose', 'Dosen'],
-  bund: ['Bund', 'Bund'], el: ['Esslöffel', 'Esslöffel'], tl: ['Teelöffel', 'Teelöffel'], kopf: ['Kopf', 'Köpfe'], knolle: ['Knolle', 'Knollen'],
-  zehe: ['Zehe', 'Zehen'], prise: ['Prise', 'Prisen'], becher: ['Becher', 'Becher'], glas: ['Glas', 'Gläser'], flasche: ['Flasche', 'Flaschen'],
-  scheibe: ['Scheibe', 'Scheiben'], tuete: ['Tüte', 'Tüten'], beutel: ['Beutel', 'Beutel'],
-}
-// 750 g → „750 Gramm“, 1250 g → „1,25 Kilo“, 3 Stk → „3“, 2 Packung → „2 Packungen“.
-export function speakAmount(quantity: number, unit: string | null | undefined): string {
-  const base = normalizeUnit(unit).base
-  const q = round(fromBase(toBase(quantity, unit).quantity, base === 'g' || base === 'ml' ? base : unit))
-  if (base === 'g' && q >= 1000) return spokenNumber(q / 1000) + ' Kilo'
-  if (base === 'ml' && q >= 1000) return spokenNumber(q / 1000) + ' Liter'
-  const words = unitWords[base]
-  const word = words ? words[q === 1 ? 0 : 1] : (unit ?? '').trim()
-  return spokenNumber(q) + (word ? ' ' + word : '')
-}
-const unitLabel = (unit: string | null | undefined) => { const base = normalizeUnit(unit).base; return base === 'stk' ? 'Stück' : unitWords[base]?.[1] || (unit ?? '').trim() || 'Stück' }
-
 // ---------------------------------------------------------------- Abziehen planen
 export type Deduction =
   | { status: 'ok'; name: string; updates: { id: string; quantity: number }[]; taken: number; unit: string | null; left: number; leftUnit: string | null; short: boolean; emptied: string[] }
@@ -157,20 +131,7 @@ export function planDeduction(name: string, rows: AlexaPantryRow[], amount: numb
   return { status: 'ok', name, updates, taken: round(fromBase(takenBase, unit)), unit, left: round(fromBase(leftBase, leftUnit)), leftUnit, short: open > 1e-9, emptied }
 }
 
-// ---------------------------------------------------------------- Antworten
-const plain = (text: string, options: { end?: boolean; reprompt?: string; attributes?: Record<string, unknown> } = {}): AlexaResponse => ({
-  version: '1.0',
-  sessionAttributes: options.attributes ?? {},
-  response: {
-    outputSpeech: { type: 'PlainText', text },
-    ...(options.end ? {} : { reprompt: { outputSpeech: { type: 'PlainText', text: options.reprompt ?? 'Noch was?' } } }),
-    shouldEndSession: Boolean(options.end),
-  },
-})
-const more = (text: string, attributes?: Record<string, unknown>) => plain(text + ' Noch was?', { reprompt: 'Noch was? Sag zum Beispiel: drei Eier verbraucht. Oder: nein.', attributes })
-export const SORRY = 'Da hat gerade etwas nicht geklappt. Versuch es bitte gleich noch mal.'
-export const sorry = (): AlexaResponse => plain(SORRY, { end: true })
-const HELP = 'Sag zum Beispiel: ich habe drei Eier verbraucht. Oder: zweihundert Gramm Mehl verbraucht. Oder: wie viele Eier habe ich noch. Oder: rückgängig.'
+const HELP = 'Sag zum Beispiel: ich habe drei Eier verbraucht. Oder: ich habe sechs Eier gekauft. Oder: Vorrat erfassen. Oder: was ist im Kühlschrank. Oder: wie viele Eier habe ich noch. Oder: rückgängig.'
 
 function pairing(code: string): AlexaResponse {
   const digits = '<say-as interpret-as="digits">' + code + '</say-as>'
@@ -185,55 +146,20 @@ function pairing(code: string): AlexaResponse {
   }
 }
 
-// Slots lesen: erkannter Katalogname (Auflösung) zuerst, sonst das Gesprochene.
-function slotValues(slot: Slot | undefined): { value: string; id: string | null; resolved: string | null } {
-  const authority = slot?.resolutions?.resolutionsPerAuthority?.find(a => a.status?.code === 'ER_SUCCESS_MATCH')
-  const hit = authority?.values?.[0]?.value
-  return { value: (slot?.value ?? '').trim(), id: hit?.id ?? null, resolved: hit?.name ?? null }
-}
-function spokenAmount(slot: Slot | undefined): number | null {
-  const raw = slotValues(slot).value.replace(',', '.')
-  const n = Number(raw)
-  return raw && Number.isFinite(n) && n > 0 && n <= 100000 ? n : null
-}
-const unitIds: Record<string, string> = { gramm: 'g', g: 'g', kilo: 'kg', kilogramm: 'kg', kg: 'kg', milliliter: 'ml', ml: 'ml', liter: 'l', l: 'l', stueck: 'Stk', stuck: 'Stk', stk: 'Stk',
-  packung: 'Packung', packungen: 'Packung', paeckchen: 'Packung', packchen: 'Packung', pack: 'Packung', dose: 'Dose', dosen: 'Dose', becher: 'Becher', glas: 'Glas', glaeser: 'Glas', glaser: 'Glas',
-  flasche: 'Flasche', flaschen: 'Flasche', bund: 'Bund', essloeffel: 'EL', essloffel: 'EL', teeloeffel: 'TL', teeloffel: 'TL', scheibe: 'Scheibe', scheiben: 'Scheibe', tuete: 'Tüte', tueten: 'Tüte', tute: 'Tüte', beutel: 'Beutel' }
-function spokenUnit(slot: Slot | undefined): string | null {
-  const s = slotValues(slot)
-  if (s.id) return s.id
-  const key = s.value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/[^a-z]+/g, '')
-  return key ? unitIds[key] ?? s.value : null
-}
-// Alexa schreibt manchmal alles ins Lebensmittel-Feld: „ein Ei“ → 1 + „Ei“, „Packung Mehl“ → Packung + „Mehl“, „die Eier“ → „Eier“.
-const unitKey = (word: string) => word.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/[^a-z]+/g, '')
-export function splitFoodPhrase(value: string): { food: string; one: boolean; unit: string | null } {
-  let words = value.trim().split(/\s+/).filter(Boolean)
-  let one = false
-  let unit: string | null = null
-  if (words.length > 1 && /^(ein|eine|einen|einem|einer)$/i.test(words[0])) { one = true; words = words.slice(1) }
-  else if (words.length > 1 && /^(die|den|das|der|dem|etwas|von|vom)$/i.test(words[0])) words = words.slice(1)
-  if (words.length > 1 && unitIds[unitKey(words[0])]) { unit = unitIds[unitKey(words[0])]; words = words.slice(1) }
-  if (words.length > 1 && /^(von|vom)$/i.test(words[0])) words = words.slice(1)
-  return { food: words.join(' '), one, unit }
-}
-function readFood(slot: Slot | undefined): { names: string[]; one: boolean; unit: string | null } {
-  const s = slotValues(slot)
-  const raw = s.value === '?' ? '' : s.value
-  const split = splitFoodPhrase(raw)
-  const names = [s.resolved, s.id, raw, split.food].filter((v): v is string => Boolean(v && v.trim()))
-  return { names: [...new Set(names)], one: split.one, unit: split.unit }
-}
-
 type Pending =
   | { ask: 'amount'; food: string[] }
   | { ask: 'which'; amount: number | null; unit: string | null; names: string[] }
   | { ask: 'delete'; ids: string[]; name: string }
+  | { ask: 'offer'; names: string[] }   // „nicht gefunden – soll ich es eintragen?“
+  | AddPending
+  | ListPending
+
+const offer = (text: string, names: string[]) => plain(text + ' Soll ich es eintragen?', { reprompt: 'Soll ich es in den Vorrat eintragen? Sag ja oder nein.', attributes: { pending: { ask: 'offer', names } satisfies Pending } })
 
 async function deduct(backend: AlexaBackend, pantry: AlexaPantryRow[], food: string[], amount: number | null, unit: string | null): Promise<AlexaResponse> {
   const match = matchPantry(food, pantry)
   const said = food[food.length - 1] ?? 'Das'
-  if (match.status === 'none') return more(said + ' habe ich im Vorrat nicht gefunden.')
+  if (match.status === 'none') return offer(said + ' habe ich im Vorrat nicht gefunden.', food)
   if (match.status === 'many') {
     const list = match.names.length === 2 ? match.names.join(' oder ') : match.names.slice(0, -1).join(', ') + ' oder ' + match.names[match.names.length - 1]
     return plain('Meinst du ' + list + '?', { reprompt: 'Welches meinst du: ' + list + '?', attributes: { pending: { ask: 'which', amount, unit, names: match.names } satisfies Pending } })
@@ -263,76 +189,142 @@ async function deduct(backend: AlexaBackend, pantry: AlexaPantryRow[], food: str
 function stock(pantry: AlexaPantryRow[], food: string[]): AlexaResponse {
   const match = matchPantry(food, pantry)
   const said = food[food.length - 1] ?? 'Das'
-  if (match.status === 'none') return more(said + ' ist gerade nicht im Vorrat.')
+  if (match.status === 'none') return offer(said + ' ist gerade nicht im Vorrat.', food)
   if (match.status === 'many') {
     const parts = match.names.map(name => { const m = matchPantry([name], pantry); return m.status === 'one' ? name + ': ' + total(m.rows) : name })
     return more('Im Vorrat: ' + parts.join(', ') + '.')
   }
   return more(match.name + ': noch ' + total(match.rows) + ' da.')
 }
-// Summe in der Einheit des ersten Eintrags; ohne Menge eingetragene Einträge werden genannt.
-function total(rows: AlexaPantryRow[]): string {
-  const tracked = rows.filter(r => num(r.quantity) !== null)
-  if (!tracked.length) return 'etwas, aber ohne Menge eingetragen'
-  const unit = tracked[0].unit
-  const same = tracked.filter(r => sameKind(r.unit, unit))
-  const sum = same.reduce((s, r) => s + toBase(num(r.quantity)!, r.unit).quantity, 0)
-  const text = speakAmount(fromBase(sum, unit), unit)
-  return rows.length > tracked.length ? text + ' und noch etwas ohne Menge' : text
+type Mode = 'add' | 'use' | undefined
+// „add“ = zuletzt wurde etwas eingetragen: dann heißt ein bloßes „sechs Eier“ eintragen, sonst verbraucht.
+export async function handleAlexa(body: AlexaRequest, backend: AlexaBackend): Promise<AlexaResponse> {
+  const state: { mode: Mode } = { mode: body.session?.attributes?.mode as Mode }
+  const result = await route(body, backend, state)
+  if (state.mode && result.response.outputSpeech && !result.response.shouldEndSession) {
+    result.sessionAttributes = { ...result.sessionAttributes, mode: state.mode }
+    if (state.mode === 'add' && result.response.reprompt?.outputSpeech.text.startsWith('Noch was?')) result.response.reprompt.outputSpeech.text = 'Noch was? Sag zum Beispiel: sechs Eier. Oder: fertig.'
+  }
+  return result
 }
 
-export async function handleAlexa(body: AlexaRequest, backend: AlexaBackend): Promise<AlexaResponse> {
+const today = (timestamp: string | undefined) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(timestamp ? new Date(timestamp) : new Date())
+// Neue Befehle brechen eine angefangene Eintragung ab (mit Hinweis), alles andere ist eine Antwort auf die Rückfrage.
+const commands = ['VerbrauchIntent', 'EinsIntent', 'BestandIntent', 'RueckgaengigIntent', 'HinzufuegenIntent', 'HinzufuegenEinsIntent', 'ErfassenIntent', 'VorratAnsageIntent']
+
+function readAnswer(intent: string, slots: Record<string, Slot>): Answer {
+  const food = readFood(slots.lebensmittel)
+  const text = [slots.lagerort, slots.kategorie, slots.lebensmittel].flatMap(s => { const v = slotValues(s); return [v.resolved, v.value] }).filter(Boolean).join(' ')
+  const said = fold(slotValues(slots.lebensmittel).value)
+  const one = intent === 'AngabeEinsIntent' || intent === 'MengeEinsIntent' || food.one
+  let number = spokenAmount(slots.menge) ?? (one ? 1 : null)
+  const days = intent === 'TageIntent' ? 1 : intent === 'WochenIntent' ? 7 : 0
+  if (days) number = spokenAmount(slots.menge)
+  return {
+    yes: intent === 'AMAZON.YesIntent', no: intent === 'AMAZON.NoIntent',
+    skip: intent === 'OhneIntent' || /^(ohne|egal|weiss( ich)? nicht|keine ahnung|uberspringen|kein datum)/.test(said),
+    fresh: intent === 'NeuIntent' || /^(neu|neu anlegen)$/.test(said),
+    number, unit: spokenUnit(slots.einheit) ?? food.unit, names: food.names, text, date: slots.datum?.value ?? null,
+  }
+}
+
+async function route(body: AlexaRequest, backend: AlexaBackend, state: { mode: Mode }): Promise<AlexaResponse> {
   const type = body.request?.type
   if (type === 'SessionEndedRequest') return { version: '1.0', response: {} }
   const intent = type === 'IntentRequest' ? body.request?.intent?.name ?? '' : ''
   const slots = body.request?.intent?.slots ?? {}
-  const pending = (body.session?.attributes?.pending ?? null) as Pending | null
-  if (intent === 'AMAZON.StopIntent' || intent === 'AMAZON.CancelIntent' || (intent === 'AMAZON.NoIntent' && pending?.ask !== 'delete')) return plain('Alles klar. Guten Appetit!', { end: true })
-  if (intent === 'AMAZON.HelpIntent') return plain(HELP + ' Was möchtest du?', { reprompt: 'Was hast du verbraucht?' })
+  let pending = (body.session?.attributes?.pending ?? null) as Pending | null
+  const unsaved = pending?.ask === 'add' ? pending.draft.name + ' habe ich nicht gespeichert.' : ''
+  if (intent === 'AMAZON.StopIntent' || (intent === 'AMAZON.CancelIntent' && !unsaved) || (intent === 'AMAZON.NoIntent' && !['delete', 'add', 'offer'].includes(pending?.ask ?? ''))) {
+    return plain('Alles klar. ' + (unsaved ? unsaved + ' ' : '') + 'Guten Appetit!', { end: true })
+  }
+  if (intent === 'AMAZON.CancelIntent') return more('Okay, ' + unsaved)
+  if (intent === 'AMAZON.HelpIntent') return plain(HELP + ' Was möchtest du?', { reprompt: 'Was möchtest du?', attributes: pending ? { pending } : {} })
   if (type !== 'LaunchRequest' && type !== 'IntentRequest') return { version: '1.0', response: {} }
 
   const context = await backend.context()
   if (context.status === 'pending') return pairing(context.code)
   if (context.status === 'wrong_app') return plain('Dieses Alexa-Konto ist mit einem anderen Blankmann-Skill verbunden. Trenne es in der App unter Einstellungen und verbinde es neu.', { end: true })
   const pantry = context.pantry
+  const adding: AddContext = { backend, pantry, today: today(body.request?.timestamp) }
 
-  if (type === 'LaunchRequest') return plain('Hallo! Was hast du verbraucht?', { reprompt: 'Sag zum Beispiel: drei Eier verbraucht.' })
+  if (type === 'LaunchRequest') return plain('Hallo! Was hast du verbraucht?', { reprompt: 'Sag zum Beispiel: drei Eier verbraucht. Oder: Vorrat erfassen.' })
+
+  if (pending?.ask === 'add') {
+    // „pack es in den Keller“ ist eine Antwort, keine neue Eintragung.
+    const onlyPronoun = intent.startsWith('Hinzufuegen') && readFood(slots.lebensmittel).names.every(n => /^(es|das|die|den|ihn|sie)$/i.test(n))
+    if (!commands.includes(intent) || onlyPronoun) {
+      const answer = readAnswer(intent, slots)
+      if (onlyPronoun) answer.names = []
+      // „in fünf Tagen“ / „zwei Wochen“ als Antwort auf die Haltbarkeit
+      if (pending.step === 'date' && (intent === 'TageIntent' || intent === 'WochenIntent') && answer.number !== null) answer.date = addDays(adding.today, answer.number * (intent === 'TageIntent' ? 1 : 7))
+      return continueAdd(pending, answer, adding)
+    }
+    pending = null
+    const next = await route({ ...body, session: { ...body.session, attributes: {} } }, backend, state)
+    const speech = next.response.outputSpeech
+    if (speech?.type === 'PlainText') speech.text = unsaved + ' ' + speech.text
+    return next
+  }
+
+  const place = parsePlace(slotValues(slots.lagerort).resolved ?? slotValues(slots.lagerort).value)
+  const food = readFood(slots.lebensmittel)
+  const add = (names: string[], quantity: number | null, unit: string | null) => { state.mode = 'add'; return beginAdd(names, { quantity, unit, place }, adding) }
+  const take = (names: string[], quantity: number | null, unit: string | null) => { state.mode = 'use'; return deduct(backend, pantry, names, quantity, unit) }
+  const amount = spokenAmount(slots.menge) ?? (food.one ? 1 : null)
+  const unit = spokenUnit(slots.einheit) ?? food.unit
+
   switch (intent) {
-    case 'VerbrauchIntent': {
-      const food = readFood(slots.lebensmittel)
-      return deduct(backend, pantry, food.names, spokenAmount(slots.menge) ?? (food.one ? 1 : null), spokenUnit(slots.einheit) ?? food.unit)
-    }
-    case 'EinsIntent': {
-      const food = readFood(slots.lebensmittel)
-      return deduct(backend, pantry, food.names, 1, spokenUnit(slots.einheit) ?? food.unit)
-    }
-    case 'BestandIntent': {
-      const food = readFood(slots.lebensmittel)
+    case 'VerbrauchIntent': return take(food.names, amount, unit)
+    case 'EinsIntent': return take(food.names, 1, unit)
+    // Ohne Verb („sechs Eier“): je nachdem, was zuletzt dran war.
+    case 'AngabeIntent': return state.mode === 'add' ? add(food.names, amount, unit) : take(food.names, amount, unit)
+    case 'AngabeEinsIntent': return state.mode === 'add' ? add(food.names, 1, unit) : take(food.names, 1, unit)
+    case 'HinzufuegenIntent': return add(food.names, amount, unit)
+    case 'HinzufuegenEinsIntent': return add(food.names, 1, unit)
+    case 'ErfassenIntent':
+      state.mode = 'add'
+      return plain('Okay. Nenn mir, was du da hast, eins nach dem anderen. Zum Beispiel: sechs Eier. Wenn du durch bist, sag: fertig.', { reprompt: 'Sag zum Beispiel: sechs Eier. Oder: fertig.' })
+    case 'BestandIntent':
       return food.names.length ? stock(pantry, food.names) : plain('Welches Lebensmittel meinst du?', { reprompt: 'Sag zum Beispiel: wie viele Eier habe ich noch.' })
-    }
-    case 'MengeIntent': {
-      const amount = spokenAmount(slots.menge)
-      if (pending?.ask === 'amount' && amount !== null) return deduct(backend, pantry, pending.food, amount, spokenUnit(slots.einheit))
+    case 'VorratAnsageIntent': return listStock(pantry, place)
+    case 'LagerortIntent': return listStock(pantry, place)
+    case 'AMAZON.NextIntent':
+      if (pending?.ask === 'list') return listStock(pantry, pending.place, pending.offset, true)
+      return plain('Was möchtest du?', { reprompt: 'Was möchtest du?' })
+    case 'MengeIntent':
+    case 'MengeEinsIntent': {
+      const count = intent === 'MengeEinsIntent' ? 1 : spokenAmount(slots.menge)
+      if (pending?.ask === 'amount' && count !== null) return take(pending.food, count, spokenUnit(slots.einheit))
       if (pending?.ask === 'which') return plain('Welches meinst du: ' + pending.names.join(' oder ') + '?', { reprompt: 'Sag zum Beispiel: ' + pending.names[0] + '.', attributes: { pending } })
-      return plain('Wovon? Sag zum Beispiel: drei Eier verbraucht.', { reprompt: 'Was hast du verbraucht?' })
+      return state.mode === 'add'
+        ? plain('Wovon? Sag zum Beispiel: sechs Eier.', { reprompt: 'Was hast du da?' })
+        : plain('Wovon? Sag zum Beispiel: drei Eier verbraucht.', { reprompt: 'Was hast du verbraucht?' })
     }
     case 'LebensmittelIntent': {
-      const read = readFood(slots.lebensmittel)
-      const food = read.names
       if (pending?.ask === 'which') {
-        const chosen = pending.names.find(n => food.some(f => sameName(f, n))) ?? pending.names.find(n => food.some(f => stem(f).length >= 3 && (stem(n).includes(stem(f)) || stem(f).includes(stem(n)))))
+        const chosen = pending.names.find(n => food.names.some(f => sameName(f, n))) ?? pending.names.find(n => food.names.some(f => stem(f).length >= 3 && (stem(n).includes(stem(f)) || stem(f).includes(stem(n)))))
         if (!chosen) return plain('Das habe ich nicht verstanden. Meinst du ' + pending.names.join(' oder ') + '?', { reprompt: 'Welches meinst du?', attributes: { pending } })
-        return deduct(backend, pantry, [chosen], pending.amount, pending.unit)
+        return take([chosen], pending.amount, pending.unit)
       }
-      return food.length ? deduct(backend, pantry, food, read.one ? 1 : null, read.unit) : plain('Was hast du verbraucht?', { reprompt: 'Sag zum Beispiel: drei Eier verbraucht.' })
+      if (pending?.ask === 'list') {
+        const said = fold(food.names[food.names.length - 1] ?? '')
+        if (/^alle/.test(said)) return listStock(pantry, null, 0, true)
+        const where = parsePlace(said)
+        if (where) return listStock(pantry, where)
+      }
+      if (!food.names.length) return plain('Was meinst du?', { reprompt: 'Was möchtest du?' })
+      return state.mode === 'add' ? add(food.names, food.one ? 1 : null, food.unit) : take(food.names, food.one ? 1 : null, food.unit)
     }
     case 'AMAZON.YesIntent':
       if (pending?.ask === 'delete') {
         await backend.remove(pending.name + ' gelöscht', pending.ids)
         return more('Erledigt, ' + pending.name + ' aus dem Vorrat gelöscht.')
       }
-      return plain('Was hast du verbraucht?', { reprompt: 'Sag zum Beispiel: drei Eier verbraucht.' })
+      if (pending?.ask === 'offer') return add(pending.names, null, null)
+      return plain('Was möchtest du?', { reprompt: 'Sag zum Beispiel: drei Eier verbraucht.' })
     case 'AMAZON.NoIntent':
+      if (pending?.ask === 'offer') return more('Okay.')
       return more('Okay, ' + (pending as { name: string }).name + ' bleibt mit null im Vorrat.')
     case 'RueckgaengigIntent': {
       const result = await backend.undo()
@@ -341,7 +333,10 @@ export async function handleAlexa(body: AlexaRequest, backend: AlexaBackend): Pr
     case 'AMAZON.FallbackIntent':
     case 'AMAZON.NavigateHomeIntent':
     default:
-      if (pending) return plain('Das habe ich nicht verstanden. ' + (pending.ask === 'delete' ? 'Sicher, dass du das Element ' + pending.name + ' löschen willst? Sag ja oder nein.' : pending.ask === 'which' ? 'Meinst du ' + pending.names.join(' oder ') + '?' : 'Wie viel hast du verbraucht?'), { reprompt: 'Sag ja oder nein.', attributes: { pending } })
-      return plain('Das habe ich nicht verstanden. ' + HELP, { reprompt: 'Was hast du verbraucht?' })
+      if (pending?.ask === 'delete') return plain('Das habe ich nicht verstanden. Sicher, dass du das Element ' + pending.name + ' löschen willst? Sag ja oder nein.', { reprompt: 'Sag ja oder nein.', attributes: { pending } })
+      if (pending?.ask === 'which') return plain('Das habe ich nicht verstanden. Meinst du ' + pending.names.join(' oder ') + '?', { reprompt: 'Welches meinst du?', attributes: { pending } })
+      if (pending?.ask === 'amount') return plain('Das habe ich nicht verstanden. Wie viel hast du verbraucht?', { reprompt: 'Sag zum Beispiel: zwei.', attributes: { pending } })
+      if (pending?.ask === 'offer') return plain('Das habe ich nicht verstanden. Soll ich es eintragen?', { reprompt: 'Sag ja oder nein.', attributes: { pending } })
+      return plain('Das habe ich nicht verstanden. ' + HELP, { reprompt: 'Was möchtest du?', attributes: pending ? { pending } : {} })
   }
 }

@@ -1,5 +1,7 @@
-// Tests für den Alexa-Skill (0.3.54). Aufruf: npm run test:alexa
+// Tests für den Alexa-Skill (0.3.54, Vorrat erfassen/ansagen 0.3.61). Aufruf: npm run test:alexa
 // Die Datenbank wird im Speicher nachgebaut (gleiche Regeln wie die Funktionen alexa_* in Supabase).
+import type { AlexaFood, AlexaNewItem } from '../src/lib/alexaAdd.ts'
+import { parseCategory, parseDate, parsePlace } from '../src/lib/alexaAdd.ts'
 import { checkEnvelope, handleAlexa, matchPantry, speakAmount, splitFoodPhrase, type AlexaBackend, type AlexaPantryRow, type AlexaRequest, type AlexaResponse } from '../src/lib/alexaSkill.ts'
 
 let failed = 0
@@ -13,9 +15,10 @@ const APP = 'amzn1.ask.skill.12345678-aaaa-bbbb-cccc-1234567890ab'
 const row = (id: string, name: string, quantity: number | null, unit: string | null, food_name: string | null = null, best_before: string | null = null, food_item_id: string | null = null): AlexaPantryRow =>
   ({ id, name, quantity, unit, best_before, food_item_id: food_item_id ?? (food_name ? 'f-' + food_name : null), food_name, is_organic: false })
 
-function fakeBackend(start: AlexaPantryRow[], status: 'linked' | 'pending' = 'linked') {
+function fakeBackend(start: AlexaPantryRow[], status: 'linked' | 'pending' = 'linked', catalog: AlexaFood[] = []) {
   let pantry = start.map(r => ({ ...r }))
-  const log: { label: string; before: AlexaPantryRow[]; deleted: boolean }[] = []
+  const log: { label: string; before: AlexaPantryRow[]; deleted: boolean; added?: string }[] = []
+  const added: AlexaNewItem[] = []
   const calls: string[] = []
   const backend: AlexaBackend = {
     async context() { calls.push('context'); return status === 'pending' ? { status: 'pending', code: '4711' } : { status: 'linked', pantry: pantry.map(r => ({ ...r })) } },
@@ -35,14 +38,22 @@ function fakeBackend(start: AlexaPantryRow[], status: 'linked' | 'pending' = 'li
       calls.push('undo')
       const last = log.pop()
       if (!last) return { ok: false }
+      if (last.added) pantry = pantry.filter(r => r.id !== last.added)
       for (const b of last.before) {
         if (last.deleted) pantry.push(b)
         else { const r = pantry.find(p => p.id === b.id); if (r) r.quantity = b.quantity }
       }
       return { ok: true, label: last.label }
     },
+    async foods() { calls.push('foods'); return catalog },
+    async add(label, item) {
+      calls.push('add:' + label)
+      const id = 'neu-' + added.push(item)
+      pantry.push({ id, name: item.name, quantity: item.quantity, unit: item.unit, best_before: item.best_before, food_item_id: item.food_id ?? 'f-' + item.name, food_name: item.name, is_organic: item.is_organic, storage_location: item.storage_location })
+      log.push({ label, before: [], deleted: false, added: id })
+    },
   }
-  return { backend, get pantry() { return pantry }, calls }
+  return { backend, get pantry() { return pantry }, calls, added }
 }
 
 const now = new Date().toISOString()
@@ -164,7 +175,7 @@ console.log('5. Abziehen')
   const r6 = await handleAlexa(used('3', 'kartoffeln'), db.backend)
   expect(speech(r6).startsWith('Bei Kartoffeln ist keine Menge eingetragen.'), 'ohne Menge im Vorrat → Hinweis', speech(r6))
   const r7 = await handleAlexa(used('2', 'bananen'), db.backend)
-  expect(speech(r7) === 'bananen habe ich im Vorrat nicht gefunden. Noch was?', 'nicht im Vorrat → Hinweis', speech(r7))
+  expect(speech(r7) === 'bananen habe ich im Vorrat nicht gefunden. Soll ich es eintragen?', 'nicht im Vorrat → Angebot zum Eintragen', speech(r7))
   const r8 = await handleAlexa(intent('EinsIntent', { lebensmittel: slot('lebensmittel', 'zitrone') }), db.backend)
   expect(db.pantry.find(p => p.id === 'zitrone')!.quantity === 2 && speech(r8) === 'Okay, Zitrone minus 1. Noch 2 da. Noch was?', '„eine Zitrone“ → minus 1', speech(r8))
   const r9 = await handleAlexa(used('100', 'champignon', { value: 'gramm', id: 'g' }, 'Champignons'), db.backend)
@@ -200,6 +211,217 @@ console.log('6. Nachfragen, Hilfe, Ende')
   expect(speech(fb).startsWith('Das habe ich nicht verstanden.'), 'nicht verstanden → Hilfe')
   const fb2 = await handleAlexa(intent('AMAZON.FallbackIntent', {}, { pending: { ask: 'delete', ids: ['x'], name: 'Eier' } }), db.backend)
   expect(speech(fb2).includes('Sicher, dass du das Element Eier löschen willst?') && (fb2.sessionAttributes?.pending as { ask: string }).ask === 'delete', 'bei offener Löschfrage wird nachgefragt, nichts gelöscht')
+}
+
+const food = (name: string, category: string, default_unit: string | null = null): AlexaFood => ({ id: 'f-' + name, name, category, default_unit })
+const catalog = [food('Eier', 'Milchprodukte & Eier'), food('Milch', 'Milchprodukte & Eier', 'ml'), food('Mehl', 'Getreide & Backwaren', 'g'), food('Banane', 'Obst'), food('Kokosmilch', 'Hülsenfrüchte & Konserven'), food('Paprika rot', 'Gemüse'), food('Paprika gelb', 'Gemüse')]
+const at = '2026-11-26T09:00:00Z'
+const stamped = (r: AlexaRequest): AlexaRequest => ({ ...r, request: { ...r.request, timestamp: at } })
+// Ein Gespräch: die Sitzungsdaten der letzten Antwort gehen in die nächste Anfrage.
+function talk(db: ReturnType<typeof fakeBackend>) {
+  let attributes: Record<string, unknown> = {}
+  let last: AlexaResponse
+  const say = async (name: string, slots: Record<string, ReturnType<typeof slot>> = {}) => {
+    last = await handleAlexa(stamped(intent(name, slots, attributes)), db.backend)
+    attributes = last.sessionAttributes ?? {}
+    return speech(last)
+  }
+  // Getter erst hier definieren: Object.assign würde nur den Anfangswert kopieren.
+  return Object.defineProperties(say, { last: { get: () => last }, attributes: { get: () => attributes } }) as typeof say & { readonly last: AlexaResponse; readonly attributes: Record<string, unknown> }
+}
+const what = (name: string, menge?: string, einheit?: string, lagerort?: string) => ({
+  lebensmittel: slot('lebensmittel', name), menge: slot('menge', menge),
+  einheit: einheit ? slot('einheit', einheit, { name: einheit, id: einheit }) : slot('einheit'), lagerort: slot('lagerort', lagerort),
+})
+const text = (t: string) => ({ lebensmittel: slot('lebensmittel', t) })
+
+console.log('7. Eintragen: bekanntes Lebensmittel, fehlende Angaben werden erfragt')
+{
+  const db = fakeBackend([], 'linked', catalog)
+  const say = talk(db)
+  let a = await say('HinzufuegenIntent', what('eier'))
+  expect(a === 'Eier: wie viel?', 'ohne Menge → Rückfrage', a)
+  a = await say('MengeIntent', { menge: slot('menge', '6') })
+  expect(a === 'Eier: wohin? Ich schlage Kühlschrank vor. Passt das?', 'Lagerort mit Vorschlag', a)
+  a = await say('AMAZON.YesIntent')
+  expect(a === 'Eier: bis wann haltbar? Sag ein Datum, oder: ohne.' && db.added.length === 0, 'Haltbarkeit; noch nichts gespeichert', a)
+  a = await say('DatumIntent', { datum: slot('datum', '2026-12-10') })
+  expect(a === 'Okay, Eier plus 6, Kühlschrank, haltbar bis 10. Dezember. Noch was?', 'gespeichert und bestätigt', a)
+  const item = db.added[0]
+  expect(item.food_id === 'f-Eier' && item.quantity === 6 && item.unit === 'Stk' && item.storage_location === 'Kühlschrank' && item.best_before === '2026-12-10' && item.category === 'Milchprodukte & Eier', 'alle Felder befüllt', item)
+  a = await say('RueckgaengigIntent')
+  expect(db.pantry.length === 0 && a.startsWith('Rückgängig gemacht: Eier plus 6.'), 'Rückgängig nimmt den Eintrag zurück', a)
+}
+
+console.log('8. Eintragen: Unbekanntes wird nach Ja neu angelegt')
+{
+  const db = fakeBackend([], 'linked', catalog)
+  const say = talk(db)
+  let a = await say('HinzufuegenIntent', what('hafer drink'))
+  expect(a === 'Hafer Drink kenne ich noch nicht. Soll ich es neu anlegen?', 'unbekannt → erst fragen', a)
+  a = await say('AMAZON.YesIntent')
+  expect(a === 'Hafer Drink: wie viel?', 'Menge', a)
+  a = await say('MengeIntent', { menge: slot('menge', '2'), einheit: slot('einheit', 'packungen', { name: 'Packung', id: 'Packung' }) })
+  expect(a.startsWith('Hafer Drink: welche Kategorie?'), 'Kategorie', a)
+  a = await say('KategorieIntent', { kategorie: slot('kategorie', 'getränke', { name: 'Getränke' }) })
+  expect(a.startsWith('Hafer Drink: wohin? Ich schlage Vorratsschrank vor.'), 'Lagerort', a)
+  a = await say('AMAZON.NoIntent')
+  expect(a === 'Hafer Drink: wohin? Kühlschrank, Gefrierfach, Vorratsschrank oder Keller?', 'Nein zum Vorschlag → Auswahl, Gespräch bleibt offen', a)
+  a = await say('LagerortIntent', { lagerort: slot('lagerort', 'keller', { name: 'Keller' }) })
+  expect(a.startsWith('Hafer Drink: bis wann haltbar?'), 'Haltbarkeit', a)
+  a = await say('OhneIntent')
+  expect(a === 'Okay, Hafer Drink plus 2 Packungen, Keller, ohne Haltbarkeitsdatum. Neu angelegt unter Getränke. Noch was?', 'gespeichert', a)
+  const item = db.added[0]
+  expect(item.food_id === null && item.category === 'Getränke' && item.unit === 'Packung' && item.storage_location === 'Keller' && item.best_before === null, 'neues Nahrungsmittel mit Kategorie', item)
+}
+{
+  const db = fakeBackend([], 'linked', catalog)
+  const say = talk(db)
+  await say('HinzufuegenIntent', what('quittengelee'))
+  const a = await say('AMAZON.NoIntent')
+  expect(a === 'Okay, ich lege Quittengelee nicht an. Noch was?' && db.added.length === 0 && say.last.response.shouldEndSession === false, 'Nein → nichts angelegt', a)
+}
+{
+  const db = fakeBackend([], 'linked', catalog)
+  const say = talk(db)
+  let a = await say('HinzufuegenIntent', what('paprika', '2'))
+  expect(a === 'Paprika kenne ich noch nicht. Ähnlich ist Paprika rot oder Paprika gelb. Sag den Namen, oder: neu anlegen.', 'ähnliche Namen werden angeboten', a)
+  a = await say('LebensmittelIntent', text('paprika rot'))
+  expect(a.startsWith('Paprika rot: wohin?'), 'Auswahl übernimmt Menge 2', a)
+}
+
+console.log('9. Automatisches MHD, große Zahlen, alles in einem Satz')
+{
+  const db = fakeBackend([], 'linked', catalog)
+  const say = talk(db)
+  let a = await say('HinzufuegenIntent', what('bananen', '5', undefined, 'vorratsschrank'))
+  expect(a === 'Okay, Banane plus 5, Vorratsschrank, haltbar bis 1. Dezember. Noch was?', 'Obst: MHD automatisch (+5 Tage), keine Rückfrage', a)
+  a = await say('HinzufuegenIntent', what('mehl', '500', undefined, 'schrank'))
+  expect(a.startsWith('Mehl: bis wann haltbar?'), '„500 Mehl“ → Einheit g aus dem Katalog', a)
+  a = await say('WochenIntent', { menge: slot('menge', '2') })
+  expect(a === 'Okay, Mehl plus 500 Gramm, Vorratsschrank, haltbar bis 10. Dezember. Noch was?', '„in zwei Wochen“', a)
+  a = await say('HinzufuegenIntent', what('reispapier', '30'))
+  await say('AMAZON.YesIntent')
+  expect(say.attributes.pending !== undefined && (say.attributes.pending as { step: string }).step === 'unit', 'große Zahl ohne Einheit und ohne Katalog → Einheit erfragen', say.attributes.pending)
+}
+
+{
+  // „Gramm“ / „ein Kilo“ erkennt Alexa manchmal als Lebensmittel – als Antwort zählt es trotzdem als Einheit.
+  const db = fakeBackend([], 'linked', [food('Salz', 'Kräuter & Gewürze')])
+  const say = talk(db)
+  await say('HinzufuegenIntent', what('salz', '500'))
+  const a = await say('LebensmittelIntent', text('gramm'))
+  expect(a.startsWith('Salz: wohin?') && (say.attributes.pending as { draft: { unit: string } }).draft.unit === 'g', 'Antwort „Gramm“', a)
+  await say('HinzufuegenIntent', what('salz'))
+  const b = await say('AngabeEinsIntent', text('kilo'))
+  const d = (say.attributes.pending as { draft: { quantity: number; unit: string } }).draft
+  expect(d.quantity === 1 && d.unit === 'kg', 'Antwort „ein Kilo“', [b, d])
+}
+
+{
+  const db = fakeBackend([], 'linked', catalog)
+  const say = talk(db)
+  await say('HinzufuegenIntent', what('mehl'))
+  let a = await say('AngabeIntent', what('eier', '6'))
+  expect(a === 'Erst noch das hier. Mehl: wie viel?', 'anderes Lebensmittel bei der Mengenfrage wird nicht als Menge übernommen', a)
+  a = await say('AngabeIntent', what('mehl', '500', 'g'))
+  expect(a.startsWith('Mehl: wohin?'), 'Name wiederholen ist erlaubt', a)
+  a = await say('HinzufuegenIntent', what('es', undefined, undefined, 'keller'))
+  expect(a.startsWith('Mehl: bis wann haltbar?') && (say.attributes.pending as { draft: { place: string } }).draft.place === 'Keller', '„pack es in den Keller“ beantwortet die Ortsfrage', a)
+}
+
+console.log('10. Gleiche Zeile aufstocken, Gesamtmenge nennen')
+{
+  const start = [{ ...row('e1', 'Eier', 4, 'Stk', 'Eier', '2026-12-10'), storage_location: 'Kühlschrank' }]
+  const db = fakeBackend(start, 'linked', catalog)
+  const say = talk(db)
+  await say('HinzufuegenIntent', what('eier', '6'))
+  await say('AMAZON.YesIntent')
+  const a = await say('DatumIntent', { datum: slot('datum', '2026-12-10') })
+  expect(db.pantry.length === 1 && db.pantry[0].quantity === 10 && db.added.length === 0 && a.includes('Insgesamt jetzt 10.'), 'gleicher Ort und MHD → 4 + 6', a)
+}
+
+console.log('11. Erfassen-Modus: „sechs Eier“ ohne Verb')
+{
+  const db = fakeBackend(pantry(), 'linked', catalog)
+  const say = talk(db)
+  let a = await say('ErfassenIntent')
+  expect(a.startsWith('Okay. Nenn mir, was du da hast'), 'Start', a)
+  a = await say('AngabeIntent', what('bananen', '3'))
+  expect(a.startsWith('Banane: wohin?') && !db.calls.some(c => c.startsWith('apply')), 'im Erfassen-Modus wird eingetragen, nicht abgezogen', a)
+  a = await say('AMAZON.YesIntent')
+  expect(say.last.response.reprompt?.outputSpeech.text === 'Noch was? Sag zum Beispiel: sechs Eier. Oder: fertig.', 'Nachfrage passt zum Modus', say.last.response.reprompt)
+  a = await say('VerbrauchIntent', what('zitrone', '1'))
+  expect(a.startsWith('Okay, Zitrone minus 1.'), '„verbraucht“ zieht weiter ab', a)
+  a = await say('AngabeIntent', what('zitrone', '1'))
+  expect(a.startsWith('Okay, Zitrone minus 1.'), 'danach gilt „eine Zitrone“ wieder als verbraucht', a)
+  const fresh = fakeBackend(pantry(), 'linked', catalog)
+  const b = await talk(fresh)('AngabeIntent', what('zitrone', '1'))
+  expect(b.startsWith('Okay, Zitrone minus 1.'), 'ohne Erfassen-Modus wie bisher: abziehen', b)
+}
+
+console.log('12. Abbrechen und Zwischenfragen')
+{
+  const db = fakeBackend(pantry(), 'linked', catalog)
+  const say = talk(db)
+  await say('HinzufuegenIntent', what('eier', '6'))
+  let a = await say('BestandIntent', text('zitrone'))
+  expect(a.startsWith('Eier habe ich nicht gespeichert. Zitrone: noch 3 da.') && db.added.length === 0, 'Zwischenfrage: Entwurf wird verworfen und das gesagt', a)
+  await say('HinzufuegenIntent', what('eier', '6'))
+  a = await say('AMAZON.CancelIntent')
+  expect(a === 'Okay, Eier habe ich nicht gespeichert. Noch was?' && db.added.length === 0, 'Abbrechen', a)
+  await say('HinzufuegenIntent', what('eier', '6'))
+  a = await say('AMAZON.StopIntent')
+  expect(a === 'Alles klar. Eier habe ich nicht gespeichert. Guten Appetit!' && say.last.response.shouldEndSession === true, 'Stopp', a)
+  await say('HinzufuegenIntent', what('eier', '6'))
+  a = await say('AMAZON.FallbackIntent')
+  expect(a.startsWith('Das habe ich nicht verstanden. Eier: wohin?'), 'nicht verstanden → Frage wiederholen', a)
+}
+{
+  const db = fakeBackend(pantry(), 'linked', catalog)
+  const say = talk(db)
+  await say('BestandIntent', text('bananen'))
+  const a = await say('AMAZON.YesIntent')
+  expect(a === 'Banane: wie viel?', '„nicht im Vorrat – eintragen?“ → Ja startet die Eintragung', a)
+}
+
+console.log('13. Vorrat ansagen')
+{
+  const placed = (id: string, name: string, quantity: number | null, unit: string | null, where: string) => ({ ...row(id, name, quantity, unit, name), storage_location: where })
+  const db = fakeBackend([placed('1', 'Milch', 1000, 'ml', 'Kühlschrank'), placed('2', 'Eier', 6, 'Stk', 'Kühlschrank'), placed('3', 'Reis', null, null, 'Vorratsschrank'), placed('4', 'Butter', 0, 'g', 'Kühlschrank')])
+  const a = await talk(db)('VorratAnsageIntent')
+  expect(a === 'Im Kühlschrank: Eier 6, Milch 1 Liter. Im Vorratsschrank: Reis. Noch was?', 'wenig → alles nach Orten, Leeres fehlt', a)
+  const b = await talk(db)('VorratAnsageIntent', { lagerort: slot('lagerort', 'keller') })
+  expect(b === 'Im Keller ist nichts eingetragen. Noch was?', 'leerer Ort', b)
+  const many = fakeBackend(Array.from({ length: 23 }, (_, i) => placed('m' + i, 'Ding' + String.fromCharCode(65 + i), 1, 'Stk', i < 13 ? 'Kühlschrank' : 'Keller')))
+  const say = talk(many)
+  let c = await say('VorratAnsageIntent')
+  expect(c === 'Du hast 23 Sachen: 13 im Kühlschrank, 10 im Keller. Welchen Ort soll ich vorlesen? Oder: alles.', 'viel → erst Übersicht', c)
+  c = await say('LagerortIntent', { lagerort: slot('lagerort', 'kühlschrank') })
+  expect(c.includes('DingA 1') && c.endsWith('Noch 3 weitere. Sag weiter, oder: fertig.'), 'je 10', c)
+  c = await say('AMAZON.NextIntent')
+  expect(c === 'Im Kühlschrank: DingK 1, DingL 1, DingM 1. Noch was?', 'weiter', c)
+}
+
+console.log('14. Deuten von Datum, Ort, Kategorie')
+{
+  const d = (raw: string) => parseDate(raw, '2026-11-26')
+  expect(d('2026-12') === '2026-12-31' && d('2026-W50') === '2026-12-13' && d('2027') === '2027-12-31' && d('2026-01-10') === '2027-01-10' && d('quatsch') === null, 'Monat, Woche, Jahr, vergangenes Datum → nächstes Jahr', [d('2026-12'), d('2026-W50'), d('2026-01-10')])
+  expect(parsePlace('tiefkühlfach') === 'Gefrierfach' && parsePlace('kühlschrank') === 'Kühlschrank' && parsePlace('speisekammer') === 'Vorratsschrank' && parsePlace('balkon') === null, 'Lagerorte')
+  expect(parseCategory('Milchprodukte und Eier') === 'Milchprodukte & Eier' && parseCategory('Hülsenfrüchte und Konserven') === 'Hülsenfrüchte & Konserven' && parseCategory('Süßes') === 'Backen & Süßes' && parseCategory('Öle') === 'Öle & Saucen' && parseCategory('Backwaren') === 'Getreide & Backwaren', 'Kategorien')
+}
+
+console.log('15. Sprachmodell passt zum Code')
+{
+  const { readFileSync } = await import('node:fs')
+  const model = JSON.parse(readFileSync(new URL('../alexa/interaction-model-de-DE.json', import.meta.url), 'utf8')).interactionModel.languageModel
+  const code = readFileSync(new URL('../src/lib/alexaSkill.ts', import.meta.url), 'utf8') + readFileSync(new URL('../src/lib/alexaAdd.ts', import.meta.url), 'utf8')
+  // KategorieIntent und DatumIntent sind reine Antworten: der Code liest ihre Slots.
+  const missing = (model.intents as { name: string }[]).map(i => i.name).filter(n => !n.startsWith('AMAZON.') && !['KategorieIntent', 'DatumIntent'].includes(n) && !code.includes("'" + n + "'"))
+  expect(missing.length === 0, 'jeder eigene Intent wird behandelt', missing)
+  const types = new Set((model.types as { name: string }[]).map(t => t.name))
+  const unknown = (model.intents as { slots?: { type: string }[] }[]).flatMap(i => i.slots ?? []).filter(s => !s.type.startsWith('AMAZON.') && !types.has(s.type))
+  expect(unknown.length === 0, 'alle Slot-Typen vorhanden', unknown)
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

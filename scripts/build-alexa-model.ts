@@ -1,4 +1,4 @@
-// Baut das Interaktionsmodell (de-DE) des Alexa-Skills „Blankmann“ (0.3.54, Vorrat erfassen/ansagen 0.3.61).
+// Baut das Interaktionsmodell (de-DE) des Alexa-Skills „Blankmann“ (0.3.54, Vorrat erfassen/ansagen 0.3.61, Einkaufsliste 0.3.62).
 // Aufruf: node --experimental-strip-types scripts/build-alexa-model.ts → alexa/interaction-model-de-DE.json
 // Die Datei wird in der Alexa-Entwicklerkonsole unter „Interaktionsmodell → JSON-Editor“ eingefügt.
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -73,6 +73,15 @@ const wochen = ['in {menge} wochen', '{menge} wochen', 'noch {menge} wochen', 'h
 const ohne = ['ohne', 'ohne datum', 'kein datum', 'ohne haltbarkeit', 'weiß ich nicht', 'keine ahnung', 'überspringen', 'egal', 'unbegrenzt']
 const neu = ['neu', 'neu anlegen', 'leg es neu an', 'als neues anlegen']
 const mengeEins = ['ein {einheit}', 'eine {einheit}', 'einen {einheit}', 'nur ein {einheit}', 'nur eine {einheit}']
+// ---------------------------------------------------------------- Einkaufsliste (0.3.62)
+const einkaufSaetze = [
+  'setz {M} auf die einkaufsliste', 'setze {M} auf die einkaufsliste', 'setz {M} auf den einkaufszettel', 'schreib {M} auf die einkaufsliste', 'schreibe {M} auf die einkaufsliste', 'schreib {M} auf den einkaufszettel',
+  'pack {M} auf die einkaufsliste', 'leg {M} auf die einkaufsliste', 'trag {M} auf der einkaufsliste ein', 'füge {M} zur einkaufsliste hinzu', 'füge {M} der einkaufsliste hinzu',
+  '{M} auf die einkaufsliste', '{M} auf den einkaufszettel', '{M} zur einkaufsliste', 'auf die einkaufsliste {M}', 'wir müssen {M} kaufen', 'ich muss {M} kaufen', 'wir brauchen noch {M}', 'ich brauche noch {M}',
+]
+const einkauf = einkaufSaetze.flatMap(s => ['{menge} {lebensmittel}', '{menge} {einheit} {lebensmittel}', '{lebensmittel}'].map(m => s.replace('{M}', m)))
+const einkaufEins = einkaufSaetze.flatMap(s => articles.flatMap(a => [`${a} {lebensmittel}`, `${a} {einheit} {lebensmittel}`].map(m => s.replace('{M}', m))))
+const einkaufStart = ['einkaufsliste', 'einkaufszettel', 'auf die einkaufsliste', 'etwas auf die einkaufsliste', 'ich will etwas auf die einkaufsliste setzen', 'ich möchte etwas auf die einkaufsliste setzen', 'setz etwas auf die einkaufsliste', 'einkaufsliste ergänzen']
 const orte: [string, string[]][] = [
   ['Kühlschrank', ['Kühli']], ['Gefrierfach', ['Gefrierschrank', 'Tiefkühlfach', 'Tiefkühlschrank', 'Gefriertruhe', 'Truhe', 'Tiefkühler', 'Froster', 'Eisfach']],
   ['Vorratsschrank', ['Schrank', 'Speisekammer', 'Regal', 'Vorratsregal']], ['Keller', ['Vorratskeller']],
@@ -112,6 +121,9 @@ const model = {
         { name: 'AngabeEinsIntent', slots: oneSlots, samples: angabeEins },
         { name: 'HinzufuegenIntent', slots: [...amountSlots, slot('lagerort', 'LAGERORT')], samples: [...new Set(hinzu)] },
         { name: 'HinzufuegenEinsIntent', slots: [...oneSlots, slot('lagerort', 'LAGERORT')], samples: [...new Set(hinzuEins)] },
+        { name: 'EinkaufIntent', slots: amountSlots, samples: [...new Set(einkauf)] },
+        { name: 'EinkaufEinsIntent', slots: oneSlots, samples: [...new Set(einkaufEins)] },
+        { name: 'EinkaufStartIntent', samples: einkaufStart },
         { name: 'ErfassenIntent', samples: erfassen },
         { name: 'VorratAnsageIntent', slots: [slot('lagerort', 'LAGERORT')], samples: ansage },
         { name: 'LagerortIntent', slots: [slot('lagerort', 'LAGERORT')], samples: lagerort },

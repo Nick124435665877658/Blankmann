@@ -2,11 +2,11 @@
 import { supabase } from './supabase'
 import { baseKey } from './kitchen'
 import { guessCategory } from './categories'
-import type { PantryIdea } from './pantryIdeas'
+import type { IdeaCourse, PantryIdea } from './pantryIdeas'
 import { HISTAMINE_VERSION } from './recipeAi'
 
-export async function fetchPantryIdeas(householdId: string, accessToken: string): Promise<PantryIdea[]> {
-  const response = await fetch('/api/pantry-ideas', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ householdId }) })
+export async function fetchPantryIdeas(householdId: string, accessToken: string, courses: IdeaCourse[]): Promise<PantryIdea[]> {
+  const response = await fetch('/api/pantry-ideas', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + accessToken }, body: JSON.stringify({ householdId, courses }) })
   const body = (await response.json().catch(() => ({}))) as { ideas?: PantryIdea[]; error?: string }
   if (!response.ok || !body.ideas) throw new Error(body.error || 'Die KI-Ideen konnten nicht geladen werden (' + response.status + ').')
   return body.ideas

@@ -621,6 +621,224 @@
           ]
         },
         {
+          "name": "EinkaufIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "setz {menge} {lebensmittel} auf die einkaufsliste",
+            "setz {menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "setz {lebensmittel} auf die einkaufsliste",
+            "setze {menge} {lebensmittel} auf die einkaufsliste",
+            "setze {menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "setze {lebensmittel} auf die einkaufsliste",
+            "setz {menge} {lebensmittel} auf den einkaufszettel",
+            "setz {menge} {einheit} {lebensmittel} auf den einkaufszettel",
+            "setz {lebensmittel} auf den einkaufszettel",
+            "schreib {menge} {lebensmittel} auf die einkaufsliste",
+            "schreib {menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreib {lebensmittel} auf die einkaufsliste",
+            "schreibe {menge} {lebensmittel} auf die einkaufsliste",
+            "schreibe {menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreibe {lebensmittel} auf die einkaufsliste",
+            "schreib {menge} {lebensmittel} auf den einkaufszettel",
+            "schreib {menge} {einheit} {lebensmittel} auf den einkaufszettel",
+            "schreib {lebensmittel} auf den einkaufszettel",
+            "pack {menge} {lebensmittel} auf die einkaufsliste",
+            "pack {menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "pack {lebensmittel} auf die einkaufsliste",
+            "leg {menge} {lebensmittel} auf die einkaufsliste",
+            "leg {menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "leg {lebensmittel} auf die einkaufsliste",
+            "trag {menge} {lebensmittel} auf der einkaufsliste ein",
+            "trag {menge} {einheit} {lebensmittel} auf der einkaufsliste ein",
+            "trag {lebensmittel} auf der einkaufsliste ein",
+            "füge {menge} {lebensmittel} zur einkaufsliste hinzu",
+            "füge {menge} {einheit} {lebensmittel} zur einkaufsliste hinzu",
+            "füge {lebensmittel} zur einkaufsliste hinzu",
+            "füge {menge} {lebensmittel} der einkaufsliste hinzu",
+            "füge {menge} {einheit} {lebensmittel} der einkaufsliste hinzu",
+            "füge {lebensmittel} der einkaufsliste hinzu",
+            "{menge} {lebensmittel} auf die einkaufsliste",
+            "{menge} {einheit} {lebensmittel} auf die einkaufsliste",
+            "{lebensmittel} auf die einkaufsliste",
+            "{menge} {lebensmittel} auf den einkaufszettel",
+            "{menge} {einheit} {lebensmittel} auf den einkaufszettel",
+            "{lebensmittel} auf den einkaufszettel",
+            "{menge} {lebensmittel} zur einkaufsliste",
+            "{menge} {einheit} {lebensmittel} zur einkaufsliste",
+            "{lebensmittel} zur einkaufsliste",
+            "auf die einkaufsliste {menge} {lebensmittel}",
+            "auf die einkaufsliste {menge} {einheit} {lebensmittel}",
+            "auf die einkaufsliste {lebensmittel}",
+            "wir müssen {menge} {lebensmittel} kaufen",
+            "wir müssen {menge} {einheit} {lebensmittel} kaufen",
+            "wir müssen {lebensmittel} kaufen",
+            "ich muss {menge} {lebensmittel} kaufen",
+            "ich muss {menge} {einheit} {lebensmittel} kaufen",
+            "ich muss {lebensmittel} kaufen",
+            "wir brauchen noch {menge} {lebensmittel}",
+            "wir brauchen noch {menge} {einheit} {lebensmittel}",
+            "wir brauchen noch {lebensmittel}",
+            "ich brauche noch {menge} {lebensmittel}",
+            "ich brauche noch {menge} {einheit} {lebensmittel}",
+            "ich brauche noch {lebensmittel}"
+          ]
+        },
+        {
+          "name": "EinkaufEinsIntent",
+          "slots": [
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "setz ein {lebensmittel} auf die einkaufsliste",
+            "setz ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "setz eine {lebensmittel} auf die einkaufsliste",
+            "setz eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "setz einen {lebensmittel} auf die einkaufsliste",
+            "setz einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "setze ein {lebensmittel} auf die einkaufsliste",
+            "setze ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "setze eine {lebensmittel} auf die einkaufsliste",
+            "setze eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "setze einen {lebensmittel} auf die einkaufsliste",
+            "setze einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "setz ein {lebensmittel} auf den einkaufszettel",
+            "setz ein {einheit} {lebensmittel} auf den einkaufszettel",
+            "setz eine {lebensmittel} auf den einkaufszettel",
+            "setz eine {einheit} {lebensmittel} auf den einkaufszettel",
+            "setz einen {lebensmittel} auf den einkaufszettel",
+            "setz einen {einheit} {lebensmittel} auf den einkaufszettel",
+            "schreib ein {lebensmittel} auf die einkaufsliste",
+            "schreib ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreib eine {lebensmittel} auf die einkaufsliste",
+            "schreib eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreib einen {lebensmittel} auf die einkaufsliste",
+            "schreib einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreibe ein {lebensmittel} auf die einkaufsliste",
+            "schreibe ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreibe eine {lebensmittel} auf die einkaufsliste",
+            "schreibe eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreibe einen {lebensmittel} auf die einkaufsliste",
+            "schreibe einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "schreib ein {lebensmittel} auf den einkaufszettel",
+            "schreib ein {einheit} {lebensmittel} auf den einkaufszettel",
+            "schreib eine {lebensmittel} auf den einkaufszettel",
+            "schreib eine {einheit} {lebensmittel} auf den einkaufszettel",
+            "schreib einen {lebensmittel} auf den einkaufszettel",
+            "schreib einen {einheit} {lebensmittel} auf den einkaufszettel",
+            "pack ein {lebensmittel} auf die einkaufsliste",
+            "pack ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "pack eine {lebensmittel} auf die einkaufsliste",
+            "pack eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "pack einen {lebensmittel} auf die einkaufsliste",
+            "pack einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "leg ein {lebensmittel} auf die einkaufsliste",
+            "leg ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "leg eine {lebensmittel} auf die einkaufsliste",
+            "leg eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "leg einen {lebensmittel} auf die einkaufsliste",
+            "leg einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "trag ein {lebensmittel} auf der einkaufsliste ein",
+            "trag ein {einheit} {lebensmittel} auf der einkaufsliste ein",
+            "trag eine {lebensmittel} auf der einkaufsliste ein",
+            "trag eine {einheit} {lebensmittel} auf der einkaufsliste ein",
+            "trag einen {lebensmittel} auf der einkaufsliste ein",
+            "trag einen {einheit} {lebensmittel} auf der einkaufsliste ein",
+            "füge ein {lebensmittel} zur einkaufsliste hinzu",
+            "füge ein {einheit} {lebensmittel} zur einkaufsliste hinzu",
+            "füge eine {lebensmittel} zur einkaufsliste hinzu",
+            "füge eine {einheit} {lebensmittel} zur einkaufsliste hinzu",
+            "füge einen {lebensmittel} zur einkaufsliste hinzu",
+            "füge einen {einheit} {lebensmittel} zur einkaufsliste hinzu",
+            "füge ein {lebensmittel} der einkaufsliste hinzu",
+            "füge ein {einheit} {lebensmittel} der einkaufsliste hinzu",
+            "füge eine {lebensmittel} der einkaufsliste hinzu",
+            "füge eine {einheit} {lebensmittel} der einkaufsliste hinzu",
+            "füge einen {lebensmittel} der einkaufsliste hinzu",
+            "füge einen {einheit} {lebensmittel} der einkaufsliste hinzu",
+            "ein {lebensmittel} auf die einkaufsliste",
+            "ein {einheit} {lebensmittel} auf die einkaufsliste",
+            "eine {lebensmittel} auf die einkaufsliste",
+            "eine {einheit} {lebensmittel} auf die einkaufsliste",
+            "einen {lebensmittel} auf die einkaufsliste",
+            "einen {einheit} {lebensmittel} auf die einkaufsliste",
+            "ein {lebensmittel} auf den einkaufszettel",
+            "ein {einheit} {lebensmittel} auf den einkaufszettel",
+            "eine {lebensmittel} auf den einkaufszettel",
+            "eine {einheit} {lebensmittel} auf den einkaufszettel",
+            "einen {lebensmittel} auf den einkaufszettel",
+            "einen {einheit} {lebensmittel} auf den einkaufszettel",
+            "ein {lebensmittel} zur einkaufsliste",
+            "ein {einheit} {lebensmittel} zur einkaufsliste",
+            "eine {lebensmittel} zur einkaufsliste",
+            "eine {einheit} {lebensmittel} zur einkaufsliste",
+            "einen {lebensmittel} zur einkaufsliste",
+            "einen {einheit} {lebensmittel} zur einkaufsliste",
+            "auf die einkaufsliste ein {lebensmittel}",
+            "auf die einkaufsliste ein {einheit} {lebensmittel}",
+            "auf die einkaufsliste eine {lebensmittel}",
+            "auf die einkaufsliste eine {einheit} {lebensmittel}",
+            "auf die einkaufsliste einen {lebensmittel}",
+            "auf die einkaufsliste einen {einheit} {lebensmittel}",
+            "wir müssen ein {lebensmittel} kaufen",
+            "wir müssen ein {einheit} {lebensmittel} kaufen",
+            "wir müssen eine {lebensmittel} kaufen",
+            "wir müssen eine {einheit} {lebensmittel} kaufen",
+            "wir müssen einen {lebensmittel} kaufen",
+            "wir müssen einen {einheit} {lebensmittel} kaufen",
+            "ich muss ein {lebensmittel} kaufen",
+            "ich muss ein {einheit} {lebensmittel} kaufen",
+            "ich muss eine {lebensmittel} kaufen",
+            "ich muss eine {einheit} {lebensmittel} kaufen",
+            "ich muss einen {lebensmittel} kaufen",
+            "ich muss einen {einheit} {lebensmittel} kaufen",
+            "wir brauchen noch ein {lebensmittel}",
+            "wir brauchen noch ein {einheit} {lebensmittel}",
+            "wir brauchen noch eine {lebensmittel}",
+            "wir brauchen noch eine {einheit} {lebensmittel}",
+            "wir brauchen noch einen {lebensmittel}",
+            "wir brauchen noch einen {einheit} {lebensmittel}",
+            "ich brauche noch ein {lebensmittel}",
+            "ich brauche noch ein {einheit} {lebensmittel}",
+            "ich brauche noch eine {lebensmittel}",
+            "ich brauche noch eine {einheit} {lebensmittel}",
+            "ich brauche noch einen {lebensmittel}",
+            "ich brauche noch einen {einheit} {lebensmittel}"
+          ]
+        },
+        {
+          "name": "EinkaufStartIntent",
+          "samples": [
+            "einkaufsliste",
+            "einkaufszettel",
+            "auf die einkaufsliste",
+            "etwas auf die einkaufsliste",
+            "ich will etwas auf die einkaufsliste setzen",
+            "ich möchte etwas auf die einkaufsliste setzen",
+            "setz etwas auf die einkaufsliste",
+            "einkaufsliste ergänzen"
+          ]
+        },
+        {
           "name": "ErfassenIntent",
           "samples": [
             "vorrat erfassen",
@@ -3092,6 +3310,118 @@
                 "synonyms": [
                   "Zwiebel"
                 ]
+              }
+            },
+            {
+              "name": {
+                "value": "Klopapier",
+                "synonyms": [
+                  "Toilettenpapier"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Küchenrolle",
+                "synonyms": [
+                  "Küchenpapier"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Spülmittel",
+                "synonyms": [
+                  "Spüli"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Waschmittel"
+              }
+            },
+            {
+              "name": {
+                "value": "Zahnpasta",
+                "synonyms": [
+                  "Zahncreme"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Müllbeutel",
+                "synonyms": [
+                  "Mülltüten"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Alufolie"
+              }
+            },
+            {
+              "name": {
+                "value": "Backpapier"
+              }
+            },
+            {
+              "name": {
+                "value": "Frischhaltefolie"
+              }
+            },
+            {
+              "name": {
+                "value": "Spülschwämme",
+                "synonyms": [
+                  "Schwämme"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Seife",
+                "synonyms": [
+                  "Handseife"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Shampoo"
+              }
+            },
+            {
+              "name": {
+                "value": "Duschgel"
+              }
+            },
+            {
+              "name": {
+                "value": "Taschentücher"
+              }
+            },
+            {
+              "name": {
+                "value": "Spültabs",
+                "synonyms": [
+                  "Spülmaschinentabs"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Putzmittel",
+                "synonyms": [
+                  "Reiniger"
+                ]
+              }
+            },
+            {
+              "name": {
+                "value": "Batterien"
               }
             }
           ]

@@ -68,7 +68,7 @@ export const speakDate = (date: string, today: string) =>
   Number(date.slice(8, 10)) + '. ' + months[Number(date.slice(5, 7)) - 1] + (date.slice(0, 4) === today.slice(0, 4) ? '' : ' ' + date.slice(0, 4))
 
 // „rote linsen“ → „Rote Linsen“
-const titleCase = (value: string) => value.trim().split(/\s+/).map((w, i) => i && /^(und|mit|aus|in|im|von|vom|ohne|für|der|die|das)$/i.test(w) ? w.toLowerCase() : w.charAt(0).toLocaleUpperCase('de-DE') + w.slice(1)).join(' ')
+export const titleCase = (value: string) => value.trim().split(/\s+/).map((w, i) => i && /^(und|mit|aus|in|im|von|vom|ohne|für|der|die|das)$/i.test(w) ? w.toLowerCase() : w.charAt(0).toLocaleUpperCase('de-DE') + w.slice(1)).join(' ')
 
 // Katalog: nur gleicher Name (Einzahl/Mehrzahl egal) gilt als bekannt – „Milch“ ist nicht „Kokosmilch“.
 export function matchFood(names: string[], foods: AlexaFood[]): { food: AlexaFood | null; similar: string[] } {

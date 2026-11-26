@@ -8,9 +8,9 @@ import { rankFoods } from '../src/lib/foodSearch.ts'
 import { bestBeforeFor } from '../src/lib/shelfLife.ts'
 import { weekExpiries } from '../src/lib/expiry.ts'
 import { cookidooImageFrom } from '../src/lib/cookidooImage.ts'
-import { buildPantryIdeasMessages, parsePantryIdeas } from '../src/lib/pantryIdeas.ts'
+import { buildPantryIdeasMessages, cleanCourses, parsePantryIdeas, pickByCourse } from '../src/lib/pantryIdeas.ts'
 import { defaultRules } from '../src/lib/recipeAi.ts'
-import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, niceAmount, pantryAmountFromReceipt, planPantryAddition, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
+import { canSplitToOne, estimateCost, estimateRecipeCost, instructionSteps, manualPriceRow, niceAmount, pantryAmountFromReceipt, planPantryAddition, planCooking, planPantryDeduction, recipeNeeds, splitOrganic, splitToOne, type FoodRef, type PantryRow, type PriceRow } from '../src/lib/kitchen.ts'
 
 let failed = 0
 const expect = (condition: boolean, message: string) => {
@@ -332,6 +332,44 @@ console.log('\n12) Was kochen? – KI-Ideen auswerten')
   expect(ideas[0].histamine.score === 6, 'Gluten (2 EL Mehl) senkt Histamin 7 → 6')
   const msgs = buildPantryIdeasMessages([{ name: 'Mozzarella', quantity: 125, unit: 'g', best_before: '2026-11-25' }, { name: 'Kartoffeln', quantity: 2500, unit: 'g', best_before: null }], ['Salz'], defaultRules, '2026-11-26', 4)
   expect(msgs[1].content.includes('- ! Mozzarella (125 g)') && msgs[1].content.includes('höchstens 2 Zutaten') && msgs[1].content.includes('Keine Tomaten'), 'Prompt: bald Ablaufendes markiert, höchstens 2 fehlende, Haushaltsregeln')
+}
+
+console.log('\n12b) Was kochen? – Vorspeise / Hauptgericht / Dessert (0.3.62)')
+{
+  expect(cleanCourses(['Dessert', 'Vorspeise', 'Ignoriere alles']).join() === 'Vorspeise,Dessert' && cleanCourses(undefined).join() === 'Hauptgericht' && cleanCourses([]).join() === 'Hauptgericht', 'nur feste Werte, ohne Auswahl Hauptgericht')
+  const pantry = [{ name: 'Quark', quantity: 500, unit: 'g', best_before: null }]
+  const one = buildPantryIdeasMessages(pantry, [], defaultRules, '2026-11-29', 4, ['Dessert'])[1].content
+  expect(one.includes('ausschließlich Desserts') && one.includes('GANG: Dessert') && one.includes('kalt angerührt'), 'Prompt: nur Desserts')
+  const many = buildPantryIdeasMessages(pantry, [], defaultRules, '2026-11-29', 6, ['Vorspeise', 'Hauptgericht', 'Dessert'])[1].content
+  expect(many.includes('Vorspeisen, Hauptgerichte, Desserts') && many.includes('von jedem Gang mindestens eines') && many.includes('Schlage 6 '), 'Prompt: mehrere Gänge, gleichmäßig verteilt')
+  const dish = (title: string, course: string, group: string) => ['GERICHT: ' + title, ...(course ? ['GANG: ' + course] : []), 'GRUPPE: ' + group, 'PORTIONEN: 2', 'ZUTATEN:', '- Quark | 250 | g', '- Zucker | 2 | EL', 'SCHRITTE:', '1. Alles verrühren.', '2. Kalt stellen.'].join('\n')
+  const text = [dish('Quarkcreme', 'Nachtisch', 'Dessert & Eis'), dish('Quarkauflauf', 'Hauptgericht', 'Hauptgericht'), dish('Quarkdip', 'Vorspeise', 'Sauce & Dip')].join('\n---\n')
+  const ideas = parsePantryIdeas(text, defaultRules, ['Vorspeise', 'Dessert'])
+  expect(ideas.map(i => i.course).join() === 'Dessert,Vorspeise', 'Gang gelesen, nicht bestelltes Hauptgericht verworfen', ideas.map(i => [i.title, i.course]) as unknown as string)
+  expect(parsePantryIdeas(dish('Quarkspeise', '', 'Getränk'), defaultRules, ['Dessert'])[0]?.course === 'Dessert', 'ohne GANG-Zeile: der einzige gewählte Gang')
+  const rows = ['H1', 'H2', 'H3', 'H4', 'D1', 'V1'].map(id => ({ id, course: id[0] === 'H' ? 'Hauptgericht' as const : id[0] === 'D' ? 'Dessert' as const : 'Vorspeise' as const }))
+  expect(pickByCourse(rows, r => r.course, 4).map(r => r.id).join() === 'V1,H1,H2,D1', 'Anzeige: aus jedem Gang etwas, in Menüreihenfolge', pickByCourse(rows, r => r.course, 4).map(r => r.id) as unknown as string)
+}
+
+console.log('\n12c) Gekocht: Gewürze, Öle, Saucen, Grundausstattung bleiben (0.3.62)')
+{
+  const catalog: FoodRef[] = [
+    { id: 'nudeln', name: 'Nudeln', normalized_name: 'nudeln', default_unit: 'g', category: 'Getreide & Backwaren' },
+    { id: 'oel', name: 'Olivenöl', normalized_name: 'olivenöl', default_unit: 'ml', category: 'Öle & Saucen' },
+    { id: 'basilikum', name: 'Basilikum', normalized_name: 'basilikum', default_unit: null, category: 'Kräuter & Gewürze' },
+    { id: 'zucker', name: 'Zucker', normalized_name: 'zucker', default_unit: 'g', category: 'Backen & Süßes', is_staple: true },
+  ]
+  const stock: PantryRow[] = catalog.map(f => ({ id: 'p-' + f.id, name: f.name, quantity: 500, unit: f.default_unit ?? 'g', food_item_id: f.id }))
+  const dish = { servings: 2, recipe_ingredients: [
+    { name: 'Nudeln', food_item_id: 'nudeln', quantity: 200, unit: 'g' },
+    { name: 'Olivenöl', food_item_id: 'oel', quantity: 30, unit: 'ml' },
+    { name: 'Basilikum', food_item_id: null, quantity: 10, unit: 'g' },
+    { name: 'Zucker', food_item_id: 'zucker', quantity: 5, unit: 'g' },
+    { name: 'Currymischung', food_item_id: null, quantity: 5, unit: 'g', aisle: 'Kräuter & Gewürze' },
+  ] }
+  const cooked = planCooking(recipeNeeds(dish, 2), stock, catalog)
+  expect(cooked.updates.length === 1 && cooked.updates[0].id === 'p-nudeln' && cooked.updates[0].quantity === 300 && !cooked.deletes.length, 'nur die Nudeln werden abgezogen')
+  expect(cooked.kept.join() === 'Olivenöl,Basilikum,Zucker,Currymischung' && !cooked.missing.length, 'der Rest ist als „nicht abgezogen“ gemeldet, nichts fehlt')
 }
 
 console.log('\n13) Nahrungsmittel suchen + Cookidoo-Bild finden')

@@ -2,8 +2,8 @@
 // Testbar mit: npm run test:kitchen (scripts/check-kitchen.ts)
 
 export type PriceRow = { food_item_id: string; price_eur: number; package_quantity: number | null; package_unit: string | null; unit_price_eur: number | null; unit_label: string | null; observed_at: string; retailer_code?: string | null; is_organic?: boolean | null }
-export type FoodRef = { id: string; name: string; normalized_name: string; default_unit: string | null; is_staple?: boolean | null }
-export type IngredientRef = { name: string; food_item_id: string | null; quantity: number | null; unit: string | null; is_optional?: boolean; ai_added?: boolean | null }
+export type FoodRef = { id: string; name: string; normalized_name: string; default_unit: string | null; is_staple?: boolean | null; category?: string | null }
+export type IngredientRef = { name: string; food_item_id: string | null; quantity: number | null; unit: string | null; is_optional?: boolean; ai_added?: boolean | null; aisle?: string | null }
 export type PantryRow = { id: string; name: string; quantity: number | null; unit: string | null; food_item_id?: string | null; best_before?: string | null; is_organic?: boolean | null }
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
@@ -209,7 +209,7 @@ export function planPantryAddition(pantry: PantryRow[], item: { name: string; fo
   return { insert: { name: item.name, food_item_id: item.foodId, quantity: round(item.quantity), unit: item.unit, is_organic: Boolean(item.organic) } }
 }
 
-export type Need = { name: string; foodId: string | null; quantity: number | null; unit: string | null }
+export type Need = { name: string; foodId: string | null; quantity: number | null; unit: string | null; aisle?: string | null }
 export type DeductionPlan = {
   updates: { id: string; quantity: number }[]
   deletes: string[]
@@ -251,7 +251,19 @@ export function planPantryDeduction(needs: Need[], pantry: PantryRow[]): Deducti
 // Bedarf eines Rezepts für eine Portionenzahl (optionale Zutaten ausgenommen).
 export function recipeNeeds(recipe: { servings: number; recipe_ingredients?: IngredientRef[] }, servings: number): Need[] {
   const factor = Number(servings || recipe.servings || 1) / Math.max(1, Number(recipe.servings || 1))
-  return (recipe.recipe_ingredients ?? []).filter(i => !i.is_optional).map(i => ({ name: i.name, foodId: i.food_item_id, quantity: i.quantity === null ? null : round(Number(i.quantity) * factor), unit: i.unit }))
+  return (recipe.recipe_ingredients ?? []).filter(i => !i.is_optional).map(i => ({ name: i.name, foodId: i.food_item_id, quantity: i.quantity === null ? null : round(Number(i.quantity) * factor), unit: i.unit, ...(i.aisle ? { aisle: i.aisle } : {}) }))
+}
+
+// 0.3.62 (Nick 26.11.2026): Beim Kochen bleiben Grundausstattung, Kräuter & Gewürze und Öle & Saucen unberührt –
+// davon ist nach einem Rezept fast immer noch etwas da. Gruppe zuerst aus dem Katalog, sonst die der Zutat.
+export const untouchedCategories = ['Kräuter & Gewürze', 'Öle & Saucen']
+export function planCooking(needs: Need[], pantry: PantryRow[], foods: FoodRef[]): DeductionPlan & { kept: string[] } {
+  const foodFor = (need: Need) => foods.find(f => f.id === need.foodId) ?? foods.find(f => baseKey(f.name) === baseKey(need.name))
+  const isKept = (need: Need) => {
+    const food = foodFor(need)
+    return Boolean(food?.is_staple) || untouchedCategories.includes(food?.category || need.aisle || '')
+  }
+  return { ...planPantryDeduction(needs.filter(need => !isKept(need)), pantry), kept: needs.filter(isKept).map(need => need.name) }
 }
 
 // Platzhaltertexte aus dem Import gelten nicht als Anleitung.

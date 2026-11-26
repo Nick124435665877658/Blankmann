@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BookOpen, Check, ChefHat, ExternalLink, LoaderCircle, Sparkles, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { estimateRecipeCost, formatAmount, instructionSteps, planPantryDeduction, recipeNeeds, type DeductionPlan, type FoodRef, type IngredientRef, type PantryRow, type PriceRow } from '../lib/kitchen'
+import { estimateRecipeCost, formatAmount, instructionSteps, planCooking, recipeNeeds, type DeductionPlan, type FoodRef, type IngredientRef, type PantryRow, type PriceRow } from '../lib/kitchen'
 import ManualPriceForm from './ManualPriceForm'
 import { completeRecipeWithAi } from '../lib/recipeAiClient'
 import { isThermomix } from '../lib/recipeAi'
@@ -23,7 +23,7 @@ export default function RecipeDetails({ photoUrl, recipe, health = null, meal, f
   const [busy, setBusy] = useState<'' | 'ai' | 'add' | 'save' | 'cook'>('')
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
-  const [cooked, setCooked] = useState<DeductionPlan | null>(null)
+  const [cooked, setCooked] = useState<(DeductionPlan & { kept: string[] }) | null>(null)
 
   async function saveSteps(next: string[]) {
     if (!supabase) return false
@@ -65,9 +65,9 @@ export default function RecipeDetails({ photoUrl, recipe, health = null, meal, f
   }
   async function markCooked() {
     if (!supabase) return
-    if (!window.confirm('„' + recipe.title + '“ als gekocht markieren? Die Zutaten für ' + String(servings).replace('.', ',') + ' Portionen werden vom Vorrat abgezogen; ein Rest bleibt im Vorrat.')) return
+    if (!window.confirm('„' + recipe.title + '“ als gekocht markieren? Die Zutaten für ' + String(servings).replace('.', ',') + ' Portionen werden vom Vorrat abgezogen; ein Rest bleibt im Vorrat. Gewürze, Kräuter, Öle, Saucen und Grundausstattung werden nicht abgezogen.')) return
     setBusy('cook')
-    const plan = planPantryDeduction(recipeNeeds(recipe, servings), pantry)
+    const plan = planCooking(recipeNeeds(recipe, servings), pantry, foods)
     try {
       for (const update of plan.updates) {
         const { error } = await supabase.from('pantry_items').update({ quantity: update.quantity, updated_at: new Date().toISOString() }).eq('id', update.id).eq('household_id', householdId)
@@ -140,7 +140,8 @@ export default function RecipeDetails({ photoUrl, recipe, health = null, meal, f
         {cooked.used.length ? 'Vom Vorrat abgezogen: ' + cooked.used.join(', ') + '. ' : ''}
         {cooked.partial.length ? 'Nur teilweise im Vorrat: ' + cooked.partial.join(', ') + '. ' : ''}
         {cooked.missing.length ? 'Nicht im Vorrat: ' + cooked.missing.join(', ') + '. ' : ''}
-        {cooked.unconvertible.length ? 'Im Vorrat, aber Menge/Einheit nicht verrechenbar (bitte im Vorrat selbst anpassen): ' + cooked.unconvertible.join(', ') + '.' : ''}
+        {cooked.unconvertible.length ? 'Im Vorrat, aber Menge/Einheit nicht verrechenbar (bitte im Vorrat selbst anpassen): ' + cooked.unconvertible.join(', ') + '. ' : ''}
+        {cooked.kept.length ? 'Bewusst nicht abgezogen (Gewürze, Öle, Saucen, Grundausstattung): ' + cooked.kept.join(', ') + '.' : ''}
       </span></div>
       : <button type="button" className="button button-dark" disabled={busy !== ''} onClick={markCooked}><ChefHat size={16} /> {busy === 'cook' ? 'Vorrat wird aktualisiert …' : 'Gekocht – Zutaten vom Vorrat abziehen'}</button>}
   </div>

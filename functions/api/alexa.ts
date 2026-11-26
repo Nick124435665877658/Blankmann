@@ -7,13 +7,14 @@
 // Anfragen älter als 150 Sekunden werden abgelehnt. Keine Geheimnisse im Code: nur der öffentliche Supabase-Schlüssel.
 import { alexaIds, checkEnvelope, handleAlexa, sorry, type AlexaBackend, type AlexaContext, type AlexaRequest } from '../../src/lib/alexaSkill'
 import type { AlexaFood } from '../../src/lib/alexaAdd'
+import type { AlexaShopResult } from '../../src/lib/alexaShop'
 
 type Env = { VITE_SUPABASE_URL?: string; VITE_SUPABASE_PUBLISHABLE_KEY?: string }
 type Context = { request: Request; env: Env }
 
 const SUPABASE_URL = 'https://rrjsolyytdktfmrykdca.supabase.co'
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_v66KgLKqMrY-UknWgXR-7Q_lDGBHTvF'
-const VERSION = '0.3.61'
+const VERSION = '0.3.62'
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } })
 
 function rpcCaller(env: Env) {
@@ -36,6 +37,7 @@ function supabaseBackend(env: Env, user: string, app: string): AlexaBackend {
     undo: () => rpc<{ ok: boolean; label?: string }>('alexa_undo', { p_user: user, p_app: app }),
     foods: () => rpc<AlexaFood[]>('alexa_foods', { p_user: user, p_app: app }),
     add: async (label, item) => { await rpc('alexa_add', { p_user: user, p_app: app, p_label: label, p_item: item }) },
+    shop: (label, item) => rpc<AlexaShopResult>('alexa_shop_add', { p_user: user, p_app: app, p_label: label, p_item: item }),
   }
 }
 

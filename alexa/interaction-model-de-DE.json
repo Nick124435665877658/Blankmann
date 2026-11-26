@@ -954,6 +954,12 @@
               }
             },
             {
+              "id": "Bierschinken",
+              "name": {
+                "value": "Bierschinken"
+              }
+            },
+            {
               "id": "Birne",
               "name": {
                 "value": "Birne",
@@ -1084,6 +1090,12 @@
               }
             },
             {
+              "id": "Butterkäse",
+              "name": {
+                "value": "Butterkäse"
+              }
+            },
+            {
               "id": "Butterkekse",
               "name": {
                 "value": "Butterkekse"
@@ -1205,6 +1217,12 @@
               }
             },
             {
+              "id": "Cracker",
+              "name": {
+                "value": "Cracker"
+              }
+            },
+            {
               "id": "Cranberrys",
               "name": {
                 "value": "Cranberrys"
@@ -1226,6 +1244,12 @@
               "id": "Crème fraîche",
               "name": {
                 "value": "Crème fraîche"
+              }
+            },
+            {
+              "id": "Croissant",
+              "name": {
+                "value": "Croissant"
               }
             },
             {
@@ -1344,6 +1368,12 @@
               }
             },
             {
+              "id": "Erdnussflips",
+              "name": {
+                "value": "Erdnussflips"
+              }
+            },
+            {
               "id": "Espresso",
               "name": {
                 "value": "Espresso"
@@ -1383,6 +1413,12 @@
               "id": "Fleischbrühe",
               "name": {
                 "value": "Fleischbrühe"
+              }
+            },
+            {
+              "id": "Fleischwurst",
+              "name": {
+                "value": "Fleischwurst"
               }
             },
             {
@@ -1546,6 +1582,12 @@
               }
             },
             {
+              "id": "Gummibärchen",
+              "name": {
+                "value": "Gummibärchen"
+              }
+            },
+            {
               "id": "Gurke",
               "name": {
                 "value": "Gurke",
@@ -1660,6 +1702,12 @@
               "id": "Hühnerbrühe",
               "name": {
                 "value": "Hühnerbrühe"
+              }
+            },
+            {
+              "id": "Hummus",
+              "name": {
+                "value": "Hummus"
               }
             },
             {
@@ -1834,6 +1882,12 @@
               }
             },
             {
+              "id": "Kochschinken",
+              "name": {
+                "value": "Kochschinken"
+              }
+            },
+            {
               "id": "Kohlrabi",
               "name": {
                 "value": "Kohlrabi"
@@ -1993,6 +2047,12 @@
               }
             },
             {
+              "id": "Leberwurst",
+              "name": {
+                "value": "Leberwurst"
+              }
+            },
+            {
               "id": "Lebkuchengewürz",
               "name": {
                 "value": "Lebkuchengewürz"
@@ -2060,6 +2120,12 @@
               "id": "Lotus Kekse",
               "name": {
                 "value": "Lotus Kekse"
+              }
+            },
+            {
+              "id": "Maasdamer",
+              "name": {
+                "value": "Maasdamer"
               }
             },
             {
@@ -2265,6 +2331,18 @@
               }
             },
             {
+              "id": "Müsli",
+              "name": {
+                "value": "Müsli"
+              }
+            },
+            {
+              "id": "Müsliriegel",
+              "name": {
+                "value": "Müsliriegel"
+              }
+            },
+            {
               "id": "Natron",
               "name": {
                 "value": "Natron"
@@ -2313,6 +2391,12 @@
               "id": "Nürnberger Rostbratwürstchen",
               "name": {
                 "value": "Nürnberger Rostbratwürstchen"
+              }
+            },
+            {
+              "id": "Nuss Nougat Creme",
+              "name": {
+                "value": "Nuss Nougat Creme"
               }
             },
             {
@@ -2529,6 +2613,12 @@
               }
             },
             {
+              "id": "Popcorn",
+              "name": {
+                "value": "Popcorn"
+              }
+            },
+            {
               "id": "Preiselbeermarmelade",
               "name": {
                 "value": "Preiselbeermarmelade",
@@ -2559,6 +2649,12 @@
               "id": "Putenbrust",
               "name": {
                 "value": "Putenbrust"
+              }
+            },
+            {
+              "id": "Putenbrust Aufschnitt",
+              "name": {
+                "value": "Putenbrust Aufschnitt"
               }
             },
             {
@@ -2637,6 +2733,12 @@
               "id": "Reismehl",
               "name": {
                 "value": "Reismehl"
+              }
+            },
+            {
+              "id": "Reiswaffeln",
+              "name": {
+                "value": "Reiswaffeln"
               }
             },
             {
@@ -2808,6 +2910,12 @@
               }
             },
             {
+              "id": "Salami",
+              "name": {
+                "value": "Salami"
+              }
+            },
+            {
               "id": "Salat",
               "name": {
                 "value": "Salat"
@@ -2823,6 +2931,12 @@
               "id": "Salz",
               "name": {
                 "value": "Salz"
+              }
+            },
+            {
+              "id": "Salzstangen",
+              "name": {
+                "value": "Salzstangen"
               }
             },
             {
@@ -3090,6 +3204,18 @@
               }
             },
             {
+              "id": "Stracke",
+              "name": {
+                "value": "Stracke"
+              }
+            },
+            {
+              "id": "Studentenfutter",
+              "name": {
+                "value": "Studentenfutter"
+              }
+            },
+            {
               "id": "Sumach",
               "name": {
                 "value": "Sumach"
@@ -3261,6 +3387,12 @@
               "id": "Vanillezucker",
               "name": {
                 "value": "Vanillezucker"
+              }
+            },
+            {
+              "id": "Vegetarischer Aufschnitt",
+              "name": {
+                "value": "Vegetarischer Aufschnitt"
               }
             },
             {

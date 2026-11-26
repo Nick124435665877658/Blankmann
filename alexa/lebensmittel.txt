@@ -1,4 +1,4 @@
-# Lebensmittel, die Alexa als Beispiele kennt (Stand Katalog 23.11.2026). Eine Zeile je Lebensmittel,
+# Lebensmittel, die Alexa als Beispiele kennt (Stand Katalog 26.11.2026). Eine Zeile je Lebensmittel,
 # Synonyme nach „|“. Neue Katalogeinträge funktionieren auch ohne Eintrag hier – Alexa versteht sie nur etwas schlechter.
 # Nach Änderungen: node --experimental-strip-types scripts/build-alexa-model.ts → JSON neu in die Alexa-Konsole laden.
 Ahornsirup
@@ -24,6 +24,7 @@ Bananenchips
 Basilikum
 Basmatireis
 Beluga Linsen
+Bierschinken
 Birne|Birnen
 Bittermandelaroma
 Blaumohn
@@ -43,6 +44,7 @@ Buchweizenmehl
 Bulgur
 Butter|Markenbutter|Deutsche Markenbutter
 Butter Vanille Aroma
+Butterkäse
 Butterkekse
 Butterschmalz
 Camembert
@@ -62,10 +64,12 @@ Ciabatta
 Cidre
 Cognac
 Couscous
+Cracker
 Cranberrys
 Crema di Balsamico
 Crème double
 Crème fraîche
+Croissant
 Curry
 Currypaste
 Datteln
@@ -83,6 +87,7 @@ Erdbeeren|Erdbeere
 Erdbeerkonfitüre|Erdbeermarmelade
 Erdnusscreme|Erdnussbutter
 Erdnüsse
+Erdnussflips
 Espresso
 Essig
 Estragon
@@ -90,6 +95,7 @@ Feldsalat
 Fenchel
 Feta
 Fleischbrühe
+Fleischwurst
 Flohsamenschalen
 Fontina
 Frankfurter grüne Kräuter
@@ -116,6 +122,7 @@ Griechischer Joghurt
 Grüne Bohnen
 Grüne Pfefferkörner
 Grünkohl
+Gummibärchen
 Gurke|Gurken|Salatgurke
 Hackfleisch gemischt|Hackfleisch|Hack
 Haferdrink|Hafermilch
@@ -132,6 +139,7 @@ Hirschrücken
 Hokkaido Kürbis
 Honig
 Hühnerbrühe
+Hummus
 Ingwer
 Ingwer gemahlen
 Jalapeños
@@ -157,6 +165,7 @@ Kiwi|Kiwis
 Knoblauch|Knoblauchzehe|Knoblauchzehen
 Knoblauchpulver
 Knollensellerie
+Kochschinken
 Kohlrabi
 Kokosdrink
 Kokosfett
@@ -182,6 +191,7 @@ Lachsfilet|Lachs
 Lasagneplatten
 Lauch
 Laugenbrezeln|Brezeln
+Leberwurst
 Lebkuchengewürz
 Leinsamen
 Leipziger Allerlei
@@ -192,6 +202,7 @@ Linsen grün
 Linsen rot|rote Linsen
 Lorbeerblatt|Lorbeer|Lorbeerblätter
 Lotus Kekse
+Maasdamer
 Macadamianüsse
 Mais
 Majoran
@@ -223,6 +234,8 @@ Minze
 Mohn
 Mozzarella
 Muskatnuss
+Müsli
+Müsliriegel
 Natron
 Naturjoghurt|Joghurt
 Nektarine|Nektarinen
@@ -230,6 +243,7 @@ Nelken
 Noriblätter
 Nudeln|Pasta
 Nürnberger Rostbratwürstchen
+Nuss-Nougat-Creme
 Nüsse
 Oblaten
 Öl
@@ -262,11 +276,13 @@ Pflaumenmus
 Piment
 Pinienkerne
 Pistazien
+Popcorn
 Preiselbeermarmelade|Preiselbeeren
 Provolone
 Puddingpulver
 Puderzucker
 Putenbrust
+Putenbrust-Aufschnitt
 Quark
 Quinoa
 Radieschen
@@ -280,6 +296,7 @@ Reis
 Reisdrink
 Reisessig
 Reismehl
+Reiswaffeln
 Rhabarber
 Rigatoni
 Rinderfond
@@ -306,9 +323,11 @@ Saft
 Sahne|Schlagsahne
 Sahnesteif
 Sake
+Salami
 Salat
 Salbei
 Salz
+Salzstangen
 Sambal Oelek
 Sauerkirschen
 Sauerkraut
@@ -349,6 +368,8 @@ Spekulatius
 Spinat
 Staudensellerie
 Sternanis
+Stracke
+Studentenfutter
 Sumach
 Suppengemüse
 Süßkartoffeln|Süßkartoffel
@@ -375,6 +396,7 @@ Vanilleextrakt
 Vanillepuddingpulver
 Vanilleschote
 Vanillezucker
+Vegetarischer Aufschnitt
 Vollkornreis
 Vollmilchschokolade|Schokolade
 Wacholderbeeren

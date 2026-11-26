@@ -1340,3 +1340,30 @@ div.add-panel-body{display:contents}
 .list-search-clear:hover{color:var(--ink)}
 .list-search input::-webkit-search-cancel-button{display:none}
 .recipe-search-count{white-space:nowrap}
+/* 0.3.60 Schnellauswahl: Frühstück zusammenstellen, Obst & Gemüse / Snacks / Getränke / Frühstück für die Woche */
+.quick-pick{display:grid;gap:10px;margin:10px 0 4px;min-width:0}
+.quick-pick-head{display:grid;gap:2px}
+.quick-pick-head b{font-size:13px}
+.quick-pick-chips{margin:0}
+.quick-pick-section{display:grid;gap:6px;min-width:0}
+.quick-pick-label{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.quick-pick-tiles{display:flex;flex-wrap:wrap;gap:6px}
+.quick-tile{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:10px;padding:7px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;cursor:pointer;line-height:1.2;text-align:left}
+.quick-tile:hover{border-color:#8ba187}
+.quick-tile.selected{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+.quick-tile:focus-visible{outline:2px solid #8ba187;outline-offset:2px}
+.app-shell.theme-sophia .quick-tile.selected{background:#5F7A57!important;border-color:#5F7A57!important;color:#fff!important}
+.app-shell.theme-sophia .quick-tile.selected span{color:#fff!important}
+.app-shell.theme-sophia .quick-tile.selected svg,.app-shell.theme-sophia .quick-tile.selected svg *{color:#fff!important;stroke:#fff!important}
+.theme-nick .quick-tile{background:#101a24;border-color:#354556;color:#c2d0dc}
+.theme-nick .quick-tile.selected{background:#2a5a52;border-color:#3d7a6f;color:#eafaf5}
+.theme-nick .quick-pick-row input{background:#101a24;border-color:#354556;color:#e6edf5}
+.quick-pick-picked{display:grid;gap:6px;border-top:1px solid var(--line);padding-top:10px;min-width:0}
+.quick-pick-row{display:grid;grid-template-columns:minmax(0,1fr) 64px 72px auto;gap:6px;align-items:center}
+.quick-pick-row input{width:100%;min-width:0;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface,var(--paper));color:var(--ink);font:inherit;font-size:14px}
+.quick-pick-name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.quick-pick-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.breakfast-builder{display:grid;gap:8px;margin-top:10px}
+.breakfast-builder>.button{justify-self:start}
+@media(max-width:720px){.quick-pick-row{grid-template-columns:minmax(0,1fr) 56px 64px auto}}
+.device-phone .quick-pick-row{grid-template-columns:minmax(0,1fr) 56px 64px auto}

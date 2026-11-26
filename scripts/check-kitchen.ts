@@ -1,5 +1,6 @@
 // Tests für Preisschätzung und Vorrat. Aufruf: npm run test:kitchen
 import { recipeMatches } from '../src/lib/recipeSearch.ts'
+import { breakfastSections, weekAmount, weekGroups } from '../src/lib/quickPicks.ts'
 import { applyGlutenYeast, buildHistamineMessages, buildRecipeMessages, glutenYeastPenalty, parseHistamine, parseHistamineBatch, parseRecipeAnswer } from '../src/lib/recipeAi.ts'
 import { groupForMeal, matchRecipeGroup } from '../src/lib/recipeGroups.ts'
 import { compareMatches, matchRecipeToPantry } from '../src/lib/pantryMatch.ts'
@@ -418,6 +419,28 @@ console.log('\n17) Rezeptsuche (0.3.58)')
   expect(recipeMatches(r, 'hauptger') && recipeMatches(r, 'thermomix'), 'Gruppe und Liste durchsucht (auch „Thermomix“)')
   expect(!recipeMatches(r, 'kuchen'), 'kein Treffer bei fremdem Wort')
   expect(recipeMatches({ title: 'Möhren-Kichererbsen-Suppe' }, 'mohren') && recipeMatches({ title: 'Möhren-Kichererbsen-Suppe' }, 'moehren suppe'), 'Umlaut im Titel, Bindestrich trennt Wörter')
+}
+
+console.log('\n18) Schnellauswahl Frühstück / Woche (0.3.60)')
+{
+  let n = 0
+  const f = (name: string, category: string, q: number | null = null, u: string | null = null) => ({ id: 'q' + (n++), name, category, default_unit: null, typical_package_quantity: q, typical_package_unit: u })
+  const foods = [f('Brötchen', 'Getreide & Backwaren', 300, 'g'), f('Salami', 'Fleisch & Fisch', 100, 'g'), f('Gouda', 'Milchprodukte & Eier', 400, 'g'), f('Erdbeerkonfitüre', 'Backen & Süßes', 450, 'g'), f('Eier', 'Milchprodukte & Eier', 10, 'Stk'),
+    f('Apfel', 'Obst', 1, 'Stk'), f('Banane', 'Obst', 1, 'Stk'), f('Zitronensaft', 'Obst', 200, 'ml'), f('Orangeat', 'Obst', 100, 'g'), f('Rosinen', 'Obst', 250, 'g'), f('Zucchini', 'Gemüse', 2, 'Stk'), f('Suppengemüse', 'Gemüse', 1, 'Bund'),
+    f('KARTOFFELCHIPS', 'Snacks', 175, 'g'), f('Gummibärchen', 'Snacks', 200, 'g'), f('Vollmilchschokolade', 'Backen & Süßes', 100, 'g'), f('Erdnüsse', 'Nüsse & Saaten', 150, 'g'),
+    f('Orangensaft', 'Getränke', 1, 'l'), f('Marsala', 'Getränke', 750, 'ml'), f('Milch', 'Milchprodukte & Eier', 1, 'l'), f('Mehl', 'Getreide & Backwaren', 1, 'kg')]
+  const b = breakfastSections(foods)
+  const label = (sections: { label: string; items: { food: { name: string } }[] }[]) => sections.map(s => s.label + ':' + s.items.map(i => i.food.name).join('+')).join(' | ')
+  expect(label(b) === 'Brot & Brötchen:Brötchen | Aufstrich:Erdbeerkonfitüre | Aufschnitt:Salami | Käse:Gouda | Dazu:Eier+Milch+Orangensaft+Apfel+Banane', 'Frühstück: Gruppen nur mit vorhandenen Nahrungsmitteln (' + label(b) + ')')
+  const salami = b.find(s => s.label === 'Aufschnitt')!.items[0]
+  expect(salami.quantity === 60 && salami.unit === 'g' && b[0].items[0].quantity === 4 && b[0].items[0].unit === 'Stk', 'Frühstücksmengen für 2 Personen (Salami 60 g, 4 Brötchen)')
+  const w = weekGroups(foods)
+  expect(w.map(g => g.label).join(',') === 'Obst & Gemüse,Snacks,Getränke,Frühstück', 'Wochen-Gruppen: Obst & Gemüse, Snacks, Getränke, Frühstück')
+  expect(label(w[0].sections) === 'Obst:Apfel+Banane | Gemüse:Zucchini', 'Obst & Gemüse ohne Säfte, Orangeat, Trockenobst, Suppengemüse')
+  expect(label(w[1].sections) === 'Snacks:KARTOFFELCHIPS+Gummibärchen+Vollmilchschokolade+Erdnüsse | Trockenobst:Rosinen', 'Snacks quer durch den Katalog (Schokolade, Nüsse), Trockenobst bei Snacks (Nick)')
+  expect(label(w[2].sections) === 'Getränke:Orangensaft+Milch', 'Getränke ohne Koch-Wein (Marsala), mit Milch')
+  expect(weekAmount(foods[5]).quantity === 6 && weekAmount(foods[5]).unit === 'Stk' && weekAmount(foods[12]).quantity === 175 && weekAmount(foods[12]).unit === 'g', 'Wochenmenge: übliche Packung, Stück-Obst 6 Stk')
+  expect(w[3].sections.find(s => s.label === 'Aufschnitt')!.items[0].quantity === 100, 'Frühstück in der Wochenliste: in Packungen (Salami 100 g)')
 }
 
 console.log(failed ? '\n' + failed + ' Prüfung(en) fehlgeschlagen' : '\nAlle Prüfungen bestanden')

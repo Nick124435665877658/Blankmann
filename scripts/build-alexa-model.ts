@@ -11,8 +11,9 @@ const foods = lines.map(line => {
   const [name, ...synonyms] = line.split('|').map(clean).filter(Boolean)
   const syn = synonyms.filter(s => !seen.has(s.toLowerCase()) && s.toLowerCase() !== name.toLowerCase())
   seen.add(name.toLowerCase()); syn.forEach(s => seen.add(s.toLowerCase()))
-  return { id: name, name: { value: name, ...(syn.length ? { synonyms: syn } : {}) } }
-}).filter((value, index, all) => all.findIndex(v => v.id.toLowerCase() === value.id.toLowerCase()) === index)
+  // Ohne „id“: Amazon lehnt IDs mit Leerzeichen ab („Brauner Zucker“), der Endpunkt nutzt den Namen.
+  return { name: { value: name, ...(syn.length ? { synonyms: syn } : {}) } }
+}).filter((value, index, all) => all.findIndex(v => v.name.value.toLowerCase() === value.name.value.toLowerCase()) === index)
 
 const units: [string, string, string[]][] = [
   ['g', 'Gramm', []], ['kg', 'Kilo', ['Kilogramm', 'Kilos']], ['ml', 'Milliliter', []], ['l', 'Liter', []],
@@ -83,7 +84,7 @@ const kategorien: [string, string[]][] = [
   ['Nüsse und Saaten', ['Nüsse', 'Saaten']], ['Backen und Süßes', ['Backen', 'Süßes', 'Süßigkeiten']], ['Snacks', ['Knabbersachen']],
   ['Getränke', []], ['Tiefkühl', ['Tiefkühlware']], ['Sonstiges', ['Anderes']],
 ]
-const values = (list: [string, string[]][]) => list.map(([value, synonyms]) => ({ id: value, name: { value, ...(synonyms.length ? { synonyms } : {}) } }))
+const values = (list: [string, string[]][]) => list.map(([value, synonyms]) => ({ name: { value, ...(synonyms.length ? { synonyms } : {}) } }))
 
 const slot = (name: string, type: string) => ({ name, type })
 const amountSlots = [slot('menge', 'AMAZON.NUMBER'), slot('einheit', 'EINHEIT'), slot('lebensmittel', 'LEBENSMITTEL')]

@@ -13,8 +13,8 @@ Am besten am Computer. Kostenlos, keine Kreditkarte nötig. Der Skill bleibt pri
    - Falls Amazon den Aufrufnamen „blankmann“ ablehnt: links „Invocations → Skill Invocation Name“ auf `blankmann küche` ändern, speichern, neu bauen. Dann heißt es „Alexa, sag Blankmann Küche …“.
 4. **Endpunkt eintragen:** links **Endpoint** → **HTTPS** wählen
    - Default Region: `https://blankmann.pages.dev/api/alexa`
-   - Zertifikat: **„My development endpoint has a certificate from a trusted certificate authority“**
-   - **Save Endpoints**
+   - Zertifikat: **„My development endpoint is a sub-domain of a domain that has a wildcard certificate from a certificate authority“**
+   - **Save**, danach **noch einmal „Build skill“** (sonst gilt die Änderung nicht)
 5. **Testen einschalten:** oben Reiter **Test** → Auswahl „Off“ auf **Development** stellen.
 6. **Verbinden:** im Test-Fenster `öffne blankmann` tippen (oder zum Echo sagen: „Alexa, öffne Blankmann“). Alexa nennt einen **4-stelligen Code**. In der BLANKMANN-App: **Einstellungen → Alexa → Code eingeben → Verbinden**.
 7. **Loslegen:** „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“
@@ -22,10 +22,18 @@ Am besten am Computer. Kostenlos, keine Kreditkarte nötig. Der Skill bleibt pri
 ## Was Alexa versteht
 - „… ich habe drei Eier verbraucht“ · „… zweihundert Gramm Mehl verbraucht“ · „… ich habe eine Zwiebel verwendet“
 - „… wie viele Eier habe ich noch?“
+- **Eintragen:** „… ich habe sechs Eier gekauft“ · „… leg 500 Gramm Mehl in den Vorratsschrank“ · „… füge Hafermilch hinzu“
+- **Mehreres am Stück:** „… Vorrat erfassen“, dann einfach „sechs Eier“, „zwei Packungen Nudeln“, zum Schluss „fertig“.
+- Alexa fragt nach, bis alles befüllt ist: Menge, bei Neuem die Kategorie, Lagerort, Haltbarkeit („ohne“ geht). Unbekanntes wird erst nach „ja“ neu angelegt. Bei frischem Obst und Gemüse setzt sie das MHD selbst.
+- Eintragen legt immer **dazu**, ersetzt nichts.
+- **Ansagen:** „… was ist im Vorrat?“ · „… was ist im Kühlschrank?“ (lange Listen mit „weiter“)
 - „… rückgängig“ (nimmt die letzte Alexa-Änderung zurück, bis 24 Stunden)
 - Nach jeder Änderung fragt Alexa „Noch was?“ – einfach weitermachen oder „nein“ sagen.
 - Mehrere Einträge (z. B. zwei Packungen Eier): das früheste MHD wird zuerst verbraucht.
 - Wird etwas leer: „Sicher, dass du das Element … löschen willst?“ – „ja“ löscht, „nein“ lässt es mit 0 stehen.
+
+## Nach Änderungen am Sprachmodell
+`alexa/interaction-model-de-DE.json` in der Konsole unter „Interaction Model → JSON Editor“ ersetzen → **Save** → **Build skill**.
 
 ## Wenn etwas nicht klappt
 - „Es gab ein Problem mit der Antwort des angeforderten Skills“: im Test-Fenster unten „JSON Output“ ansehen und Claude ein Foto schicken.

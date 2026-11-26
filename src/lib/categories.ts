@@ -1,4 +1,4 @@
-import { normalize } from './receiptParser'
+import { normalize } from './receiptParser.ts'
 
 // Nahrungsmittel-Gruppen in der Reihenfolge der Auswahllisten (Anlegen, Gruppe ändern).
 export const foodCategories = [

@@ -40,6 +40,13 @@
           "samples": []
         },
         {
+          "name": "AMAZON.NextIntent",
+          "samples": [
+            "weiter",
+            "mehr"
+          ]
+        },
+        {
           "name": "VerbrauchIntent",
           "slots": [
             {
@@ -129,8 +136,6 @@
             "{menge} {einheit} {lebensmittel} gegessen",
             "{menge} {lebensmittel} verkocht",
             "{menge} {einheit} {lebensmittel} verkocht",
-            "{menge} {lebensmittel}",
-            "{menge} {einheit} {lebensmittel}",
             "zieh {menge} {lebensmittel} ab",
             "zieh {menge} {einheit} {lebensmittel} ab",
             "zieh {menge} {lebensmittel} vom vorrat ab",
@@ -241,16 +246,10 @@
             "wir haben ein {einheit} {lebensmittel} aufgebraucht",
             "ein {lebensmittel} verbraucht",
             "ein {einheit} {lebensmittel} verbraucht",
-            "ein {lebensmittel}",
-            "ein {einheit} {lebensmittel}",
             "eine {lebensmittel} verbraucht",
             "eine {einheit} {lebensmittel} verbraucht",
-            "eine {lebensmittel}",
-            "eine {einheit} {lebensmittel}",
             "einen {lebensmittel} verbraucht",
-            "einen {einheit} {lebensmittel} verbraucht",
-            "einen {lebensmittel}",
-            "einen {einheit} {lebensmittel}"
+            "einen {einheit} {lebensmittel} verbraucht"
           ]
         },
         {
@@ -337,6 +336,460 @@
             "ich meine die {lebensmittel}",
             "ich meine den {lebensmittel}",
             "ich meine das {lebensmittel}"
+          ]
+        },
+        {
+          "name": "AngabeIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "{menge} {lebensmittel}",
+            "{menge} {einheit} {lebensmittel}"
+          ]
+        },
+        {
+          "name": "AngabeEinsIntent",
+          "slots": [
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            }
+          ],
+          "samples": [
+            "ein {lebensmittel}",
+            "ein {einheit} {lebensmittel}",
+            "eine {lebensmittel}",
+            "eine {einheit} {lebensmittel}",
+            "einen {lebensmittel}",
+            "einen {einheit} {lebensmittel}"
+          ]
+        },
+        {
+          "name": "HinzufuegenIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            },
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            },
+            {
+              "name": "lagerort",
+              "type": "LAGERORT"
+            }
+          ],
+          "samples": [
+            "leg {menge} {lebensmittel} in den vorrat",
+            "leg {menge} {einheit} {lebensmittel} in den vorrat",
+            "leg {lebensmittel} in den vorrat",
+            "leg {menge} {lebensmittel} in den {lagerort}",
+            "leg {menge} {einheit} {lebensmittel} in den {lagerort}",
+            "leg {lebensmittel} in den {lagerort}",
+            "leg {menge} {lebensmittel} ins {lagerort}",
+            "leg {menge} {einheit} {lebensmittel} ins {lagerort}",
+            "leg {lebensmittel} ins {lagerort}",
+            "füge {menge} {lebensmittel} hinzu",
+            "füge {menge} {einheit} {lebensmittel} hinzu",
+            "füge {lebensmittel} hinzu",
+            "trag {menge} {lebensmittel} ein",
+            "trag {menge} {einheit} {lebensmittel} ein",
+            "trag {lebensmittel} ein",
+            "pack {menge} {lebensmittel} dazu",
+            "pack {menge} {einheit} {lebensmittel} dazu",
+            "pack {lebensmittel} dazu",
+            "ich habe {menge} {lebensmittel} gekauft",
+            "ich habe {menge} {einheit} {lebensmittel} gekauft",
+            "ich habe {lebensmittel} gekauft",
+            "ich hab {menge} {lebensmittel} gekauft",
+            "ich hab {menge} {einheit} {lebensmittel} gekauft",
+            "ich hab {lebensmittel} gekauft",
+            "wir haben {menge} {lebensmittel} gekauft",
+            "wir haben {menge} {einheit} {lebensmittel} gekauft",
+            "wir haben {lebensmittel} gekauft",
+            "ich habe {menge} {lebensmittel} eingekauft",
+            "ich habe {menge} {einheit} {lebensmittel} eingekauft",
+            "ich habe {lebensmittel} eingekauft",
+            "wir haben {menge} {lebensmittel} eingekauft",
+            "wir haben {menge} {einheit} {lebensmittel} eingekauft",
+            "wir haben {lebensmittel} eingekauft",
+            "ich habe {menge} {lebensmittel} da",
+            "ich habe {menge} {einheit} {lebensmittel} da",
+            "ich habe {lebensmittel} da",
+            "wir haben {menge} {lebensmittel} da",
+            "wir haben {menge} {einheit} {lebensmittel} da",
+            "wir haben {lebensmittel} da",
+            "ich habe {menge} {lebensmittel} im vorrat",
+            "ich habe {menge} {einheit} {lebensmittel} im vorrat",
+            "ich habe {lebensmittel} im vorrat",
+            "wir haben {menge} {lebensmittel} im vorrat",
+            "wir haben {menge} {einheit} {lebensmittel} im vorrat",
+            "wir haben {lebensmittel} im vorrat",
+            "ich habe {menge} {lebensmittel} zu hause",
+            "ich habe {menge} {einheit} {lebensmittel} zu hause",
+            "ich habe {lebensmittel} zu hause",
+            "ich habe {menge} {lebensmittel} im {lagerort}",
+            "ich habe {menge} {einheit} {lebensmittel} im {lagerort}",
+            "ich habe {lebensmittel} im {lagerort}",
+            "neu im vorrat {menge} {lebensmittel}",
+            "neu im vorrat {menge} {einheit} {lebensmittel}",
+            "neu im vorrat {lebensmittel}",
+            "{menge} {lebensmittel} dazu",
+            "{menge} {einheit} {lebensmittel} dazu",
+            "{lebensmittel} dazu",
+            "{menge} {lebensmittel} hinzufügen",
+            "{menge} {einheit} {lebensmittel} hinzufügen",
+            "{lebensmittel} hinzufügen",
+            "{menge} {lebensmittel} in den {lagerort}",
+            "{menge} {einheit} {lebensmittel} in den {lagerort}",
+            "{lebensmittel} in den {lagerort}",
+            "{menge} {lebensmittel} ins {lagerort}",
+            "{menge} {einheit} {lebensmittel} ins {lagerort}",
+            "{lebensmittel} ins {lagerort}"
+          ]
+        },
+        {
+          "name": "HinzufuegenEinsIntent",
+          "slots": [
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            },
+            {
+              "name": "lebensmittel",
+              "type": "LEBENSMITTEL"
+            },
+            {
+              "name": "lagerort",
+              "type": "LAGERORT"
+            }
+          ],
+          "samples": [
+            "leg ein {lebensmittel} in den vorrat",
+            "leg ein {einheit} {lebensmittel} in den vorrat",
+            "leg eine {lebensmittel} in den vorrat",
+            "leg eine {einheit} {lebensmittel} in den vorrat",
+            "leg einen {lebensmittel} in den vorrat",
+            "leg einen {einheit} {lebensmittel} in den vorrat",
+            "leg ein {lebensmittel} in den {lagerort}",
+            "leg ein {einheit} {lebensmittel} in den {lagerort}",
+            "leg eine {lebensmittel} in den {lagerort}",
+            "leg eine {einheit} {lebensmittel} in den {lagerort}",
+            "leg einen {lebensmittel} in den {lagerort}",
+            "leg einen {einheit} {lebensmittel} in den {lagerort}",
+            "leg ein {lebensmittel} ins {lagerort}",
+            "leg ein {einheit} {lebensmittel} ins {lagerort}",
+            "leg eine {lebensmittel} ins {lagerort}",
+            "leg eine {einheit} {lebensmittel} ins {lagerort}",
+            "leg einen {lebensmittel} ins {lagerort}",
+            "leg einen {einheit} {lebensmittel} ins {lagerort}",
+            "füge ein {lebensmittel} hinzu",
+            "füge ein {einheit} {lebensmittel} hinzu",
+            "füge eine {lebensmittel} hinzu",
+            "füge eine {einheit} {lebensmittel} hinzu",
+            "füge einen {lebensmittel} hinzu",
+            "füge einen {einheit} {lebensmittel} hinzu",
+            "trag ein {lebensmittel} ein",
+            "trag ein {einheit} {lebensmittel} ein",
+            "trag eine {lebensmittel} ein",
+            "trag eine {einheit} {lebensmittel} ein",
+            "trag einen {lebensmittel} ein",
+            "trag einen {einheit} {lebensmittel} ein",
+            "pack ein {lebensmittel} dazu",
+            "pack ein {einheit} {lebensmittel} dazu",
+            "pack eine {lebensmittel} dazu",
+            "pack eine {einheit} {lebensmittel} dazu",
+            "pack einen {lebensmittel} dazu",
+            "pack einen {einheit} {lebensmittel} dazu",
+            "ich habe ein {lebensmittel} gekauft",
+            "ich habe ein {einheit} {lebensmittel} gekauft",
+            "ich habe eine {lebensmittel} gekauft",
+            "ich habe eine {einheit} {lebensmittel} gekauft",
+            "ich habe einen {lebensmittel} gekauft",
+            "ich habe einen {einheit} {lebensmittel} gekauft",
+            "ich hab ein {lebensmittel} gekauft",
+            "ich hab ein {einheit} {lebensmittel} gekauft",
+            "ich hab eine {lebensmittel} gekauft",
+            "ich hab eine {einheit} {lebensmittel} gekauft",
+            "ich hab einen {lebensmittel} gekauft",
+            "ich hab einen {einheit} {lebensmittel} gekauft",
+            "wir haben ein {lebensmittel} gekauft",
+            "wir haben ein {einheit} {lebensmittel} gekauft",
+            "wir haben eine {lebensmittel} gekauft",
+            "wir haben eine {einheit} {lebensmittel} gekauft",
+            "wir haben einen {lebensmittel} gekauft",
+            "wir haben einen {einheit} {lebensmittel} gekauft",
+            "ich habe ein {lebensmittel} eingekauft",
+            "ich habe ein {einheit} {lebensmittel} eingekauft",
+            "ich habe eine {lebensmittel} eingekauft",
+            "ich habe eine {einheit} {lebensmittel} eingekauft",
+            "ich habe einen {lebensmittel} eingekauft",
+            "ich habe einen {einheit} {lebensmittel} eingekauft",
+            "wir haben ein {lebensmittel} eingekauft",
+            "wir haben ein {einheit} {lebensmittel} eingekauft",
+            "wir haben eine {lebensmittel} eingekauft",
+            "wir haben eine {einheit} {lebensmittel} eingekauft",
+            "wir haben einen {lebensmittel} eingekauft",
+            "wir haben einen {einheit} {lebensmittel} eingekauft",
+            "ich habe ein {lebensmittel} da",
+            "ich habe ein {einheit} {lebensmittel} da",
+            "ich habe eine {lebensmittel} da",
+            "ich habe eine {einheit} {lebensmittel} da",
+            "ich habe einen {lebensmittel} da",
+            "ich habe einen {einheit} {lebensmittel} da",
+            "wir haben ein {lebensmittel} da",
+            "wir haben ein {einheit} {lebensmittel} da",
+            "wir haben eine {lebensmittel} da",
+            "wir haben eine {einheit} {lebensmittel} da",
+            "wir haben einen {lebensmittel} da",
+            "wir haben einen {einheit} {lebensmittel} da",
+            "ich habe ein {lebensmittel} im vorrat",
+            "ich habe ein {einheit} {lebensmittel} im vorrat",
+            "ich habe eine {lebensmittel} im vorrat",
+            "ich habe eine {einheit} {lebensmittel} im vorrat",
+            "ich habe einen {lebensmittel} im vorrat",
+            "ich habe einen {einheit} {lebensmittel} im vorrat",
+            "wir haben ein {lebensmittel} im vorrat",
+            "wir haben ein {einheit} {lebensmittel} im vorrat",
+            "wir haben eine {lebensmittel} im vorrat",
+            "wir haben eine {einheit} {lebensmittel} im vorrat",
+            "wir haben einen {lebensmittel} im vorrat",
+            "wir haben einen {einheit} {lebensmittel} im vorrat",
+            "ich habe ein {lebensmittel} zu hause",
+            "ich habe ein {einheit} {lebensmittel} zu hause",
+            "ich habe eine {lebensmittel} zu hause",
+            "ich habe eine {einheit} {lebensmittel} zu hause",
+            "ich habe einen {lebensmittel} zu hause",
+            "ich habe einen {einheit} {lebensmittel} zu hause",
+            "ich habe ein {lebensmittel} im {lagerort}",
+            "ich habe ein {einheit} {lebensmittel} im {lagerort}",
+            "ich habe eine {lebensmittel} im {lagerort}",
+            "ich habe eine {einheit} {lebensmittel} im {lagerort}",
+            "ich habe einen {lebensmittel} im {lagerort}",
+            "ich habe einen {einheit} {lebensmittel} im {lagerort}",
+            "neu im vorrat ein {lebensmittel}",
+            "neu im vorrat ein {einheit} {lebensmittel}",
+            "neu im vorrat eine {lebensmittel}",
+            "neu im vorrat eine {einheit} {lebensmittel}",
+            "neu im vorrat einen {lebensmittel}",
+            "neu im vorrat einen {einheit} {lebensmittel}",
+            "ein {lebensmittel} dazu",
+            "ein {einheit} {lebensmittel} dazu",
+            "eine {lebensmittel} dazu",
+            "eine {einheit} {lebensmittel} dazu",
+            "einen {lebensmittel} dazu",
+            "einen {einheit} {lebensmittel} dazu",
+            "ein {lebensmittel} hinzufügen",
+            "ein {einheit} {lebensmittel} hinzufügen",
+            "eine {lebensmittel} hinzufügen",
+            "eine {einheit} {lebensmittel} hinzufügen",
+            "einen {lebensmittel} hinzufügen",
+            "einen {einheit} {lebensmittel} hinzufügen",
+            "ein {lebensmittel} in den {lagerort}",
+            "ein {einheit} {lebensmittel} in den {lagerort}",
+            "eine {lebensmittel} in den {lagerort}",
+            "eine {einheit} {lebensmittel} in den {lagerort}",
+            "einen {lebensmittel} in den {lagerort}",
+            "einen {einheit} {lebensmittel} in den {lagerort}",
+            "ein {lebensmittel} ins {lagerort}",
+            "ein {einheit} {lebensmittel} ins {lagerort}",
+            "eine {lebensmittel} ins {lagerort}",
+            "eine {einheit} {lebensmittel} ins {lagerort}",
+            "einen {lebensmittel} ins {lagerort}",
+            "einen {einheit} {lebensmittel} ins {lagerort}"
+          ]
+        },
+        {
+          "name": "ErfassenIntent",
+          "samples": [
+            "vorrat erfassen",
+            "ich will meinen vorrat erfassen",
+            "ich möchte meinen vorrat erfassen",
+            "ich will meinen vorrat eintragen",
+            "vorrat eintragen",
+            "inventur",
+            "wir machen inventur",
+            "ich möchte etwas eintragen",
+            "etwas eintragen",
+            "ich will etwas hinzufügen",
+            "etwas hinzufügen",
+            "ich möchte etwas anlegen",
+            "neues lebensmittel anlegen",
+            "ich habe eingekauft",
+            "ich war einkaufen",
+            "einkauf eintragen"
+          ]
+        },
+        {
+          "name": "VorratAnsageIntent",
+          "slots": [
+            {
+              "name": "lagerort",
+              "type": "LAGERORT"
+            }
+          ],
+          "samples": [
+            "was habe ich im vorrat",
+            "was haben wir im vorrat",
+            "was ist im vorrat",
+            "was habe ich da",
+            "was haben wir da",
+            "was ist alles da",
+            "was habe ich zu hause",
+            "lies meinen vorrat vor",
+            "sag mir meinen vorrat",
+            "was für einen vorrat habe ich",
+            "was ist im {lagerort}",
+            "was habe ich im {lagerort}",
+            "was haben wir im {lagerort}",
+            "was liegt im {lagerort}",
+            "was ist in der {lagerort}",
+            "lies den {lagerort} vor"
+          ]
+        },
+        {
+          "name": "LagerortIntent",
+          "slots": [
+            {
+              "name": "lagerort",
+              "type": "LAGERORT"
+            }
+          ],
+          "samples": [
+            "{lagerort}",
+            "in den {lagerort}",
+            "ins {lagerort}",
+            "in die {lagerort}",
+            "in der {lagerort}",
+            "im {lagerort}"
+          ]
+        },
+        {
+          "name": "KategorieIntent",
+          "slots": [
+            {
+              "name": "kategorie",
+              "type": "KATEGORIE"
+            }
+          ],
+          "samples": [
+            "{kategorie}",
+            "kategorie {kategorie}",
+            "unter {kategorie}",
+            "zu {kategorie}",
+            "bei {kategorie}",
+            "nimm {kategorie}"
+          ]
+        },
+        {
+          "name": "DatumIntent",
+          "slots": [
+            {
+              "name": "datum",
+              "type": "AMAZON.DATE"
+            }
+          ],
+          "samples": [
+            "{datum}",
+            "bis {datum}",
+            "bis zum {datum}",
+            "am {datum}",
+            "haltbar bis {datum}",
+            "mindestens haltbar bis {datum}",
+            "hält bis {datum}",
+            "läuft am {datum} ab"
+          ]
+        },
+        {
+          "name": "TageIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "in {menge} tagen",
+            "{menge} tage",
+            "noch {menge} tage",
+            "hält {menge} tage",
+            "hält noch {menge} tage"
+          ]
+        },
+        {
+          "name": "WochenIntent",
+          "slots": [
+            {
+              "name": "menge",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "in {menge} wochen",
+            "{menge} wochen",
+            "noch {menge} wochen",
+            "hält {menge} wochen",
+            "hält noch {menge} wochen"
+          ]
+        },
+        {
+          "name": "OhneIntent",
+          "samples": [
+            "ohne",
+            "ohne datum",
+            "kein datum",
+            "ohne haltbarkeit",
+            "weiß ich nicht",
+            "keine ahnung",
+            "überspringen",
+            "egal",
+            "unbegrenzt"
+          ]
+        },
+        {
+          "name": "NeuIntent",
+          "samples": [
+            "neu",
+            "neu anlegen",
+            "leg es neu an",
+            "als neues anlegen"
+          ]
+        },
+        {
+          "name": "MengeEinsIntent",
+          "slots": [
+            {
+              "name": "einheit",
+              "type": "EINHEIT"
+            }
+          ],
+          "samples": [
+            "ein {einheit}",
+            "eine {einheit}",
+            "einen {einheit}",
+            "nur ein {einheit}",
+            "nur eine {einheit}"
           ]
         }
       ],
@@ -3179,6 +3632,197 @@
               "id": "Beutel",
               "name": {
                 "value": "Beutel"
+              }
+            }
+          ]
+        },
+        {
+          "name": "LAGERORT",
+          "values": [
+            {
+              "id": "Kühlschrank",
+              "name": {
+                "value": "Kühlschrank",
+                "synonyms": [
+                  "Kühli"
+                ]
+              }
+            },
+            {
+              "id": "Gefrierfach",
+              "name": {
+                "value": "Gefrierfach",
+                "synonyms": [
+                  "Gefrierschrank",
+                  "Tiefkühlfach",
+                  "Tiefkühlschrank",
+                  "Gefriertruhe",
+                  "Truhe",
+                  "Tiefkühler",
+                  "Froster",
+                  "Eisfach"
+                ]
+              }
+            },
+            {
+              "id": "Vorratsschrank",
+              "name": {
+                "value": "Vorratsschrank",
+                "synonyms": [
+                  "Schrank",
+                  "Speisekammer",
+                  "Regal",
+                  "Vorratsregal"
+                ]
+              }
+            },
+            {
+              "id": "Keller",
+              "name": {
+                "value": "Keller",
+                "synonyms": [
+                  "Vorratskeller"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "KATEGORIE",
+          "values": [
+            {
+              "id": "Gemüse",
+              "name": {
+                "value": "Gemüse"
+              }
+            },
+            {
+              "id": "Obst",
+              "name": {
+                "value": "Obst",
+                "synonyms": [
+                  "Früchte"
+                ]
+              }
+            },
+            {
+              "id": "Kräuter und Gewürze",
+              "name": {
+                "value": "Kräuter und Gewürze",
+                "synonyms": [
+                  "Gewürze",
+                  "Kräuter"
+                ]
+              }
+            },
+            {
+              "id": "Fleisch und Fisch",
+              "name": {
+                "value": "Fleisch und Fisch",
+                "synonyms": [
+                  "Fleisch",
+                  "Fisch",
+                  "Wurst"
+                ]
+              }
+            },
+            {
+              "id": "Milchprodukte und Eier",
+              "name": {
+                "value": "Milchprodukte und Eier",
+                "synonyms": [
+                  "Milchprodukte",
+                  "Molkerei"
+                ]
+              }
+            },
+            {
+              "id": "Getreide und Backwaren",
+              "name": {
+                "value": "Getreide und Backwaren",
+                "synonyms": [
+                  "Getreide",
+                  "Backwaren",
+                  "Brot",
+                  "Nudeln"
+                ]
+              }
+            },
+            {
+              "id": "Hülsenfrüchte und Konserven",
+              "name": {
+                "value": "Hülsenfrüchte und Konserven",
+                "synonyms": [
+                  "Konserven",
+                  "Hülsenfrüchte",
+                  "Dosen"
+                ]
+              }
+            },
+            {
+              "id": "Öle und Saucen",
+              "name": {
+                "value": "Öle und Saucen",
+                "synonyms": [
+                  "Öle",
+                  "Öl",
+                  "Saucen",
+                  "Soßen"
+                ]
+              }
+            },
+            {
+              "id": "Nüsse und Saaten",
+              "name": {
+                "value": "Nüsse und Saaten",
+                "synonyms": [
+                  "Nüsse",
+                  "Saaten"
+                ]
+              }
+            },
+            {
+              "id": "Backen und Süßes",
+              "name": {
+                "value": "Backen und Süßes",
+                "synonyms": [
+                  "Backen",
+                  "Süßes",
+                  "Süßigkeiten"
+                ]
+              }
+            },
+            {
+              "id": "Snacks",
+              "name": {
+                "value": "Snacks",
+                "synonyms": [
+                  "Knabbersachen"
+                ]
+              }
+            },
+            {
+              "id": "Getränke",
+              "name": {
+                "value": "Getränke"
+              }
+            },
+            {
+              "id": "Tiefkühl",
+              "name": {
+                "value": "Tiefkühl",
+                "synonyms": [
+                  "Tiefkühlware"
+                ]
+              }
+            },
+            {
+              "id": "Sonstiges",
+              "name": {
+                "value": "Sonstiges",
+                "synonyms": [
+                  "Anderes"
+                ]
               }
             }
           ]

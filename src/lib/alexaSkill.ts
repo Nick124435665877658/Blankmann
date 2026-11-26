@@ -3,9 +3,11 @@
 // Regeln (Nick): mehrere Einträge desselben Lebensmittels → frühestes MHD zuerst, ohne Rückfrage; bei 0 Sicherheitsabfrage
 // wie in der App („Sicher, dass du das Element … löschen willst?“); „Wie viele … hab ich noch?“; „Rückgängig“; „Noch was?“.
 // 0.3.61 (Nick 26.11.2026): Vorrat erfassen („ich habe sechs Eier gekauft“, mit Rückfragen) und ansagen → alexaAdd.ts.
+// 0.3.62: „setz Milch auf die Einkaufsliste“ → alexaShop.ts.
 // Ohne Browser/Datenbank testbar: die Datenbank kommt als `AlexaBackend` herein (scripts/check-alexa.ts).
 import { fromBase, sameKind, splitOrganic, toBase } from './kitchen.ts'
 import { addDays, beginAdd, continueAdd, listStock, parsePlace, type AddContext, type AddPending, type AlexaFood, type AlexaNewItem, type Answer, type ListPending } from './alexaAdd.ts'
+import { askShop, shopAdd, type AlexaShopItem, type AlexaShopResult } from './alexaShop.ts'
 import { fold, keys, more, num, plain, readFood, round, sameName, slotValues, speakAmount, splitFoodPhrase, spokenAmount, spokenUnit, stem, total, unitLabel, SORRY, sorry } from './alexaText.ts'
 export { speakAmount, splitFoodPhrase, SORRY, sorry }
 
@@ -18,6 +20,7 @@ export type AlexaBackend = {
   undo(): Promise<{ ok: boolean; label?: string }>
   foods(): Promise<AlexaFood[]>
   add(label: string, item: AlexaNewItem): Promise<void>
+  shop(label: string, item: AlexaShopItem): Promise<AlexaShopResult>
 }
 
 export type Slot = { name?: string; value?: string; resolutions?: { resolutionsPerAuthority?: { status?: { code?: string }; values?: { value?: { name?: string; id?: string } }[] }[] } }
@@ -131,7 +134,7 @@ export function planDeduction(name: string, rows: AlexaPantryRow[], amount: numb
   return { status: 'ok', name, updates, taken: round(fromBase(takenBase, unit)), unit, left: round(fromBase(leftBase, leftUnit)), leftUnit, short: open > 1e-9, emptied }
 }
 
-const HELP = 'Sag zum Beispiel: ich habe drei Eier verbraucht. Oder: ich habe sechs Eier gekauft. Oder: Vorrat erfassen. Oder: was ist im Kühlschrank. Oder: wie viele Eier habe ich noch. Oder: rückgängig.'
+const HELP = 'Sag zum Beispiel: ich habe drei Eier verbraucht. Oder: ich habe sechs Eier gekauft. Oder: Vorrat erfassen. Oder: was ist im Kühlschrank. Oder: wie viele Eier habe ich noch. Oder: setz Milch auf die Einkaufsliste. Oder: rückgängig.'
 
 function pairing(code: string): AlexaResponse {
   const digits = '<say-as interpret-as="digits">' + code + '</say-as>'
@@ -196,21 +199,25 @@ function stock(pantry: AlexaPantryRow[], food: string[]): AlexaResponse {
   }
   return more(match.name + ': noch ' + total(match.rows) + ' da.')
 }
-type Mode = 'add' | 'use' | undefined
-// „add“ = zuletzt wurde etwas eingetragen: dann heißt ein bloßes „sechs Eier“ eintragen, sonst verbraucht.
+type Mode = 'add' | 'shop' | 'use' | undefined
+// Ein bloßes „sechs Eier“ meint, was zuletzt dran war: „add“ = eintragen, „shop“ = Einkaufsliste, sonst verbraucht.
 export async function handleAlexa(body: AlexaRequest, backend: AlexaBackend): Promise<AlexaResponse> {
   const state: { mode: Mode } = { mode: body.session?.attributes?.mode as Mode }
   const result = await route(body, backend, state)
   if (state.mode && result.response.outputSpeech && !result.response.shouldEndSession) {
     result.sessionAttributes = { ...result.sessionAttributes, mode: state.mode }
-    if (state.mode === 'add' && result.response.reprompt?.outputSpeech.text.startsWith('Noch was?')) result.response.reprompt.outputSpeech.text = 'Noch was? Sag zum Beispiel: sechs Eier. Oder: fertig.'
+    const reprompt = result.response.reprompt?.outputSpeech
+    if (reprompt?.text.startsWith('Noch was?')) {
+      if (state.mode === 'add') reprompt.text = 'Noch was? Sag zum Beispiel: sechs Eier. Oder: fertig.'
+      if (state.mode === 'shop') reprompt.text = 'Noch was für die Einkaufsliste? Sag zum Beispiel: Brot. Oder: fertig.'
+    }
   }
   return result
 }
 
 const today = (timestamp: string | undefined) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(timestamp ? new Date(timestamp) : new Date())
 // Neue Befehle brechen eine angefangene Eintragung ab (mit Hinweis), alles andere ist eine Antwort auf die Rückfrage.
-const commands = ['VerbrauchIntent', 'EinsIntent', 'BestandIntent', 'RueckgaengigIntent', 'HinzufuegenIntent', 'HinzufuegenEinsIntent', 'ErfassenIntent', 'VorratAnsageIntent']
+const commands = ['VerbrauchIntent', 'EinsIntent', 'BestandIntent', 'RueckgaengigIntent', 'HinzufuegenIntent', 'HinzufuegenEinsIntent', 'ErfassenIntent', 'VorratAnsageIntent', 'EinkaufIntent', 'EinkaufEinsIntent', 'EinkaufStartIntent']
 
 function readAnswer(intent: string, slots: Record<string, Slot>): Answer {
   const food = readFood(slots.lebensmittel)
@@ -271,6 +278,8 @@ async function route(body: AlexaRequest, backend: AlexaBackend, state: { mode: M
   const food = readFood(slots.lebensmittel)
   const add = (names: string[], quantity: number | null, unit: string | null) => { state.mode = 'add'; return beginAdd(names, { quantity, unit, place }, adding) }
   const take = (names: string[], quantity: number | null, unit: string | null) => { state.mode = 'use'; return deduct(backend, pantry, names, quantity, unit) }
+  const shop = (names: string[], quantity: number | null, unit: string | null) => { state.mode = 'shop'; return shopAdd(names, { quantity, unit }, backend) }
+  const bare = (names: string[], quantity: number | null, unit: string | null) => state.mode === 'add' ? add(names, quantity, unit) : state.mode === 'shop' ? shop(names, quantity, unit) : take(names, quantity, unit)
   const amount = spokenAmount(slots.menge) ?? (food.one ? 1 : null)
   const unit = spokenUnit(slots.einheit) ?? food.unit
 
@@ -278,8 +287,11 @@ async function route(body: AlexaRequest, backend: AlexaBackend, state: { mode: M
     case 'VerbrauchIntent': return take(food.names, amount, unit)
     case 'EinsIntent': return take(food.names, 1, unit)
     // Ohne Verb („sechs Eier“): je nachdem, was zuletzt dran war.
-    case 'AngabeIntent': return state.mode === 'add' ? add(food.names, amount, unit) : take(food.names, amount, unit)
-    case 'AngabeEinsIntent': return state.mode === 'add' ? add(food.names, 1, unit) : take(food.names, 1, unit)
+    case 'AngabeIntent': return bare(food.names, amount, unit)
+    case 'AngabeEinsIntent': return bare(food.names, 1, unit)
+    case 'EinkaufIntent': return shop(food.names, amount, unit)
+    case 'EinkaufEinsIntent': return shop(food.names, 1, unit)
+    case 'EinkaufStartIntent': state.mode = 'shop'; return askShop()
     case 'HinzufuegenIntent': return add(food.names, amount, unit)
     case 'HinzufuegenEinsIntent': return add(food.names, 1, unit)
     case 'ErfassenIntent':
@@ -297,6 +309,7 @@ async function route(body: AlexaRequest, backend: AlexaBackend, state: { mode: M
       const count = intent === 'MengeEinsIntent' ? 1 : spokenAmount(slots.menge)
       if (pending?.ask === 'amount' && count !== null) return take(pending.food, count, spokenUnit(slots.einheit))
       if (pending?.ask === 'which') return plain('Welches meinst du: ' + pending.names.join(' oder ') + '?', { reprompt: 'Sag zum Beispiel: ' + pending.names[0] + '.', attributes: { pending } })
+      if (state.mode === 'shop') return plain('Wovon? Sag zum Beispiel: zwei Liter Milch.', { reprompt: 'Was soll auf die Einkaufsliste?' })
       return state.mode === 'add'
         ? plain('Wovon? Sag zum Beispiel: sechs Eier.', { reprompt: 'Was hast du da?' })
         : plain('Wovon? Sag zum Beispiel: drei Eier verbraucht.', { reprompt: 'Was hast du verbraucht?' })
@@ -314,7 +327,7 @@ async function route(body: AlexaRequest, backend: AlexaBackend, state: { mode: M
         if (where) return listStock(pantry, where)
       }
       if (!food.names.length) return plain('Was meinst du?', { reprompt: 'Was möchtest du?' })
-      return state.mode === 'add' ? add(food.names, food.one ? 1 : null, food.unit) : take(food.names, food.one ? 1 : null, food.unit)
+      return bare(food.names, food.one ? 1 : null, food.unit)
     }
     case 'AMAZON.YesIntent':
       if (pending?.ask === 'delete') {

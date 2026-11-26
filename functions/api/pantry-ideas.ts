@@ -1,10 +1,10 @@
-// Cloudflare Pages Function: POST /api/pantry-ideas  { householdId }
+// Cloudflare Pages Function: POST /api/pantry-ideas  { householdId, courses? }
 // „Was kochen?“ (0.3.50): Workers AI (Gratis-Kontingent) schlägt Gerichte vor, die hauptsächlich aus dem Vorrat bestehen.
 // Antwort: { ideas, model } – gespeichert wird erst, wenn Nick/Sophia „Als Rezept speichern“ tippen (in der App).
 // Sicherheit: Vorrat, Grundausstattung und Haushaltsregeln werden mit dem Login des Nutzers aus Supabase geladen
 // (Zeilenschutz/RLS) – es gehen keine beliebigen Texte vom Browser an die KI.
 import { defaultRules, type AiRules } from '../../src/lib/recipeAi'
-import { buildPantryIdeasMessages, parsePantryIdeas, type IdeaPantryItem } from '../../src/lib/pantryIdeas'
+import { buildPantryIdeasMessages, cleanCourses, parsePantryIdeas, type IdeaCourse, type IdeaPantryItem } from '../../src/lib/pantryIdeas'
 
 type AiBinding = { run: (model: string, input: Record<string, unknown>) => Promise<unknown> }
 type Env = { AI?: AiBinding; VITE_SUPABASE_URL?: string; VITE_SUPABASE_PUBLISHABLE_KEY?: string }
@@ -13,9 +13,9 @@ type SettingsRow = { histamine_low_enabled?: boolean; tomato_free_enabled?: bool
 
 const SUPABASE_URL = 'https://rrjsolyytdktfmrykdca.supabase.co'
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_v66KgLKqMrY-UknWgXR-7Q_lDGBHTvF'
-const MODELS: { id: string; input: (messages: { role: string; content: string }[]) => Record<string, unknown> }[] = [
-  { id: '@cf/google/gemma-4-26b-a4b-it', input: messages => ({ messages, max_completion_tokens: 2600, temperature: 0.7 }) },
-  { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', input: messages => ({ messages, max_tokens: 2600, temperature: 0.7 }) },
+const MODELS: { id: string; input: (messages: { role: string; content: string }[], maxTokens: number) => Record<string, unknown> }[] = [
+  { id: '@cf/google/gemma-4-26b-a4b-it', input: (messages, maxTokens) => ({ messages, max_completion_tokens: maxTokens, temperature: 0.7 }) },
+  { id: '@cf/meta/llama-3.3-70b-instruct-fp8-fast', input: (messages, maxTokens) => ({ messages, max_tokens: maxTokens, temperature: 0.7 }) },
 ]
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } })
 
@@ -38,7 +38,12 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
   const token = (request.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '')
   if (!token) return json({ error: 'Bitte zuerst anmelden.' }, 401)
   let householdId = ''
-  try { householdId = String(((await request.json()) as { householdId?: unknown }).householdId ?? '') } catch { /* leerer Body */ }
+  let courses: IdeaCourse[] = cleanCourses(null)
+  try {
+    const body = (await request.json()) as { householdId?: unknown; courses?: unknown }
+    householdId = String(body.householdId ?? '')
+    courses = cleanCourses(body.courses)
+  } catch { /* leerer Body */ }
   if (!/^[0-9a-f-]{36}$/i.test(householdId)) return json({ error: 'Ungültiger Haushalt.' }, 400)
 
   const url = env.VITE_SUPABASE_URL || SUPABASE_URL
@@ -61,11 +66,13 @@ export const onRequestPost = async ({ request, env }: Context): Promise<Response
     if (row) rules = { tomatoFree: row.tomato_free_enabled ?? true, creamFree: row.cream_free_enabled ?? true, histamineLow: row.histamine_low_enabled ?? true, vegetableRich: row.vegetable_rich_enabled ?? true, notes: row.dietary_notes ?? null }
   } catch { /* Standardregeln */ }
 
-  const messages = buildPantryIdeasMessages(pantry, staples, rules, berlinDate(3), 4)
+  // Bei allen drei Gängen sechs Vorschläge (zwei je Gang), dafür mehr Platz für die Antwort.
+  const count = courses.length === 3 ? 6 : 4
+  const messages = buildPantryIdeasMessages(pantry, staples, rules, berlinDate(3), count, courses)
   let lastError = ''
   for (const model of MODELS) {
     try {
-      const ideas = parsePantryIdeas(textOf(await env.AI.run(model.id, model.input(messages))), rules)
+      const ideas = parsePantryIdeas(textOf(await env.AI.run(model.id, model.input(messages, count === 6 ? 3800 : 2600))), rules, courses)
       if (ideas.length) return json({ ideas, model: model.id })
       lastError = 'keine verwertbaren Vorschläge'
     } catch (error) {

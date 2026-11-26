@@ -1,6 +1,7 @@
 // Tests für den Alexa-Skill (0.3.54, Vorrat erfassen/ansagen 0.3.61). Aufruf: npm run test:alexa
 // Die Datenbank wird im Speicher nachgebaut (gleiche Regeln wie die Funktionen alexa_* in Supabase).
 import type { AlexaFood, AlexaNewItem } from '../src/lib/alexaAdd.ts'
+import type { AlexaShopItem } from '../src/lib/alexaShop.ts'
 import { parseCategory, parseDate, parsePlace } from '../src/lib/alexaAdd.ts'
 import { checkEnvelope, handleAlexa, matchPantry, speakAmount, splitFoodPhrase, type AlexaBackend, type AlexaPantryRow, type AlexaRequest, type AlexaResponse } from '../src/lib/alexaSkill.ts'
 
@@ -19,6 +20,7 @@ function fakeBackend(start: AlexaPantryRow[], status: 'linked' | 'pending' = 'li
   let pantry = start.map(r => ({ ...r }))
   const log: { label: string; before: AlexaPantryRow[]; deleted: boolean; added?: string }[] = []
   const added: AlexaNewItem[] = []
+  const list: (AlexaShopItem & { checked: boolean })[] = []
   const calls: string[] = []
   const backend: AlexaBackend = {
     async context() { calls.push('context'); return status === 'pending' ? { status: 'pending', code: '4711' } : { status: 'linked', pantry: pantry.map(r => ({ ...r })) } },
@@ -46,6 +48,17 @@ function fakeBackend(start: AlexaPantryRow[], status: 'linked' | 'pending' = 'li
       return { ok: true, label: last.label }
     },
     async foods() { calls.push('foods'); return catalog },
+    async shop(label, item) {
+      calls.push('shop:' + label)
+      const row = list.find(r => r.name.toLowerCase() === item.name.toLowerCase() && (item.quantity === null || (r.quantity === null && r.unit === null) || r.unit === item.unit))
+      if (!row) { list.push({ ...item, checked: false }); return { status: 'added', quantity: item.quantity, unit: item.unit } }
+      if (item.quantity === null && !row.checked) return { status: 'exists', quantity: row.quantity, unit: row.unit }
+      const status = row.checked || row.quantity === null ? 'added' : 'merged'
+      row.quantity = status === 'merged' ? row.quantity! + item.quantity! : item.quantity
+      if (status === 'added') row.unit = item.unit
+      row.checked = false
+      return { status, quantity: row.quantity, unit: row.unit }
+    },
     async add(label, item) {
       calls.push('add:' + label)
       const id = 'neu-' + added.push(item)
@@ -53,7 +66,7 @@ function fakeBackend(start: AlexaPantryRow[], status: 'linked' | 'pending' = 'li
       log.push({ label, before: [], deleted: false, added: id })
     },
   }
-  return { backend, get pantry() { return pantry }, calls, added }
+  return { backend, get pantry() { return pantry }, calls, added, list }
 }
 
 const now = new Date().toISOString()
@@ -411,11 +424,52 @@ console.log('14. Deuten von Datum, Ort, Kategorie')
   expect(parseCategory('Milchprodukte und Eier') === 'Milchprodukte & Eier' && parseCategory('Hülsenfrüchte und Konserven') === 'Hülsenfrüchte & Konserven' && parseCategory('Süßes') === 'Backen & Süßes' && parseCategory('Öle') === 'Öle & Saucen' && parseCategory('Backwaren') === 'Getreide & Backwaren', 'Kategorien')
 }
 
+console.log('14b. Einkaufsliste (0.3.62)')
+{
+  const db = fakeBackend(pantry(), 'linked', catalog)
+  let attributes: Record<string, unknown> = {}
+  const say = async (name: string, slots: Record<string, ReturnType<typeof slot>> = {}) => {
+    const r = await handleAlexa(intent(name, slots, attributes), db.backend)
+    attributes = r.sessionAttributes ?? {}
+    return speech(r)
+  }
+  const stockBefore = JSON.stringify(db.pantry)
+  let c = await say('EinkaufIntent', { lebensmittel: slot('lebensmittel', 'milch') })
+  expect(c === 'Okay, Milch auf die Einkaufsliste gesetzt. Noch was?' && db.list[0].quantity === null && db.list[0].aisle === 'Milchprodukte & Eier', 'ohne Menge, Gruppe aus dem Katalog', [c, db.list[0]])
+  c = await say('EinkaufIntent', { lebensmittel: slot('lebensmittel', 'milch') })
+  expect(c === 'Milch ist schon auf der Einkaufsliste. Noch was?' && db.list.length === 1, 'doppelt wird nicht doppelt', c)
+  c = await say('EinkaufIntent', { menge: slot('menge', '2'), einheit: slot('einheit', 'liter', { name: 'Liter', id: 'l' }), lebensmittel: slot('lebensmittel', 'milch') })
+  expect(c === 'Okay, 2 Liter Milch auf die Einkaufsliste gesetzt. Noch was?' && db.list.length === 1 && db.list[0].quantity === 2 && db.list[0].unit === 'l', 'Menge wird nachgetragen', [c, db.list])
+  c = await say('AngabeIntent', { menge: slot('menge', '1'), einheit: slot('einheit', 'liter', { name: 'Liter', id: 'l' }), lebensmittel: slot('lebensmittel', 'milch') })
+  expect(c === 'Okay, jetzt 3 Liter Milch auf der Einkaufsliste. Noch was?', 'bloße Angabe geht weiter auf die Liste und zählt dazu', c)
+  c = await say('LebensmittelIntent', { lebensmittel: slot('lebensmittel', 'zahnpasta') })
+  expect(c === 'Okay, Zahnpasta auf die Einkaufsliste gesetzt. Noch was?' && db.list[1].aisle === 'Sonstiges', 'Haushaltsartikel → Sonstiges', [c, db.list[1]])
+  c = await say('AngabeEinsIntent', { lebensmittel: slot('lebensmittel', 'bio banane') })
+  expect(db.list[2].name === 'Bio Banane' && db.list[2].quantity === 1 && db.list[2].unit === 'Stk' && db.list[2].aisle === 'Obst', '„eine Bio-Banane“', db.list[2])
+  expect(JSON.stringify(db.pantry) === stockBefore && db.added.length === 0, 'der Vorrat bleibt unberührt')
+  c = await say('AMAZON.NoIntent')
+  expect(c === 'Alles klar. Guten Appetit!', '„nein“ beendet', c)
+
+  attributes = {}
+  c = await say('EinkaufStartIntent')
+  expect(c === 'Was soll auf die Einkaufsliste?' && attributes.mode === 'shop', 'ohne Artikel → Nachfrage', [c, attributes])
+  c = await say('EinkaufEinsIntent', { einheit: slot('einheit', 'packung', { name: 'Packung', id: 'Packung' }), lebensmittel: slot('lebensmittel', 'nudeln') })
+  expect(db.list[3].name === 'Nudeln' && db.list[3].quantity === 1 && db.list[3].unit === 'Packung', '„eine Packung Nudeln“', db.list[3])
+  c = await say('VerbrauchIntent', { menge: slot('menge', '1'), lebensmittel: slot('lebensmittel', 'eier') })
+  expect(attributes.mode === 'use' && db.list.length === 4 && c.startsWith('Okay, Eier minus 1'), '„verbraucht“ wechselt zurück zum Abziehen', c)
+
+  attributes = {}
+  await say('HinzufuegenIntent', { menge: slot('menge', '500'), einheit: slot('einheit', 'gramm', { name: 'Gramm', id: 'g' }), lebensmittel: slot('lebensmittel', 'mehl') })
+  c = await say('EinkaufIntent', { lebensmittel: slot('lebensmittel', 'brot') })
+  expect(c.startsWith('Mehl habe ich nicht gespeichert. Okay, Brot auf die Einkaufsliste') && db.added.length === 0, 'mitten im Eintragen: Eintragung abgebrochen, Brot auf die Liste', c)
+}
+
 console.log('15. Sprachmodell passt zum Code')
 {
   const { readFileSync } = await import('node:fs')
   const model = JSON.parse(readFileSync(new URL('../alexa/interaction-model-de-DE.json', import.meta.url), 'utf8')).interactionModel.languageModel
   const code = readFileSync(new URL('../src/lib/alexaSkill.ts', import.meta.url), 'utf8') + readFileSync(new URL('../src/lib/alexaAdd.ts', import.meta.url), 'utf8')
+  expect(model.intents.some((i: { name: string }) => i.name === 'EinkaufIntent') && model.types.every((t: { name: string; values: { id?: string }[] }) => t.name === 'EINHEIT' || t.values.every(v => v.id === undefined)), 'Einkaufs-Intent im Modell, keine IDs außer bei Einheiten')
   // KategorieIntent und DatumIntent sind reine Antworten: der Code liest ihre Slots.
   const missing = (model.intents as { name: string }[]).map(i => i.name).filter(n => !n.startsWith('AMAZON.') && !['KategorieIntent', 'DatumIntent'].includes(n) && !code.includes("'" + n + "'"))
   expect(missing.length === 0, 'jeder eigene Intent wird behandelt', missing)

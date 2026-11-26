@@ -27,6 +27,7 @@ Am besten am Computer. Kostenlos, keine Kreditkarte nötig. Der Skill bleibt pri
 - Alexa fragt nach, bis alles befüllt ist: Menge, bei Neuem die Kategorie, Lagerort, Haltbarkeit („ohne“ geht). Unbekanntes wird erst nach „ja“ neu angelegt. Bei frischem Obst und Gemüse setzt sie das MHD selbst.
 - Eintragen legt immer **dazu**, ersetzt nichts.
 - **Ansagen:** „… was ist im Vorrat?“ · „… was ist im Kühlschrank?“ (lange Listen mit „weiter“)
+- **Einkaufsliste:** „… setz Milch auf die Einkaufsliste“ · „… zwei Liter Milch auf die Einkaufsliste“ · „… Einkaufsliste“ (dann eins nach dem anderen, zum Schluss „fertig“). Immer „Blankmann“ dazusagen, sonst landet es auf Amazons eigener Liste.
 - „… rückgängig“ (nimmt die letzte Alexa-Änderung zurück, bis 24 Stunden)
 - Nach jeder Änderung fragt Alexa „Noch was?“ – einfach weitermachen oder „nein“ sagen.
 - Mehrere Einträge (z. B. zwei Packungen Eier): das früheste MHD wird zuerst verbraucht.

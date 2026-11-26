@@ -413,3 +413,21 @@ Zuckerschoten
 Zuckerstreusel
 Zwetschgen
 Zwiebeln|Zwiebel
+# Haushalt (für die Einkaufsliste)
+Klopapier|Toilettenpapier
+Küchenrolle|Küchenpapier
+Spülmittel|Spüli
+Waschmittel
+Zahnpasta|Zahncreme
+Müllbeutel|Mülltüten
+Alufolie
+Backpapier
+Frischhaltefolie
+Spülschwämme|Schwämme
+Seife|Handseife
+Shampoo
+Duschgel
+Taschentücher
+Spültabs|Spülmaschinentabs
+Putzmittel|Reiniger
+Batterien

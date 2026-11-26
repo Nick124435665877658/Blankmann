@@ -7,7 +7,21 @@ import { matchRecipeGroup, recipeGroups } from './recipeGroups.ts'
 
 export type IdeaPantryItem = { name: string; quantity: number | string | null; unit: string | null; best_before: string | null }
 export type IdeaIngredient = { name: string; quantity: number | null; unit: string | null }
-export type PantryIdea = { title: string; description: string | null; group: string | null; servings: number; prepMinutes: number | null; cookMinutes: number | null; histamine: AiHistamine; ingredients: IdeaIngredient[]; steps: string[] }
+// 0.3.62 (Nick 26.11.2026): vor der Suche wählen, welche Gänge die KI vorschlagen soll (auch mehrere).
+export const ideaCourses = ['Vorspeise', 'Hauptgericht', 'Dessert'] as const
+export type IdeaCourse = typeof ideaCourses[number]
+// Nur die festen Werte durchlassen – es gelangt kein freier Text vom Browser an die KI.
+export function cleanCourses(value: unknown): IdeaCourse[] {
+  const picked = ideaCourses.filter(course => Array.isArray(value) && value.includes(course))
+  return picked.length ? picked : ['Hauptgericht']
+}
+const plural: Record<IdeaCourse, string> = { Vorspeise: 'Vorspeisen', Hauptgericht: 'Hauptgerichte', Dessert: 'Desserts' }
+function matchCourse(value: string): IdeaCourse | null {
+  const t = value.toLocaleLowerCase('de-DE')
+  return /vorspeise|starter/.test(t) ? 'Vorspeise' : /haupt/.test(t) ? 'Hauptgericht' : /dessert|nachtisch|nachspeise|süßspeise/.test(t) ? 'Dessert' : null
+}
+
+export type PantryIdea = { course: IdeaCourse | null; title: string; description: string | null; group: string | null; servings: number; prepMinutes: number | null; cookMinutes: number | null; histamine: AiHistamine; ingredients: IdeaIngredient[]; steps: string[] }
 
 const keyOf = (value: string) => value.toLocaleLowerCase('de-DE').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, ' ').trim()
 const cap = (value: string) => value ? value.charAt(0).toLocaleUpperCase('de-DE') + value.slice(1) : value
@@ -16,7 +30,7 @@ const amountText = (item: IdeaPantryItem) => {
   return q !== null && Number.isFinite(q) ? String(Math.round(q * 100) / 100).replace('.', ',') + (item.unit ? ' ' + item.unit : '') : ''
 }
 
-export function buildPantryIdeasMessages(pantry: IdeaPantryItem[], staples: string[], rules: AiRules, soon: string, count = 4) {
+export function buildPantryIdeasMessages(pantry: IdeaPantryItem[], staples: string[], rules: AiRules, soon: string, count = 4, courses: IdeaCourse[] = ['Hauptgericht']) {
   const sorted = [...pantry].sort((a, b) => (a.best_before ?? '9999') < (b.best_before ?? '9999') ? -1 : 1)
   const stock = sorted.slice(0, 80).map(item => {
     const expiring = Boolean(item.best_before && item.best_before <= soon)
@@ -26,17 +40,21 @@ export function buildPantryIdeasMessages(pantry: IdeaPantryItem[], staples: stri
   const system = 'Du bist eine erfahrene Hausköchin. Du schlägst alltagstaugliche Gerichte für zwei Personen vor und antwortest nur auf Deutsch und genau im verlangten Format, ohne Einleitung.'
   const user = [
     'Schlage ' + count + ' verschiedene Gerichte vor, die man hauptsächlich aus diesem Vorrat kochen kann. Mit „!“ markierte Zutaten laufen bald ab – nutze sie bevorzugt.',
+    courses.length === 1
+      ? 'Es sollen ausschließlich ' + plural[courses[0]] + ' sein.'
+      : 'Es sollen nur diese Gänge vorkommen: ' + courses.map(c => plural[c]).join(', ') + '. Verteile die Gerichte gleichmäßig darauf, von jedem Gang mindestens eines.',
     'Vorrat:', ...stock,
     staples.length ? 'Immer vorhanden (Grundausstattung): ' + staples.slice(0, 60).join(', ') + '.' : '',
     'Regeln:',
     '- Pro Gericht höchstens 2 Zutaten, die weder im Vorrat noch in der Grundausstattung stehen.',
     '- Mengen für 2 Portionen, realistisch und in g, ml, Stk, EL, TL oder Prise.',
-    '- Zubereitung am Herd oder im Backofen, kein Thermomix. Am Herd Hitzestufen statt °C, °C nur für den Backofen.',
+    '- Zubereitung am Herd oder im Backofen' + (courses.some(c => c !== 'Hauptgericht') ? ' oder kalt angerührt' : '') + ', kein Thermomix. Am Herd Hitzestufen statt °C, °C nur für den Backofen.',
     ...ruleLines(rules).map(line => '- ' + line),
     '- Histaminwert von 1 (sehr histaminreich) bis 10 (histaminarm) mit einer Nachkommastelle (z. B. 6,5). Gluten und Hefe lass bei deiner Zahl außen vor – die rechnet die App selbst ein.',
     '- Ordne jedes Gericht genau einer Gruppe zu: ' + recipeGroups.join(', ') + '.',
     'Format – für jedes Gericht genau so, Gerichte getrennt durch eine Zeile mit ---:',
     'GERICHT: Name des Gerichts',
+    'GANG: ' + courses.join(' oder '),
     'GRUPPE: eine der genannten Gruppen',
     'BESCHREIBUNG: ein kurzer Satz',
     'PORTIONEN: 2',
@@ -51,9 +69,9 @@ export function buildPantryIdeasMessages(pantry: IdeaPantryItem[], staples: stri
   return [{ role: 'system', content: system }, { role: 'user', content: user }]
 }
 
-const header = /^(gericht|gruppe|beschreibung|portionen|zeit|histamin|zutaten|schritte|anleitung|zubereitung)\w*\s*:/i
+const header = /^(gericht|gang|gruppe|beschreibung|portionen|zeit|histamin|zutaten|schritte|anleitung|zubereitung)\w*\s*:/i
 
-function parseBlock(block: string, rules: AiRules): PantryIdea | null {
+function parseBlock(block: string, rules: AiRules, courses?: IdeaCourse[]): PantryIdea | null {
   const lines = block.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
   const value = (re: RegExp) => (lines.find(line => re.test(line)) ?? '').replace(re, '').trim()
   const title = cap(value(/^gericht\w*\s*:\s*/i).replace(/^["„“]|["“”]$/g, '')).slice(0, 80)
@@ -79,16 +97,33 @@ function parseBlock(block: string, rules: AiRules): PantryIdea | null {
   const servings = servingsRaw >= 1 && servingsRaw <= 12 ? servingsRaw : 2
   const times = parseTimes(lines)
   const histamine = applyHistamineRules(parseHistamine(lines), ingredients, servings)
-  return { title, description: value(/^beschreibung\w*\s*:\s*/i).slice(0, 200) || null, group: matchRecipeGroup(value(/^gruppe\w*\s*:\s*/i).split('|')[0]), servings, prepMinutes: times.prepMinutes, cookMinutes: times.cookMinutes, histamine, ingredients, steps }
+  const group = matchRecipeGroup(value(/^gruppe\w*\s*:\s*/i).split('|')[0])
+  // Gang: wie von der KI genannt, sonst aus der Rezeptgruppe bzw. dem einzigen gewählten Gang.
+  const named = matchCourse(value(/^gang\s*:\s*/i))
+  const course = named ?? (courses?.length === 1 ? courses[0] : group === 'Hauptgericht' ? 'Hauptgericht' : group === 'Dessert & Eis' || group === 'Kuchen & Torten' ? 'Dessert' : null)
+  if (courses && course && !courses.includes(course)) return null // nicht bestellter Gang
+  return { course, title, description: value(/^beschreibung\w*\s*:\s*/i).slice(0, 200) || null, group, servings, prepMinutes: times.prepMinutes, cookMinutes: times.cookMinutes, histamine, ingredients, steps }
 }
 
-export function parsePantryIdeas(text: string, rules: AiRules): PantryIdea[] {
+export function parsePantryIdeas(text: string, rules: AiRules, courses?: IdeaCourse[]): PantryIdea[] {
   const clean = text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/\*\*/g, '').replace(/^#+\s*/gm, '').trim()
   const blocks = clean.split(/^\s*-{3,}\s*$/m).flatMap(part => part.split(/(?=^\s*gericht\w*\s*:)/im))
   const ideas: PantryIdea[] = []
   for (const block of blocks) {
-    const idea = parseBlock(block, rules)
+    const idea = parseBlock(block, rules, courses)
     if (idea && !ideas.some(i => keyOf(i.title) === keyOf(idea.title))) ideas.push(idea)
   }
   return ideas.slice(0, 6)
+}
+
+// Auswahl für die Anzeige: reihum aus jedem Gang, damit kein gewählter Gang untergeht (Eingabe ist schon sortiert).
+export function pickByCourse<T>(items: T[], courseOf: (item: T) => IdeaCourse | null, limit: number): T[] {
+  const queues = new Map<IdeaCourse | null, T[]>()
+  for (const item of items) queues.set(courseOf(item), [...(queues.get(courseOf(item)) ?? []), item])
+  const picked: T[] = []
+  while (picked.length < limit && [...queues.values()].some(q => q.length)) {
+    for (const queue of queues.values()) if (queue.length && picked.length < limit) picked.push(queue.shift()!)
+  }
+  const order = (item: T) => { const course = courseOf(item); return course ? ideaCourses.indexOf(course) : ideaCourses.length }
+  return picked.sort((a, b) => order(a) - order(b))
 }

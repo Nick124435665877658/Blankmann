@@ -45,7 +45,7 @@ export default function AlexaPanel({ householdId }: { householdId: string }) {
     <div className="setting-block">
       <span className="eyebrow">SPRACHSTEUERUNG</span>
       <h2>Alexa</h2>
-      <small className="muted">Verbrauch per Sprache vom Vorrat abziehen: „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“ Eintragen: „… ich habe sechs Eier gekauft“ oder „… Vorrat erfassen“ – fehlt etwas, fragt Alexa nach. Auch: „… was ist im Kühlschrank?“, „… wie viele Eier habe ich noch?“ und „… rückgängig“.</small>
+      <small className="muted">Verbrauch per Sprache vom Vorrat abziehen: „Alexa, sag Blankmann, ich habe drei Eier verbraucht.“ Eintragen: „… ich habe sechs Eier gekauft“ oder „… Vorrat erfassen“ – fehlt etwas, fragt Alexa nach. Auch: „… was ist im Kühlschrank?“, „… wie viele Eier habe ich noch?“ und „… rückgängig“. Einkaufsliste: „… setz Milch auf die Einkaufsliste“.</small>
       {links.length > 0 && <div className="alexa-links">{links.map(link => <div className="alexa-link" key={link.id}>
         <div><b>{link.label}</b><small>verbunden am {when(link.created_at)} · {link.last_used_at ? 'zuletzt genutzt ' + when(link.last_used_at) : 'noch nicht genutzt'}</small></div>
         <button type="button" className="button button-light button-small" onClick={() => disconnect(link)}>Trennen</button>
